@@ -33,7 +33,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state
 
+    @Volatile
     private var cachedApiService: ApiService? = null
+    @Volatile
     private var cachedBaseUrl: String? = null
 
     private fun normalizedBaseUrl(raw: String): String {
@@ -46,12 +48,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val currentBaseUrl = normalizedBaseUrl(_state.value.baseUrl)
         
         // Only create a new ApiService if baseUrl changed or not yet initialized
-        if (cachedApiService == null || cachedBaseUrl != currentBaseUrl) {
-            cachedApiService = NetworkModule.createApi(currentBaseUrl)
+        val api = cachedApiService
+        if (api == null || cachedBaseUrl != currentBaseUrl) {
+            val newApi = NetworkModule.createApi(currentBaseUrl)
+            cachedApiService = newApi
             cachedBaseUrl = currentBaseUrl
+            return AppRepository(newApi)
         }
         
-        return AppRepository(cachedApiService!!)
+        return AppRepository(api)
     }
 
     init {
