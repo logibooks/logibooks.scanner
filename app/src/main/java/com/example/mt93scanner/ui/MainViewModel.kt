@@ -3,6 +3,7 @@ package com.example.mt93scanner.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mt93scanner.net.ApiService
 import com.example.mt93scanner.net.NetworkModule
 import com.example.mt93scanner.repo.AppRepository
 import com.example.mt93scanner.store.AuthStore
@@ -32,6 +33,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state
 
+    @Volatile
+    private var cachedApiService: ApiService? = null
+    @Volatile
+    private var cachedBaseUrl: String? = null
+
     private fun normalizedBaseUrl(raw: String): String {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return trimmed
@@ -39,7 +45,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun repo(): AppRepository {
-        val api = NetworkModule.createApi(normalizedBaseUrl(_state.value.baseUrl))
+        val currentBaseUrl = normalizedBaseUrl(_state.value.baseUrl)
+        
+        // Only create a new ApiService if baseUrl changed or not yet initialized
+        val api = cachedApiService
+        if (api == null || cachedBaseUrl != currentBaseUrl) {
+            val newApi = NetworkModule.createApi(currentBaseUrl)
+            cachedApiService = newApi
+            cachedBaseUrl = currentBaseUrl
+            return AppRepository(newApi)
+        }
+        
         return AppRepository(api)
     }
 
