@@ -1,10 +1,13 @@
 package consulting.sw.logiscanner
 
+import android.content.Context
 import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,15 +29,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.logiscanner.scan.Mt93ScanReceiver
-import com.example.logiscanner.ui.MainViewModel
-import com.example.logiscanner.ui.theme.LogiScannerTheme
+import consulting.sw.logiscanner.scan.Mt93ScanReceiver
+import consulting.sw.logiscanner.ui.MainViewModel
+import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 
 class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
     private var receiver: Mt93ScanReceiver? = null
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -81,7 +85,8 @@ class MainActivity : ComponentActivity() {
                     receiver = r
                     registerReceiver(
                         r,
-                        IntentFilter("nlscan.action.SCANNER_RESULT")
+                        IntentFilter("nlscan.action.SCANNER_RESULT"),
+                        Context.RECEIVER_EXPORTED
                     )
                 } else {
                     receiver?.let { unregisterReceiver(it) }

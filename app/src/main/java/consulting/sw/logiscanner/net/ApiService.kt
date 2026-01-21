@@ -1,4 +1,4 @@
-package com.example.logiscanner.net
+package consulting.sw.logiscanner.net
 
 import retrofit2.http.Body
 import retrofit2.http.Header

@@ -1,4 +1,4 @@
-package com.example.logiscanner.store
+package consulting.sw.logiscanner.store
 
 import android.content.Context
 import androidx.datastore.core.DataStore

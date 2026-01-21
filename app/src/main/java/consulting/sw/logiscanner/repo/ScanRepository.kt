@@ -1,7 +1,7 @@
-package com.example.logiscanner.repo
+package consulting.sw.logiscanner.repo
 
-import com.example.logiscanner.net.NetworkModule
-import com.example.logiscanner.net.ScanCheckRequest
+import consulting.sw.logiscanner.net.NetworkModule
+import consulting.sw.logiscanner.net.ScanCheckRequest
 
 class ScanRepository(baseUrl: String, private val token: String) {
 

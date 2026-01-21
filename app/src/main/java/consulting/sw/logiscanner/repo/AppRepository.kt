@@ -1,9 +1,9 @@
-package com.example.logiscanner.repo
+package consulting.sw.logiscanner.repo
 
-import com.example.logiscanner.net.ApiService
-import com.example.logiscanner.net.Credentials
-import com.example.logiscanner.net.ScanCheckRequest
-import com.example.logiscanner.net.UserViewItemWithJWT
+import consulting.sw.logiscanner.net.ApiService
+import consulting.sw.logiscanner.net.Credentials
+import consulting.sw.logiscanner.net.ScanCheckRequest
+import consulting.sw.logiscanner.net.UserViewItemWithJWT
 
 class AppRepository(private val api: ApiService) {
 

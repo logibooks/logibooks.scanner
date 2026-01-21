@@ -1,10 +1,10 @@
-package com.example.logiscanner.repo
+package consulting.sw.logiscanner.repo
 
 import android.content.Context
-import com.example.logiscanner.net.Credentials
-import com.example.logiscanner.net.NetworkModule
-import com.example.logiscanner.net.UserViewItemWithJWT
-import com.example.logiscanner.store.AuthStore
+import consulting.sw.logiscanner.net.Credentials
+import consulting.sw.logiscanner.net.NetworkModule
+import consulting.sw.logiscanner.net.UserViewItemWithJWT
+import consulting.sw.logiscanner.store.AuthStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first

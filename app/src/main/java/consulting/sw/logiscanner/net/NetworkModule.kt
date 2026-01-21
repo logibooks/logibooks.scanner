@@ -1,4 +1,4 @@
-package com.example.logiscanner.net
+package consulting.sw.logiscanner.net
 
 import com.squareup.moshi.Moshi
 import okhttp3.OkHttpClient

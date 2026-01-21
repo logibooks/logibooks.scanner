@@ -1,4 +1,4 @@
-package com.example.logiscanner.ui.theme
+package consulting.sw.logiscanner.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

@@ -1,4 +1,4 @@
-package com.example.logiscanner.scan
+package consulting.sw.logiscanner.scan
 
 import android.content.BroadcastReceiver
 import android.content.Context

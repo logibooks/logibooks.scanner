@@ -1,11 +1,11 @@
-package com.example.logiscanner.ui
+package consulting.sw.logiscanner.ui
 
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.logiscanner.repo.LoginRepository
-import com.example.logiscanner.repo.ScanRepository
+import consulting.sw.logiscanner.repo.LoginRepository
+import consulting.sw.logiscanner.repo.ScanRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

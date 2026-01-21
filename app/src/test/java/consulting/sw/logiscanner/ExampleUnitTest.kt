@@ -1,4 +1,4 @@
-package com.example.logiscanner
+package consulting.sw.logiscanner
 
 import org.junit.Test
 
