@@ -144,6 +144,11 @@ private fun LoginScreen(
             )
         }
 
+        val textFieldColors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            focusedLabelColor = MaterialTheme.colorScheme.primary
+        )
+        
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -155,10 +160,7 @@ private fun LoginScreen(
                     onValueChange = onBaseUrlChange,
                     label = { Text("Server Base URL") },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary
-                    ),
+                    colors = textFieldColors,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -167,10 +169,7 @@ private fun LoginScreen(
                     onValueChange = onEmailChange,
                     label = { Text("Email") },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary
-                    ),
+                    colors = textFieldColors,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -180,10 +179,7 @@ private fun LoginScreen(
                     label = { Text("Password") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary
-                    ),
+                    colors = textFieldColors,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -250,7 +246,10 @@ private fun ScanScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("Status", style = MaterialTheme.typography.titleMedium)
                     if (isBusy) {
                         LinearProgressIndicator(
