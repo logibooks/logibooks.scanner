@@ -18,11 +18,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,6 +36,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
@@ -50,7 +56,7 @@ class MainActivity : ComponentActivity() {
             val state by vm.state.collectAsState()
 
             LogiScannerTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     if (!state.isLoggedIn) {
                         LoginScreen(
                             baseUrl = state.baseUrl,
@@ -118,50 +124,88 @@ private fun LoginScreen(
     onPasswordChange: (String) -> Unit,
     onLogin: () -> Unit
 ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("LogiScanner", style = MaterialTheme.typography.headlineSmall)
-
-        OutlinedTextField(
-            value = baseUrl,
-            onValueChange = onBaseUrlChange,
-            label = { Text("Server Base URL") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = onEmailChange,
-            label = { Text("Email") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = onPasswordChange,
-            label = { Text("Password") },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (error != null) {
-            Text(error, color = MaterialTheme.colorScheme.error)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                "Logibooks Scanner",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                "Sign in to sync and start scanning.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
-        Button(
-            onClick = onLogin,
-            enabled = !isBusy && baseUrl.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
-            modifier = Modifier.fillMaxWidth()
+        val textFieldColors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            focusedLabelColor = MaterialTheme.colorScheme.primary
+        )
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
-            Text(if (isBusy) "Logging in..." else "Login")
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = baseUrl,
+                    onValueChange = onBaseUrlChange,
+                    label = { Text("Server Base URL") },
+                    singleLine = true,
+                    colors = textFieldColors,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    label = { Text("Email") },
+                    singleLine = true,
+                    colors = textFieldColors,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = onPasswordChange,
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    colors = textFieldColors,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (error != null) {
+                    Text(error, color = MaterialTheme.colorScheme.error)
+                }
+
+                Button(
+                    onClick = onLogin,
+                    enabled = !isBusy && baseUrl.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Text(if (isBusy) "Logging in..." else "Login")
+                }
+            }
         }
+
+        Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            "Note: baseUrl must include scheme, e.g. https://example.com/ . " +
-            "The app will auto-append trailing '/'.",
-            style = MaterialTheme.typography.bodySmall
+            "Note: baseUrl must include scheme, e.g. https://example.com/. " +
+                "The app will auto-append trailing '/'.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -176,10 +220,19 @@ private fun ScanScreen(
     error: String?,
     onLogout: () -> Unit
 ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
-                Text("Waiting for scan…", style = MaterialTheme.typography.headlineSmall)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "Ready to scan",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
                 if (!displayName.isNullOrBlank()) {
                     Text("Logged in as: $displayName", style = MaterialTheme.typography.bodyMedium)
                 }
@@ -187,22 +240,58 @@ private fun ScanScreen(
             TextButton(onClick = onLogout) { Text("Logout") }
         }
 
-        if (isBusy) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Status", style = MaterialTheme.typography.titleMedium)
+                    if (isBusy) {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .width(120.dp)
+                                .height(6.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                Text(
+                    if (isBusy) "Syncing with server…" else "Waiting for the next barcode.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         if (lastCode != null) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            val matchText = when (lastMatch) {
+                null -> "(pending)"
+                true -> "MATCH"
+                false -> "NO MATCH"
+            }
+            val matchColor = when (lastMatch) {
+                true -> MaterialTheme.colorScheme.primary
+                false -> MaterialTheme.colorScheme.error
+                null -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Last scan", style = MaterialTheme.typography.titleMedium)
                     Text("Code: $lastCode")
-                    Text("BarcodeType: ${lastBarcodeType ?: -1}")
-                    Text(
-                        "Server response: " + when (lastMatch) {
-                            null -> "(pending)"
-                            true -> "MATCH"
-                            false -> "NO MATCH"
-                        }
-                    )
+                    Text("Barcode type: ${lastBarcodeType ?: -1}")
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Server response:", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(matchText, color = matchColor, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
@@ -211,9 +300,12 @@ private fun ScanScreen(
             Text(error, color = MaterialTheme.colorScheme.error)
         }
 
+        Spacer(modifier = Modifier.weight(1f))
+
         Text(
             "Use the hardware Scan key on the MT93. The app listens to nlscan.action.SCANNER_RESULT.",
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

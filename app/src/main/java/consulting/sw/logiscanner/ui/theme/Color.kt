@@ -6,10 +6,13 @@ package consulting.sw.logiscanner.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val LogibooksBlue = Color(0xFF1976D2)
+val LogibooksBlueDark = Color(0xFF1565C0)
+val LogibooksBlueLight = Color(0xFF63A4FF)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val LogibooksBackground = Color(0xFFF6F8FC)
+val LogibooksSurface = Color(0xFFFFFFFF)
+val LogibooksSurfaceVariant = Color(0xFFE3EAF5)
+val LogibooksOnSurface = Color(0xFF1F2937)
+
+val LogibooksError = Color(0xFFD3223F)
