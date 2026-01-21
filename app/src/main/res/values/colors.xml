@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (C) 2026 Maxim [maxirmx] Samsonov (www.sw.consulting)
+All rights reserved.
+This file is a part of LogiScanner application
+-->
+
 <resources>
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
