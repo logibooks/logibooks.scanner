@@ -37,10 +37,7 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
-        # Add cache-encryption-key to generate shorter, more secure cache keys
-        # This fixes "cache key too long" errors (HTTP 400)
-        # Generate key: openssl rand -base64 16
-        # Add as repository secret: GRADLE_ENCRYPTION_KEY
+        # Fixes "cache key too long" errors (HTTP 400). See GITHUB_SECRETS_SETUP.md
         cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
     - name: Grant execute permission for gradlew
