@@ -37,8 +37,8 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
-        # Fixes "cache key too long" errors (HTTP 400)
-        # Limit cached content to reduce key length
+        # Reduces cache key length to avoid GitHub's 512-char limit (HTTP 400 errors)
+        # Limited cache includes help generate shorter keys
         cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         gradle-home-cache-includes: |
           caches
