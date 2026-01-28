@@ -37,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -60,12 +61,10 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     if (!state.isLoggedIn) {
                         LoginScreen(
-                            baseUrl = state.baseUrl,
                             email = state.email,
                             password = state.password,
                             isBusy = state.isBusy,
                             error = state.error,
-                            onBaseUrlChange = vm::setBaseUrl,
                             onEmailChange = vm::setEmail,
                             onPasswordChange = vm::setPassword,
                             onLogin = vm::login
@@ -115,12 +114,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun LoginScreen(
-    baseUrl: String,
     email: String,
     password: String,
     isBusy: Boolean,
     error: String?,
-    onBaseUrlChange: (String) -> Unit,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onLogin: () -> Unit
@@ -143,6 +140,15 @@ private fun LoginScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (BuildConfig.IS_DEBUG) {
+                Text(
+                    "DEBUG MODE",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color(0xFFFF6B6B),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
         }
 
         val textFieldColors = OutlinedTextFieldDefaults.colors(
@@ -156,15 +162,6 @@ private fun LoginScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = baseUrl,
-                    onValueChange = onBaseUrlChange,
-                    label = { Text("Server Base URL") },
-                    singleLine = true,
-                    colors = textFieldColors,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChange,
@@ -190,7 +187,7 @@ private fun LoginScreen(
 
                 Button(
                     onClick = onLogin,
-                    enabled = !isBusy && baseUrl.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
+                    enabled = !isBusy && email.isNotBlank() && password.isNotBlank(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
@@ -203,8 +200,7 @@ private fun LoginScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            "Note: baseUrl must include scheme, e.g. https://example.com/. " +
-                "The app will auto-append trailing '/'.",
+            "Server: ${BuildConfig.SERVER_URL}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -25,12 +25,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "SERVER_URL", "\"http://192.168.11.140:8080/\"")
+            buildConfigField("boolean", "IS_DEBUG", "true")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "SERVER_URL", "\"https://logibooks.sw.consulting:8083/\"")
+            buildConfigField("boolean", "IS_DEBUG", "false")
         }
     }
     compileOptions {
@@ -39,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
