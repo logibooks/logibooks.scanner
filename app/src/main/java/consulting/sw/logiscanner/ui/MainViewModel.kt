@@ -12,6 +12,7 @@ import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobRepository
 import consulting.sw.logiscanner.repo.ScanRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,6 +48,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private lateinit var loginRepo: LoginRepository
     private lateinit var scanJobRepo: ScanJobRepository
     private lateinit var scanRepo: ScanRepository
+    
+    private var colorResetJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -69,13 +72,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val url = state.value.baseUrl.let { if (!it.endsWith("/")) it.plus("/") else it }
                 loginRepo.login(url, state.value.email, state.value.password)
-                scanJobRepo = ScanJobRepository(url, loginRepo.token!!)
-                scanRepo = ScanRepository(url, loginRepo.token!!)
+                
+                val token = loginRepo.token
+                if (token.isNullOrBlank()) {
+                    throw Exception("Login failed: No token received")
+                }
+                
+                scanJobRepo = ScanJobRepository(url, token)
+                scanRepo = ScanRepository(url, token)
                 loadScanJobs()
-                _state.update { it.copy(isLoggedIn = true) }
+                _state.update { it.copy(isLoggedIn = true, password = "") } // Clear password after successful login
             } catch (ex: Exception) {
                 Log.e(javaClass.simpleName, "Login failed", ex)
-                _state.update { it.copy(error = ex.message ?: "Unknown error") }
+                _state.update { it.copy(error = ex.message ?: "Unknown error", password = "") } // Clear password on error
             } finally {
                 _state.update { it.copy(isBusy = false) }
             }
@@ -110,7 +119,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onScanned(code: String, barcodeType: Int) {
-        val job = state.value.selectedScanJob ?: return
+        val job = state.value.selectedScanJob
+        if (job == null) {
+            Log.w(javaClass.simpleName, "Scan received but no job selected, ignoring: $code")
+            return
+        }
+        
+        // Cancel any pending color reset
+        colorResetJob?.cancel()
         
         viewModelScope.launch {
             _state.update { it.copy(isBusy = true, error = null, scanResultColor = ScanResultColor.NONE) }
@@ -126,19 +142,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     ) 
                 }
                 // Reset color after a short delay
-                kotlinx.coroutines.delay(1500)
-                _state.update { it.copy(scanResultColor = ScanResultColor.NONE) }
+                colorResetJob = viewModelScope.launch {
+                    kotlinx.coroutines.delay(1500)
+                    _state.update { it.copy(scanResultColor = ScanResultColor.NONE) }
+                }
             } catch (ex: Exception) {
                 Log.e(javaClass.simpleName, "Scan failed", ex)
                 _state.update { 
                     it.copy(
+                        lastCode = code,
+                        lastCount = null,
+                        lastBarcodeType = barcodeType,
                         error = ex.message ?: "Unknown error",
                         scanResultColor = ScanResultColor.RED
                     )
                 }
                 // Reset color after a short delay
-                kotlinx.coroutines.delay(1500)
-                _state.update { it.copy(scanResultColor = ScanResultColor.NONE) }
+                colorResetJob = viewModelScope.launch {
+                    kotlinx.coroutines.delay(1500)
+                    _state.update { it.copy(scanResultColor = ScanResultColor.NONE) }
+                }
             } finally {
                 _state.update { it.copy(isBusy = false) }
             }
@@ -148,8 +171,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun logout() {
         viewModelScope.launch {
             loginRepo.logout()
+            colorResetJob?.cancel()
             _state.update { 
-                MainState(baseUrl = it.baseUrl, email = it.email) 
+                MainState(baseUrl = it.baseUrl, email = it.email, password = "") 
             }
         }
     }

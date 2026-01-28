@@ -18,7 +18,7 @@ This file is a part of LogiScanner application
     <string name="select_scan_job">Select Scan Job</string>
     <string name="no_scan_jobs">No scan jobs available</string>
     <string name="loading_jobs">Loading jobs...</string>
-    <string name="select_job">Select Job</string>
+    <string name="refresh_jobs">Refresh</string>
     <string name="job_name">Name: %s</string>
     <string name="job_description">Description: %s</string>
     <string name="job_status">Status: %s</string>
@@ -31,6 +31,7 @@ This file is a part of LogiScanner application
     <string name="waiting_for_barcode">Waiting for the next barcode.</string>
     
     <string name="current_job">Current Job</string>
+    <string name="back_to_jobs">Back</string>
     <string name="start_scanning">Start Scanning</string>
     <string name="stop_scanning">Stop Scanning</string>
     <string name="scanning_active">Scanning active</string>

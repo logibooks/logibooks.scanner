@@ -329,7 +329,7 @@ private fun JobSelectionScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Button(onClick = onRefresh) {
-                        Text(stringResource(R.string.select_job))
+                        Text(stringResource(R.string.refresh_jobs))
                     }
                 }
             }
@@ -438,7 +438,7 @@ private fun ScanScreen(
                         onClick = onBackToJobs,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("←")
+                        Text(stringResource(R.string.back_to_jobs))
                     }
                     if (!isScanning) {
                         Button(

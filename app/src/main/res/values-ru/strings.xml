@@ -18,7 +18,7 @@ This file is a part of LogiScanner application
     <string name="select_scan_job">Выберите задание сканирования</string>
     <string name="no_scan_jobs">Нет доступных заданий сканирования</string>
     <string name="loading_jobs">Загрузка заданий...</string>
-    <string name="select_job">Выбрать задание</string>
+    <string name="refresh_jobs">Обновить</string>
     <string name="job_name">Название: %s</string>
     <string name="job_description">Описание: %s</string>
     <string name="job_status">Статус: %s</string>
@@ -31,6 +31,7 @@ This file is a part of LogiScanner application
     <string name="waiting_for_barcode">Ожидание следующего штрихкода.</string>
     
     <string name="current_job">Текущее задание</string>
+    <string name="back_to_jobs">Назад</string>
     <string name="start_scanning">Начать сканирование</string>
     <string name="stop_scanning">Остановить сканирование</string>
     <string name="scanning_active">Сканирование активно</string>
