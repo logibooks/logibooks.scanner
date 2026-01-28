@@ -5,14 +5,13 @@
 package consulting.sw.logiscanner.repo
 
 import consulting.sw.logiscanner.net.NetworkModule
-import consulting.sw.logiscanner.net.ScanRequest
+import consulting.sw.logiscanner.net.ScanJob
 
-class ScanRepository(baseUrl: String, private val token: String) {
+class ScanJobRepository(baseUrl: String, private val token: String) {
 
     private val api = NetworkModule.createApi(baseUrl)
 
-    suspend fun scan(scanJobId: Int, code: String): Int {
-        val res = api.scan("Bearer $token", ScanRequest(scanJobId, code))
-        return res.count
+    suspend fun getInProgressJobs(): List<ScanJob> {
+        return api.getInProgressJobs("Bearer $token")
     }
 }
