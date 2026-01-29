@@ -31,7 +31,11 @@ class ScanJobRepository(baseUrl: String, private val token: String) {
     
     suspend fun getScanJobTypeDisplay(typeKey: String): String {
         return opsMutex.withLock {
-            ops?.scanJobTypes?.get(typeKey) ?: typeKey
+            // Try to match by value (if typeKey is numeric) or by name
+            val typeItem = ops?.types?.find { 
+                it.value.toString() == typeKey || it.name == typeKey 
+            }
+            typeItem?.name ?: typeKey
         }
     }
 }
