@@ -22,6 +22,7 @@ This file is a part of LogiScanner application
     <string name="job_name">Название: %s</string>
     <string name="job_description">Описание: %s</string>
     <string name="job_status">Статус: %s</string>
+    <string name="job_type">Тип: %s</string>
     
     <string name="ready_to_scan">Готов к сканированию</string>
     <string name="logged_in_as">Вы вошли как: %s</string>

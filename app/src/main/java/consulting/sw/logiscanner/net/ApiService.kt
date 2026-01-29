@@ -14,6 +14,11 @@ interface ApiService {
     @POST("api/Auth/login")
     suspend fun login(@Body req: Credentials): UserViewItemWithJWT
 
+    @GET("api/ScanJobs/ops")
+    suspend fun getOps(
+        @Header("Authorization") bearer: String
+    ): ScanJobOps
+
     @GET("api/ScanJobs/in-progress")
     suspend fun getInProgressJobs(
         @Header("Authorization") bearer: String
