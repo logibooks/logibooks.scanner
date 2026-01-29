@@ -53,6 +53,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
@@ -62,6 +63,7 @@ import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+
 
 class MainActivity : ComponentActivity() {
 
@@ -548,13 +550,19 @@ private fun ScanScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(stringResource(R.string.last_scan), style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.code, lastCode))
+                    Text(
+                        stringResource(R.string.code, lastCode),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     if (lastCount != null) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
                                 stringResource(R.string.count_result, lastCount),
                                 color = countColor,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -571,7 +579,9 @@ private fun ScanScreen(
         Text(
             stringResource(R.string.scan_hint),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
         )
         VersionFooter()
     }
