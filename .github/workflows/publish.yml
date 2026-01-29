@@ -31,7 +31,9 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
+        # Encryption key for Gradle cache (optional but recommended)
         cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+        # Limit cache to essential directories to avoid GitHub's 512-char key limit
         gradle-home-cache-includes: |
           caches
           notifications
@@ -42,12 +44,31 @@ jobs:
     - name: Build release APK
       run: ./gradlew assembleRelease
 
+    - name: Sign APK
+      id: sign_apk
+      uses: r0adkll/sign-android-release@v1
+      with:
+        releaseDirectory: app/build/outputs/apk/release
+        # Android signing credentials stored in repository secrets
+        # Required secrets: SIGNING_KEY (base64-encoded keystore), KEY_ALIAS, KEY_STORE_PASSWORD, KEY_PASSWORD
+        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+        alias: ${{ secrets.KEY_ALIAS }}
+        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+        keyPassword: ${{ secrets.KEY_PASSWORD }}
+
     - name: Get APK path
       id: apk
       run: |
-        APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+        # Get the signed APK path from the signing step
+        APK_PATH="${{ steps.sign_apk.outputs.signedReleaseFile }}"
+        # Validate that the APK exists before proceeding
+        if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+          echo "Error: Signed APK not found"
+          exit 1
+        fi
         echo "path=$APK_PATH" >> $GITHUB_OUTPUT
         echo "name=$(basename $APK_PATH)" >> $GITHUB_OUTPUT
+        echo "Found APK: $APK_PATH"
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
