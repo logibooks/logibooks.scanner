@@ -14,10 +14,16 @@ object NetworkModule {
 
     fun createApi(baseUrl: String): ApiService {
         val logger = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
+            level = HttpLoggingInterceptor.Level.BODY
         }
 
         val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .addHeader("Connection", "close")
+                    .build()
+                chain.proceed(request)
+            }
             .addInterceptor(logger)
             .build()
 

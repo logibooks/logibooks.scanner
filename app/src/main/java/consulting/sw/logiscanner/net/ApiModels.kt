@@ -8,32 +8,41 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class Credentials(
-    val Email: String,
-    val Password: String
+    val email: String,
+    val password: String
 )
 
 @JsonClass(generateAdapter = true)
 data class ErrMessage(
-    val Msg: String
+    val msg: String
 )
 
 @JsonClass(generateAdapter = true)
 data class UserViewItemWithJWT(
-    val Id: Int,
-    val FirstName: String,
-    val LastName: String,
-    val Patronymic: String?,
-    val Email: String,
-    val Roles: List<String>,
-    val Token: String
+    val id: Int,
+    val firstName: String,
+    val lastName: String,
+    val patronymic: String?,
+    val email: String,
+    val roles: List<String>,
+    val token: String
 )
 
 @JsonClass(generateAdapter = true)
-data class ScanCheckRequest(
+data class ScanJob(
+    val id: Int,
+    val name: String,
+    val description: String?,
+    val status: String
+)
+
+@JsonClass(generateAdapter = true)
+data class ScanRequest(
+    val scanJobId: Int,
     val code: String
 )
 
 @JsonClass(generateAdapter = true)
-data class ScanCheckResponse(
-    val match: Boolean
+data class ScanResponse(
+    val count: Int
 )
