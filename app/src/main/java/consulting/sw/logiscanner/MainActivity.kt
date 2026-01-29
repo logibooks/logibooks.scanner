@@ -4,6 +4,7 @@
 
 package consulting.sw.logiscanner
 
+import android.content.Context
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
+import java.util.Locale
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,6 +58,20 @@ class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
     private var receiver: Mt93ScanReceiver? = null
+
+    companion object {
+        // Enforced locale for the application
+        private const val APP_LOCALE = "ru"
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        val locale = Locale(APP_LOCALE)
+        Locale.setDefault(locale)
+        val config = android.content.res.Configuration(newBase.resources.configuration)
+        config.setLocale(locale)
+        val context = newBase.createConfigurationContext(config)
+        super.attachBaseContext(context)
+    }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
