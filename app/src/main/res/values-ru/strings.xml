@@ -18,7 +18,7 @@ This file is a part of LogiScanner application
     <string name="hide_password">Скрыть пароль</string>
     <string name="version_label">Версия %s</string>
 
-    <string name="select_scan_job">Выберите задание сканирования</string>
+    <string name="select_scan_job">Выберите задание</string>
     <string name="no_scan_jobs">Нет доступных заданий сканирования</string>
     <string name="loading_jobs">Загрузка заданий…</string>
     <string name="refresh_jobs">Обновить</string>
@@ -36,8 +36,8 @@ This file is a part of LogiScanner application
     
     <string name="current_job">Текущее задание</string>
     <string name="back_to_jobs">Назад</string>
-    <string name="start_scanning">Начать сканирование</string>
-    <string name="stop_scanning">Остановить сканирование</string>
+    <string name="start_scanning">Сканировать</string>
+    <string name="stop_scanning">Остановить</string>
     <string name="scanning_active">Сканирование активно</string>
     <string name="scanning_stopped">Сканирование остановлено</string>
     

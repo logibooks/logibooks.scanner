@@ -481,8 +481,7 @@ private fun ScanScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = onBackToJobs,
-                        modifier = Modifier.weight(1.2f)
+                        onClick = onBackToJobs
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -492,14 +491,15 @@ private fun ScanScreen(
                     if (!isScanning) {
                         Button(
                             onClick = onStartScanning,
-                            modifier = Modifier.weight(3f)
+                            modifier = Modifier.fillMaxWidth()
+
                         ) {
                             Text(stringResource(R.string.start_scanning))
                         }
                     } else {
                         Button(
                             onClick = onStopScanning,
-                            modifier = Modifier.weight(3f)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(stringResource(R.string.stop_scanning))
                         }
