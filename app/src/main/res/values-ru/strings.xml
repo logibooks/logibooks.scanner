@@ -14,6 +14,9 @@ This file is a part of LogiScanner application
     <string name="password">Пароль</string>
     <string name="login">Войти</string>
     <string name="logging_in">Вход…</string>
+    <string name="show_password">Показать пароль</string>
+    <string name="hide_password">Скрыть пароль</string>
+    <string name="version_label">Версия %s</string>
 
     <string name="select_scan_job">Выберите задание сканирования</string>
     <string name="no_scan_jobs">Нет доступных заданий сканирования</string>
