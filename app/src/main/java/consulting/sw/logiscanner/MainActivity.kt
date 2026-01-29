@@ -271,7 +271,8 @@ private fun JobSelectionScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.weight(3f)) {
                 Text(
                     stringResource(R.string.select_scan_job),
                     style = MaterialTheme.typography.headlineSmall,
@@ -284,7 +285,10 @@ private fun JobSelectionScreen(
                     )
                 }
             }
-            TextButton(onClick = onLogout) { Text(stringResource(R.string.logout)) }
+            Button(onClick = onLogout,
+                modifier = Modifier.weight(1.2f)) {
+                Text(stringResource(R.string.logout))
+            }
         }
 
         if (isBusy) {
@@ -397,7 +401,8 @@ private fun ScanScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.weight(3f)) {
                 Text(
                     stringResource(R.string.ready_to_scan),
                     style = MaterialTheme.typography.headlineSmall,
@@ -410,7 +415,10 @@ private fun ScanScreen(
                     )
                 }
             }
-            TextButton(onClick = onLogout) { Text(stringResource(R.string.logout)) }
+            Button(onClick = onLogout,
+                modifier = Modifier.weight(1.2f)) {
+                Text(stringResource(R.string.logout))
+            }
         }
 
         Card(
@@ -441,7 +449,7 @@ private fun ScanScreen(
                 ) {
                     Button(
                         onClick = onBackToJobs,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1.2f)
                     ) {
                         Text(stringResource(R.string.back_to_jobs))
                     }

@@ -7,18 +7,17 @@ This file is a part of LogiScanner application
 <resources>
     <string name="app_name">LogiScanner</string>
     <string name="app_title">Logibooks Scanner</string>
-    <string name="sign_in_subtitle">Войдите для синхронизации и начала сканирования.</string>
+    <string name="sign_in_subtitle">Войдите для выбора задания</string>
     <string name="debug_mode_indicator">РЕЖИМ ОТЛАДКИ</string>
     <string name="server_base_url">Базовый URL сервера</string>
     <string name="email">Email</string>
     <string name="password">Пароль</string>
     <string name="login">Войти</string>
-    <string name="logging_in">Вход...</string>
-    <string name="base_url_note">Примечание: baseUrl должен содержать схему, например https://example.com/. Приложение автоматически добавит завершающий \'/\'.</string>
-    
+    <string name="logging_in">Вход…</string>
+
     <string name="select_scan_job">Выберите задание сканирования</string>
     <string name="no_scan_jobs">Нет доступных заданий сканирования</string>
-    <string name="loading_jobs">Загрузка заданий...</string>
+    <string name="loading_jobs">Загрузка заданий…</string>
     <string name="refresh_jobs">Обновить</string>
     <string name="job_name">Название: %s</string>
     <string name="job_description">Описание: %s</string>
@@ -29,7 +28,7 @@ This file is a part of LogiScanner application
     <string name="logout">Выйти</string>
     <string name="status">Статус</string>
     <string name="syncing_with_server">Синхронизация с сервером…</string>
-    <string name="waiting_for_barcode">Ожидание следующего штрихкода.</string>
+    <string name="waiting_for_barcode">Ожидание следующего штрихкода</string>
     
     <string name="current_job">Текущее задание</string>
     <string name="back_to_jobs">Назад</string>
@@ -44,5 +43,5 @@ This file is a part of LogiScanner application
     <string name="server_response">Ответ сервера:</string>
     <string name="count_result">Количество: %d</string>
     
-    <string name="scan_hint">Используйте кнопку аппаратного сканирования на MT93. Приложение прослушивает nlscan.action.SCANNER_RESULT.</string>
+    <string name="scan_hint">Используйте кнопку аппаратного сканирования</string>
 </resources>
