@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
     override fun attachBaseContext(newBase: Context) {
         val locale = Locale(APP_LOCALE)
         Locale.setDefault(locale)
-        val config = newBase.resources.configuration
+        val config = android.content.res.Configuration(newBase.resources.configuration)
         config.setLocale(locale)
         val context = newBase.createConfigurationContext(config)
         super.attachBaseContext(context)
