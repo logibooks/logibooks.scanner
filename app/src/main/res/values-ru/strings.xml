@@ -8,6 +8,7 @@ This file is a part of LogiScanner application
     <string name="app_name">LogiScanner</string>
     <string name="app_title">Logibooks Scanner</string>
     <string name="sign_in_subtitle">Войдите для синхронизации и начала сканирования.</string>
+    <string name="debug_mode_indicator">РЕЖИМ ОТЛАДКИ</string>
     <string name="server_base_url">Базовый URL сервера</string>
     <string name="email">Email</string>
     <string name="password">Пароль</string>

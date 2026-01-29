@@ -8,6 +8,7 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import consulting.sw.logiscanner.BuildConfig
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobRepository
@@ -24,7 +25,6 @@ enum class ScanResultColor {
 }
 
 data class MainState(
-    val baseUrl: String = "",
     val email: String = "",
     val password: String = "",
     val isLoggedIn: Boolean = false,
@@ -62,7 +62,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setBaseUrl(value: String) = _state.update { it.copy(baseUrl = value) }
     fun setEmail(value: String) = _state.update { it.copy(email = value) }
     fun setPassword(value: String) = _state.update { it.copy(password = value) }
 
@@ -70,7 +69,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _state.update { it.copy(isBusy = true, error = null) }
             try {
-                val url = state.value.baseUrl.let { if (!it.endsWith("/")) it.plus("/") else it }
+                val url = BuildConfig.SERVER_URL
                 loginRepo.login(url, state.value.email, state.value.password)
                 
                 val token = loginRepo.token
@@ -173,7 +172,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             loginRepo.logout()
             colorResetJob?.cancel()
             _state.update { 
-                MainState(baseUrl = it.baseUrl, email = it.email, password = "") 
+                MainState(email = it.email, password = "") 
             }
         }
     }

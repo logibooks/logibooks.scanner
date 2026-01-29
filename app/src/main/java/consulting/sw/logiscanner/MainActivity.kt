@@ -80,12 +80,10 @@ class MainActivity : ComponentActivity() {
                     when {
                         !state.isLoggedIn -> {
                             LoginScreen(
-                                baseUrl = state.baseUrl,
                                 email = state.email,
                                 password = state.password,
                                 isBusy = state.isBusy,
                                 error = state.error,
-                                onBaseUrlChange = vm::setBaseUrl,
                                 onEmailChange = vm::setEmail,
                                 onPasswordChange = vm::setPassword,
                                 onLogin = vm::login
@@ -153,12 +151,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun LoginScreen(
-    baseUrl: String,
     email: String,
     password: String,
     isBusy: Boolean,
     error: String?,
-    onBaseUrlChange: (String) -> Unit,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onLogin: () -> Unit
@@ -181,6 +177,14 @@ private fun LoginScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (BuildConfig.DEBUG) {
+                Text(
+                    stringResource(R.string.debug_mode_indicator),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         val textFieldColors = OutlinedTextFieldDefaults.colors(
@@ -194,15 +198,6 @@ private fun LoginScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = baseUrl,
-                    onValueChange = onBaseUrlChange,
-                    label = { Text(stringResource(R.string.server_base_url)) },
-                    singleLine = true,
-                    colors = textFieldColors,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChange,
@@ -229,7 +224,7 @@ private fun LoginScreen(
 
                 Button(
                     onClick = onLogin,
-                    enabled = !isBusy && baseUrl.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
+                    enabled = !isBusy && email.isNotBlank() && password.isNotBlank(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
@@ -240,12 +235,6 @@ private fun LoginScreen(
         }
 
         Spacer(modifier = Modifier.weight(1f))
-
-        Text(
-            stringResource(R.string.base_url_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 

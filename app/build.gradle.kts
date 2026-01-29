@@ -25,7 +25,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // NOTE: SERVER_URL must include trailing slash
+            buildConfigField("String", "SERVER_URL", "\"http://192.168.11.140:8080/\"")
+        }
         release {
+            // NOTE: SERVER_URL must include trailing slash
+            buildConfigField("String", "SERVER_URL", "\"https://logibooks.sw.consulting:8089/\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -39,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
