@@ -55,7 +55,7 @@ data class ScanJobOpsItemDto(
 )
 
 @JsonClass(generateAdapter = true)
-data class ScanJobOps(
+data class ScanJobOpsDto(
     val types: List<ScanJobOpsItemDto>,
     val operations: List<ScanJobOpsItemDto>,
     val modes: List<ScanJobOpsItemDto>,

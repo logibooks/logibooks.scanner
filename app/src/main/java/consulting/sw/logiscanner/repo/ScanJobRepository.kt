@@ -6,17 +6,17 @@ package consulting.sw.logiscanner.repo
 
 import consulting.sw.logiscanner.net.NetworkModule
 import consulting.sw.logiscanner.net.ScanJob
-import consulting.sw.logiscanner.net.ScanJobOps
+import consulting.sw.logiscanner.net.ScanJobOpsDto
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class ScanJobRepository(baseUrl: String, private val token: String) {
 
     private val api = NetworkModule.createApi(baseUrl)
-    private var ops: ScanJobOps? = null
+    private var ops: ScanJobOpsDto? = null
     private val opsMutex = Mutex()
 
-    suspend fun getOps(): ScanJobOps {
+    suspend fun getOps(): ScanJobOpsDto {
         opsMutex.withLock {
             if (ops == null) {
                 ops = api.getOps("Bearer $token")
@@ -33,7 +33,11 @@ class ScanJobRepository(baseUrl: String, private val token: String) {
         return opsMutex.withLock {
             // Try to parse typeKey as an integer and find matching item by value
             val typeValue = typeKey.toIntOrNull()
-            ops?.types?.find { it.value.toString() == typeKey || (typeValue != null && it.value == typeValue) }?.name ?: typeKey
+            if (typeValue != null) {
+                ops?.types?.find { it.value == typeValue }?.name ?: typeKey
+            } else {
+                typeKey
+            }
         }
     }
 }

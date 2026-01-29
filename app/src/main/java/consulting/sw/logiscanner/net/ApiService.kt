@@ -17,7 +17,7 @@ interface ApiService {
     @GET("api/ScanJobs/ops")
     suspend fun getOps(
         @Header("Authorization") bearer: String
-    ): ScanJobOps
+    ): ScanJobOpsDto
 
     @GET("api/ScanJobs/in-progress")
     suspend fun getInProgressJobs(
