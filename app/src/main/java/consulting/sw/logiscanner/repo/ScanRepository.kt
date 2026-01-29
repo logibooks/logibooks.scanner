@@ -9,7 +9,7 @@ import consulting.sw.logiscanner.net.ScanRequest
 
 class ScanRepository(baseUrl: String, private val token: String) {
 
-    private val api = NetworkModule.createApi(baseUrl)
+    private val api = NetworkModule.createApi(baseUrl, handleUnauthorized = true)
 
     suspend fun scan(scanJobId: Int, code: String): Int {
         val res = api.scan("Bearer $token", ScanRequest(scanJobId, code))

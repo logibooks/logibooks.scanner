@@ -63,6 +63,7 @@ import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 
@@ -312,7 +313,10 @@ private fun JobSelectionScreen(
             }
             Button(onClick = onLogout,
                 modifier = Modifier.weight(1.2f)) {
-                Text(stringResource(R.string.logout))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = stringResource(R.string.logout)
+                )
             }
         }
 
@@ -445,7 +449,10 @@ private fun ScanScreen(
             }
             Button(onClick = onLogout,
                 modifier = Modifier.weight(1.2f)) {
-                Text(stringResource(R.string.logout))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = stringResource(R.string.logout)
+                )
             }
         }
 

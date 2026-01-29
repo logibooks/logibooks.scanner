@@ -12,7 +12,7 @@ import kotlinx.coroutines.sync.withLock
 
 class ScanJobRepository(baseUrl: String, private val token: String) {
 
-    private val api = NetworkModule.createApi(baseUrl)
+    private val api = NetworkModule.createApi(baseUrl, handleUnauthorized = true)
     private var ops: ScanJobOps? = null
     private val opsMutex = Mutex()
 

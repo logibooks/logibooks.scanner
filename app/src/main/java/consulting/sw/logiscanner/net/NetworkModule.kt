@@ -12,12 +12,14 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 
 object NetworkModule {
 
-    fun createApi(baseUrl: String): ApiService {
+    var onUnauthorized: (() -> Unit)? = null
+
+    fun createApi(baseUrl: String, handleUnauthorized: Boolean = false): ApiService {
         val logger = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
 
-        val client = OkHttpClient.Builder()
+        val clientBuilder = OkHttpClient.Builder()
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .addHeader("Connection", "close")
@@ -25,7 +27,19 @@ object NetworkModule {
                 chain.proceed(request)
             }
             .addInterceptor(logger)
-            .build()
+
+        // Add 401 handler interceptor for non-login requests
+        if (handleUnauthorized) {
+            clientBuilder.addInterceptor { chain ->
+                val response = chain.proceed(chain.request())
+                if (response.code == 401) {
+                    onUnauthorized?.invoke()
+                }
+                response
+            }
+        }
+
+        val client = clientBuilder.build()
 
         val moshi = Moshi.Builder().build()
 
