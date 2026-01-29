@@ -41,34 +41,26 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Build release APK
-      run: ./gradlew assembleRelease
+    - name: Decode keystore
+      run: echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.keystore
 
-    - name: Sign APK
-      id: sign_apk
-      uses: r0adkll/sign-android-release@v1
-      with:
-        releaseDirectory: app/build/outputs/apk/release
-        # Android signing credentials stored in repository secrets
-        # Required secrets: SIGNING_KEY (base64-encoded keystore), KEY_ALIAS, KEY_STORE_PASSWORD, KEY_PASSWORD
-        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-        alias: ${{ secrets.KEY_ALIAS }}
-        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-        keyPassword: ${{ secrets.KEY_PASSWORD }}
+    - name: Build signed release APK
+      env:
+        SIGNING_STORE_FILE: release.keystore
+        SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+        SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      run: ./gradlew assembleRelease
 
     - name: Get APK path
       id: apk
+      shell: bash
       run: |
-        # Get the signed APK path from the signing step
-        APK_PATH="${{ steps.sign_apk.outputs.signedReleaseFile }}"
-        # Validate that the APK exists before proceeding
-        if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
-          echo "Error: Signed APK not found"
-          exit 1
-        fi
+        APK_PATH="$(ls -1 app/build/outputs/apk/release/*.apk | head -n 1)"
+        test -f "$APK_PATH"
         echo "path=$APK_PATH" >> $GITHUB_OUTPUT
-        echo "name=$(basename $APK_PATH)" >> $GITHUB_OUTPUT
-        echo "Found APK: $APK_PATH"
+        echo "name=$(basename "$APK_PATH")" >> $GITHUB_OUTPUT
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2

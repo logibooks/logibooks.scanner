@@ -14,6 +14,18 @@ android {
         version = release(36)
     }
 
+    signingConfigs {
+        create("release") {
+            // file path provided by CI (or default local file name)
+            val ksPath = System.getenv("SIGNING_STORE_FILE") ?: "release.keystore"
+            storeFile = rootProject.file(ksPath)
+
+            storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+            keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+            keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+        }
+    }
+
     defaultConfig {
         applicationId = "consulting.sw.logiscanner"
         minSdk = 26
@@ -38,6 +50,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            // IMPORTANT: make Gradle sign the release APK
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -48,6 +63,7 @@ android {
         compose = true
         buildConfig = true
     }
+
 }
 
 dependencies {
