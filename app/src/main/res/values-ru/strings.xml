@@ -46,4 +46,8 @@ This file is a part of LogiScanner application
     <string name="count_result">Найдено посылок: %d</string>
     
     <string name="scan_hint">Используйте кнопку аппаратного сканирования</string>
+    
+    <!-- Login error messages -->
+    <string name="login_error_invalid_credentials">Неправильный адрес электронной почты или пароль</string>
+    <string name="login_error_server_unavailable">Сервер временно не доступен.  Пожалуйста, повторите позже</string>
 </resources>

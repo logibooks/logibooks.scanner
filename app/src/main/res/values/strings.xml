@@ -46,4 +46,8 @@ This file is a part of LogiScanner application
     <string name="count_result">Parcels found: %d</string>
     
     <string name="scan_hint">Use the hardware Scan key</string>
+    
+    <!-- Login error messages -->
+    <string name="login_error_invalid_credentials">Invalid email address or password</string>
+    <string name="login_error_server_unavailable">Server is temporarily unavailable. Please try again later</string>
 </resources>
