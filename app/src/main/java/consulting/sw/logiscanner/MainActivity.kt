@@ -29,17 +29,21 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,12 +51,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+
 
 class MainActivity : ComponentActivity() {
 
@@ -65,7 +78,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun attachBaseContext(newBase: Context) {
-        val locale = Locale(APP_LOCALE)
+        val locale = Locale.forLanguageTag(APP_LOCALE)
         Locale.setDefault(locale)
         val config = android.content.res.Configuration(newBase.resources.configuration)
         config.setLocale(locale)
@@ -126,7 +139,6 @@ class MainActivity : ComponentActivity() {
                                 isScanning = state.isScanning,
                                 lastCode = state.lastCode,
                                 lastCount = state.lastCount,
-                                lastBarcodeType = state.lastBarcodeType,
                                 error = state.error,
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
@@ -141,11 +153,8 @@ class MainActivity : ComponentActivity() {
             // Register/unregister receiver based on scanning state
             DisposableEffect(state.isScanning) {
                 if (state.isScanning) {
-                    val r = Mt93ScanReceiver { event ->
-                        if (event.state == "ok") {
-                            val code = event.barcode1?.takeIf { it.isNotBlank() } ?: return@Mt93ScanReceiver
-                            vm.onScanned(code, event.barcodeType ?: -1)
-                        }
+                    val r = Mt93ScanReceiver { code ->
+                            vm.onScanned(code)
                     }
                     receiver = r
                     registerReceiver(
@@ -177,6 +186,8 @@ private fun LoginScreen(
     onPasswordChange: (String) -> Unit,
     onLogin: () -> Unit
 ) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -230,8 +241,19 @@ private fun LoginScreen(
                     onValueChange = onPasswordChange,
                     label = { Text(stringResource(R.string.password)) },
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrect = false),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+                    trailingIcon = {
+                        val icon = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                        val description = if (passwordVisible) {
+                            stringResource(R.string.hide_password)
+                        } else {
+                            stringResource(R.string.show_password)
+                        }
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = icon, contentDescription = description)
+                        }
+                    },
                     colors = textFieldColors,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -253,6 +275,7 @@ private fun LoginScreen(
         }
 
         Spacer(modifier = Modifier.weight(1f))
+        VersionFooter()
     }
 }
 
@@ -290,7 +313,10 @@ private fun JobSelectionScreen(
             }
             Button(onClick = onLogout,
                 modifier = Modifier.weight(1.2f)) {
-                Text(stringResource(R.string.logout))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = stringResource(R.string.logout)
+                )
             }
         }
 
@@ -379,6 +405,9 @@ private fun JobSelectionScreen(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.weight(1f))
+        VersionFooter()
     }
 }
 
@@ -391,7 +420,6 @@ private fun ScanScreen(
     isScanning: Boolean,
     lastCode: String?,
     lastCount: Int?,
-    lastBarcodeType: Int?,
     error: String?,
     onStartScanning: () -> Unit,
     onStopScanning: () -> Unit,
@@ -421,7 +449,10 @@ private fun ScanScreen(
             }
             Button(onClick = onLogout,
                 modifier = Modifier.weight(1.2f)) {
-                Text(stringResource(R.string.logout))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = stringResource(R.string.logout)
+                )
             }
         }
 
@@ -457,22 +488,25 @@ private fun ScanScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = onBackToJobs,
-                        modifier = Modifier.weight(1.2f)
+                        onClick = onBackToJobs
                     ) {
-                        Text(stringResource(R.string.back_to_jobs))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back_to_jobs)
+                        )
                     }
                     if (!isScanning) {
                         Button(
                             onClick = onStartScanning,
-                            modifier = Modifier.weight(3f)
+                            modifier = Modifier.fillMaxWidth()
+
                         ) {
                             Text(stringResource(R.string.start_scanning))
                         }
                     } else {
                         Button(
                             onClick = onStopScanning,
-                            modifier = Modifier.weight(3f)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(stringResource(R.string.stop_scanning))
                         }
@@ -515,9 +549,9 @@ private fun ScanScreen(
         }
 
         if (lastCode != null) {
-            val countColor = when {
-                lastCount == null -> MaterialTheme.colorScheme.onSurfaceVariant
-                lastCount == 0 -> Color(0xFFFFA000) // Amber/Orange for warning
+            val countColor = when (lastCount) {
+                null -> MaterialTheme.colorScheme.onSurfaceVariant
+                0 -> Color(0xFFFFA000) // Amber/Orange for warning
                 else -> MaterialTheme.colorScheme.primary
             }
             Card(
@@ -527,18 +561,19 @@ private fun ScanScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(stringResource(R.string.last_scan), style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.code, lastCode))
-                    Text(stringResource(R.string.barcode_type, lastBarcodeType ?: -1))
+                    Text(
+                        stringResource(R.string.code, lastCode),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     if (lastCount != null) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                stringResource(R.string.server_response),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
                                 stringResource(R.string.count_result, lastCount),
                                 color = countColor,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -555,7 +590,21 @@ private fun ScanScreen(
         Text(
             stringResource(R.string.scan_hint),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
         )
+        VersionFooter()
     }
+}
+
+@Composable
+private fun VersionFooter() {
+    Text(
+        text = stringResource(R.string.version_label, BuildConfig.VERSION_NAME),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth(),
+        textAlign = TextAlign.Center
+    )
 }

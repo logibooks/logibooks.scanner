@@ -14,8 +14,11 @@ This file is a part of LogiScanner application
     <string name="password">Пароль</string>
     <string name="login">Войти</string>
     <string name="logging_in">Вход…</string>
+    <string name="show_password">Показать пароль</string>
+    <string name="hide_password">Скрыть пароль</string>
+    <string name="version_label">Версия %s</string>
 
-    <string name="select_scan_job">Выберите задание сканирования</string>
+    <string name="select_scan_job">Выберите задание</string>
     <string name="no_scan_jobs">Нет доступных заданий сканирования</string>
     <string name="loading_jobs">Загрузка заданий…</string>
     <string name="refresh_jobs">Обновить</string>
@@ -33,16 +36,18 @@ This file is a part of LogiScanner application
     
     <string name="current_job">Текущее задание</string>
     <string name="back_to_jobs">Назад</string>
-    <string name="start_scanning">Начать сканирование</string>
-    <string name="stop_scanning">Остановить сканирование</string>
+    <string name="start_scanning">Сканировать</string>
+    <string name="stop_scanning">Остановить</string>
     <string name="scanning_active">Сканирование активно</string>
     <string name="scanning_stopped">Сканирование остановлено</string>
     
     <string name="last_scan">Последнее сканирование</string>
     <string name="code">Код: %s</string>
-    <string name="barcode_type">Тип штрихкода: %d</string>
-    <string name="server_response">Ответ сервера:</string>
-    <string name="count_result">Количество: %d</string>
+    <string name="count_result">Найдено посылок: %d</string>
     
     <string name="scan_hint">Используйте кнопку аппаратного сканирования</string>
+    
+    <!-- Login error messages -->
+    <string name="login_error_invalid_credentials">Неправильный адрес электронной почты или пароль</string>
+    <string name="login_error_server_unavailable">Сервер временно недоступен. Пожалуйста, повторите позже</string>
 </resources>
