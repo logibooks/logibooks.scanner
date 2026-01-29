@@ -6,7 +6,7 @@ package consulting.sw.logiscanner.repo
 
 import consulting.sw.logiscanner.net.ApiService
 import consulting.sw.logiscanner.net.Credentials
-import consulting.sw.logiscanner.net.ScanCheckRequest
+import consulting.sw.logiscanner.net.ScanRequest
 import consulting.sw.logiscanner.net.UserViewItemWithJWT
 
 class AppRepository(private val api: ApiService) {
@@ -15,11 +15,11 @@ class AppRepository(private val api: ApiService) {
         return api.login(Credentials(Email = email, Password = password))
     }
 
-    suspend fun checkCode(token: String, code: String): Boolean {
-        val resp = api.checkCode(
+    suspend fun scan(token: String, scanJobId: Int, code: String): Int {
+        val resp = api.scan(
             bearer = "Bearer $token",
-            req = ScanCheckRequest(code = code)
+            req = ScanRequest(scanJobId = scanJobId, code = code)
         )
-        return resp.match
+        return resp.count
     }
 }

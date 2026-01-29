@@ -5,17 +5,23 @@
 package consulting.sw.logiscanner.net
 
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 
 interface ApiService {
 
-    @POST("/login")
+    @POST("api/Auth/login")
     suspend fun login(@Body req: Credentials): UserViewItemWithJWT
 
-    @POST("/scan/check")
-    suspend fun checkCode(
+    @GET("api/ScanJobs/in-progress")
+    suspend fun getInProgressJobs(
+        @Header("Authorization") bearer: String
+    ): List<ScanJob>
+
+    @POST("api/ScanJobs/scan")
+    suspend fun scan(
         @Header("Authorization") bearer: String,
-        @Body req: ScanCheckRequest
-    ): ScanCheckResponse
+        @Body req: ScanRequest
+    ): ScanResponse
 }

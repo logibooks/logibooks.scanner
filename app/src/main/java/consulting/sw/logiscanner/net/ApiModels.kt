@@ -29,11 +29,20 @@ data class UserViewItemWithJWT(
 )
 
 @JsonClass(generateAdapter = true)
-data class ScanCheckRequest(
+data class ScanJob(
+    val Id: Int,
+    val Name: String,
+    val Description: String?,
+    val Status: String
+)
+
+@JsonClass(generateAdapter = true)
+data class ScanRequest(
+    val scanJobId: Int,
     val code: String
 )
 
 @JsonClass(generateAdapter = true)
-data class ScanCheckResponse(
-    val match: Boolean
+data class ScanResponse(
+    val count: Int
 )

@@ -1,0 +1,47 @@
+<!--
+Copyright (C) 2026 Maxim [maxirmx] Samsonov (www.sw.consulting)
+All rights reserved.
+This file is a part of LogiScanner application
+-->
+
+<resources>
+    <string name="app_name">LogiScanner</string>
+    <string name="app_title">Logibooks Scanner</string>
+    <string name="sign_in_subtitle">Войдите для синхронизации и начала сканирования.</string>
+    <string name="server_base_url">Базовый URL сервера</string>
+    <string name="email">Email</string>
+    <string name="password">Пароль</string>
+    <string name="login">Войти</string>
+    <string name="logging_in">Вход...</string>
+    <string name="base_url_note">Примечание: baseUrl должен содержать схему, например https://example.com/. Приложение автоматически добавит завершающий \'/\'.</string>
+    
+    <string name="select_scan_job">Выберите задание сканирования</string>
+    <string name="no_scan_jobs">Нет доступных заданий сканирования</string>
+    <string name="loading_jobs">Загрузка заданий...</string>
+    <string name="refresh_jobs">Обновить</string>
+    <string name="job_name">Название: %s</string>
+    <string name="job_description">Описание: %s</string>
+    <string name="job_status">Статус: %s</string>
+    
+    <string name="ready_to_scan">Готов к сканированию</string>
+    <string name="logged_in_as">Вы вошли как: %s</string>
+    <string name="logout">Выйти</string>
+    <string name="status">Статус</string>
+    <string name="syncing_with_server">Синхронизация с сервером…</string>
+    <string name="waiting_for_barcode">Ожидание следующего штрихкода.</string>
+    
+    <string name="current_job">Текущее задание</string>
+    <string name="back_to_jobs">Назад</string>
+    <string name="start_scanning">Начать сканирование</string>
+    <string name="stop_scanning">Остановить сканирование</string>
+    <string name="scanning_active">Сканирование активно</string>
+    <string name="scanning_stopped">Сканирование остановлено</string>
+    
+    <string name="last_scan">Последнее сканирование</string>
+    <string name="code">Код: %s</string>
+    <string name="barcode_type">Тип штрихкода: %d</string>
+    <string name="server_response">Ответ сервера:</string>
+    <string name="count_result">Количество: %d</string>
+    
+    <string name="scan_hint">Используйте кнопку аппаратного сканирования на MT93. Приложение прослушивает nlscan.action.SCANNER_RESULT.</string>
+</resources>
