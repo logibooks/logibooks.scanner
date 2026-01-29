@@ -180,7 +180,7 @@ private fun LoginScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (BuildConfig.IS_DEBUG) {
+            if (BuildConfig.DEBUG) {
                 Text(
                     stringResource(R.string.debug_mode_indicator),
                     style = MaterialTheme.typography.bodySmall,
