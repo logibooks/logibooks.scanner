@@ -108,6 +108,7 @@ class MainActivity : ComponentActivity() {
                         state.selectedScanJob == null -> {
                             JobSelectionScreen(
                                 scanJobs = state.scanJobs,
+                                scanJobTypeDisplays = state.scanJobTypeDisplays,
                                 isBusy = state.isBusy,
                                 displayName = state.displayName,
                                 error = state.error,
@@ -120,6 +121,7 @@ class MainActivity : ComponentActivity() {
                             ScanScreen(
                                 isBusy = state.isBusy,
                                 displayName = state.displayName,
+                                selectedJob = state.selectedScanJob!!,
                                 selectedJobTypeDisplay = state.selectedScanJobTypeDisplay ?: "",
                                 isScanning = state.isScanning,
                                 lastCode = state.lastCode,
@@ -257,6 +259,7 @@ private fun LoginScreen(
 @Composable
 private fun JobSelectionScreen(
     scanJobs: List<ScanJob>,
+    scanJobTypeDisplays: Map<String, String>,
     isBusy: Boolean,
     displayName: String?,
     error: String?,
@@ -367,7 +370,7 @@ private fun JobSelectionScreen(
                                 )
                             }
                             Text(
-                                stringResource(R.string.job_status, job.status),
+                                stringResource(R.string.job_type, scanJobTypeDisplays[job.scanJobType] ?: job.scanJobType),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -383,6 +386,7 @@ private fun JobSelectionScreen(
 private fun ScanScreen(
     isBusy: Boolean,
     displayName: String?,
+    selectedJob: ScanJob,
     selectedJobTypeDisplay: String,
     isScanning: Boolean,
     lastCode: String?,
@@ -429,9 +433,21 @@ private fun ScanScreen(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.current_job), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    selectedJobTypeDisplay,
+                    selectedJob.name,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold
+                )
+                if (!selectedJob.description.isNullOrBlank()) {
+                    Text(
+                        selectedJob.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    stringResource(R.string.job_type, selectedJobTypeDisplay),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))

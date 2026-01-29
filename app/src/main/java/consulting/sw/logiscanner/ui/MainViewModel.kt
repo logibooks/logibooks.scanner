@@ -31,6 +31,7 @@ data class MainState(
     val isBusy: Boolean = false,
     val displayName: String? = null,
     val scanJobs: List<ScanJob> = emptyList(),
+    val scanJobTypeDisplays: Map<String, String> = emptyMap(),
     val selectedScanJob: ScanJob? = null,
     val selectedScanJobTypeDisplay: String? = null,
     val isScanning: Boolean = false,
@@ -98,7 +99,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 // Fetch operations/mappings first
                 scanJobRepo.getOps()
                 val jobs = scanJobRepo.getInProgressJobs()
-                _state.update { it.copy(scanJobs = jobs) }
+                // Compute type displays for all jobs
+                val typeDisplays = jobs.associate { job ->
+                    job.scanJobType to scanJobRepo.getScanJobTypeDisplay(job.scanJobType)
+                }
+                _state.update { it.copy(scanJobs = jobs, scanJobTypeDisplays = typeDisplays) }
             } catch (ex: Exception) {
                 Log.e(javaClass.simpleName, "Failed to load scan jobs", ex)
                 _state.update { it.copy(error = ex.message ?: "Unknown error") }
