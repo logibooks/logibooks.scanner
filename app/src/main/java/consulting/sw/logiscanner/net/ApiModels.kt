@@ -34,7 +34,7 @@ data class ScanJob(
     val name: String,
     val description: String?,
     val status: String,
-    val scanJobType: String
+    val type: String
 )
 
 @JsonClass(generateAdapter = true)

@@ -101,7 +101,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val jobs = scanJobRepo.getInProgressJobs()
                 // Compute type displays for all jobs
                 val typeDisplays = jobs.associate { job ->
-                    job.scanJobType to scanJobRepo.getScanJobTypeDisplay(job.scanJobType)
+                    job.type to scanJobRepo.getScanJobTypeDisplay(job.type)
                 }
                 _state.update { it.copy(scanJobs = jobs, scanJobTypeDisplays = typeDisplays) }
             } catch (ex: Exception) {
@@ -116,7 +116,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectScanJob(job: ScanJob?) {
         viewModelScope.launch {
             val typeDisplay = if (job != null && ::scanJobRepo.isInitialized) {
-                scanJobRepo.getScanJobTypeDisplay(job.scanJobType)
+                scanJobRepo.getScanJobTypeDisplay(job.type)
             } else {
                 null
             }

@@ -370,7 +370,7 @@ private fun JobSelectionScreen(
                                 )
                             }
                             Text(
-                                stringResource(R.string.job_type, scanJobTypeDisplays[job.scanJobType] ?: job.scanJobType),
+                                stringResource(R.string.job_type, scanJobTypeDisplays[job.type] ?: job.type),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
