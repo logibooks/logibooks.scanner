@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import consulting.sw.logiscanner.BuildConfig
+import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobRepository
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 enum class ScanResultColor {
     NONE, YELLOW, GREEN, RED
@@ -84,7 +86,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { it.copy(isLoggedIn = true, password = "") } // Clear password after successful login
             } catch (ex: Exception) {
                 Log.e(javaClass.simpleName, "Login failed", ex)
-                _state.update { it.copy(error = ex.message ?: "Unknown error") }
+                val errorMessage = when {
+                    ex is HttpException && ex.code() == 401 -> 
+                        getApplication<Application>().getString(R.string.login_error_invalid_credentials)
+                    else -> 
+                        getApplication<Application>().getString(R.string.login_error_server_unavailable)
+                }
+                _state.update { it.copy(error = errorMessage) }
             } finally {
                 _state.update { it.copy(isBusy = false) }
             }

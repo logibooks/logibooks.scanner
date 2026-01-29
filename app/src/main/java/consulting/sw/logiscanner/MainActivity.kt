@@ -63,6 +63,7 @@ import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 
 class MainActivity : ComponentActivity() {
@@ -483,7 +484,10 @@ private fun ScanScreen(
                         onClick = onBackToJobs,
                         modifier = Modifier.weight(1.2f)
                     ) {
-                        Text(stringResource(R.string.back_to_jobs))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back_to_jobs)
+                        )
                     }
                     if (!isScanning) {
                         Button(
