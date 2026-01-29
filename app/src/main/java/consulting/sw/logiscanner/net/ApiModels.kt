@@ -49,7 +49,15 @@ data class ScanResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class ScanJobOpsItemDto(
+    val value: Int,
+    val name: String
+)
+
+@JsonClass(generateAdapter = true)
 data class ScanJobOps(
-    val scanJobTypes: Map<String, String>,
-    val scanJobStatuses: Map<String, String>
+    val types: List<ScanJobOpsItemDto>,
+    val operations: List<ScanJobOpsItemDto>,
+    val modes: List<ScanJobOpsItemDto>,
+    val statuses: List<ScanJobOpsItemDto>
 )
