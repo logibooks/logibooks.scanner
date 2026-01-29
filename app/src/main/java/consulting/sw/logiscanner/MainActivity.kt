@@ -126,7 +126,6 @@ class MainActivity : ComponentActivity() {
                                 isScanning = state.isScanning,
                                 lastCode = state.lastCode,
                                 lastCount = state.lastCount,
-                                lastBarcodeType = state.lastBarcodeType,
                                 error = state.error,
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
@@ -141,11 +140,8 @@ class MainActivity : ComponentActivity() {
             // Register/unregister receiver based on scanning state
             DisposableEffect(state.isScanning) {
                 if (state.isScanning) {
-                    val r = Mt93ScanReceiver { event ->
-                        if (event.state == "ok") {
-                            val code = event.barcode1?.takeIf { it.isNotBlank() } ?: return@Mt93ScanReceiver
-                            vm.onScanned(code, event.barcodeType ?: -1)
-                        }
+                    val r = Mt93ScanReceiver { code ->
+                            vm.onScanned(code)
                     }
                     receiver = r
                     registerReceiver(
@@ -391,7 +387,6 @@ private fun ScanScreen(
     isScanning: Boolean,
     lastCode: String?,
     lastCount: Int?,
-    lastBarcodeType: Int?,
     error: String?,
     onStartScanning: () -> Unit,
     onStopScanning: () -> Unit,
@@ -515,9 +510,9 @@ private fun ScanScreen(
         }
 
         if (lastCode != null) {
-            val countColor = when {
-                lastCount == null -> MaterialTheme.colorScheme.onSurfaceVariant
-                lastCount == 0 -> Color(0xFFFFA000) // Amber/Orange for warning
+            val countColor = when (lastCount) {
+                null -> MaterialTheme.colorScheme.onSurfaceVariant
+                0 -> Color(0xFFFFA000) // Amber/Orange for warning
                 else -> MaterialTheme.colorScheme.primary
             }
             Card(
@@ -528,13 +523,8 @@ private fun ScanScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(stringResource(R.string.last_scan), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.code, lastCode))
-                    Text(stringResource(R.string.barcode_type, lastBarcodeType ?: -1))
                     if (lastCount != null) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                stringResource(R.string.server_response),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                             Text(
                                 stringResource(R.string.count_result, lastCount),
                                 color = countColor,

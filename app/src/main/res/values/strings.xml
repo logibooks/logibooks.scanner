@@ -40,9 +40,7 @@ This file is a part of LogiScanner application
     
     <string name="last_scan">Last scan</string>
     <string name="code">Code: %s</string>
-    <string name="barcode_type">Barcode type: %d</string>
-    <string name="server_response">Server response:</string>
-    <string name="count_result">Count: %d</string>
+    <string name="count_result">Parcels found: %d</string>
     
     <string name="scan_hint">Use the hardware Scan key</string>
 </resources>

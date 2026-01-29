@@ -37,7 +37,6 @@ data class MainState(
     val isScanning: Boolean = false,
     val lastCode: String? = null,
     val lastCount: Int? = null,
-    val lastBarcodeType: Int? = null,
     val scanResultColor: ScanResultColor = ScanResultColor.NONE,
     val error: String? = null
 )
@@ -139,7 +138,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(isScanning = false) }
     }
 
-    fun onScanned(code: String, barcodeType: Int) {
+    fun onScanned(code: String) {
         val job = state.value.selectedScanJob
         if (job == null) {
             Log.w(javaClass.simpleName, "Scan received but no job selected, ignoring: $code")
@@ -158,7 +157,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     it.copy(
                         lastCode = code, 
                         lastCount = count, 
-                        lastBarcodeType = barcodeType,
                         scanResultColor = color
                     ) 
                 }
@@ -173,7 +171,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     it.copy(
                         lastCode = code,
                         lastCount = null,
-                        lastBarcodeType = barcodeType,
                         error = ex.message ?: "Unknown error",
                         scanResultColor = ScanResultColor.RED
                     )

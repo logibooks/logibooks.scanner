@@ -40,9 +40,7 @@ This file is a part of LogiScanner application
     
     <string name="last_scan">Последнее сканирование</string>
     <string name="code">Код: %s</string>
-    <string name="barcode_type">Тип штрихкода: %d</string>
-    <string name="server_response">Ответ сервера:</string>
-    <string name="count_result">Количество: %d</string>
+    <string name="count_result">Найдено посылок: %d</string>
     
     <string name="scan_hint">Используйте кнопку аппаратного сканирования</string>
 </resources>
