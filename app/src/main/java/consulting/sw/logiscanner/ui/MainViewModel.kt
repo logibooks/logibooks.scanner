@@ -94,6 +94,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _state.update { it.copy(isBusy = true, error = null) }
             try {
+                // Fetch operations/mappings first
+                scanJobRepo.getOps()
                 val jobs = scanJobRepo.getInProgressJobs()
                 _state.update { it.copy(scanJobs = jobs) }
             } catch (ex: Exception) {
@@ -103,6 +105,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { it.copy(isBusy = false) }
             }
         }
+    }
+    
+    fun getScanJobTypeDisplay(typeKey: String): String {
+        return scanJobRepo.getScanJobTypeDisplay(typeKey)
     }
 
     fun selectScanJob(job: ScanJob?) {

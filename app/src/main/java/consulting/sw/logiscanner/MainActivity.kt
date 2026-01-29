@@ -129,7 +129,8 @@ class MainActivity : ComponentActivity() {
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
                                 onBackToJobs = { vm.selectScanJob(null) },
-                                onLogout = vm::logout
+                                onLogout = vm::logout,
+                                getScanJobTypeDisplay = vm::getScanJobTypeDisplay
                             )
                         }
                     }
@@ -392,7 +393,8 @@ private fun ScanScreen(
     onStartScanning: () -> Unit,
     onStopScanning: () -> Unit,
     onBackToJobs: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    getScanJobTypeDisplay: (String) -> String
 ) {
     Column(
         modifier = Modifier
@@ -429,17 +431,10 @@ private fun ScanScreen(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.current_job), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    selectedJob.name,
+                    getScanJobTypeDisplay(selectedJob.scanJobType),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold
                 )
-                if (!selectedJob.description.isNullOrBlank()) {
-                    Text(
-                        selectedJob.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
