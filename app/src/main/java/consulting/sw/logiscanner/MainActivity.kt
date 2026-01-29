@@ -4,8 +4,8 @@
 
 package consulting.sw.logiscanner
 
+import android.content.Context
 import android.content.IntentFilter
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -59,23 +59,23 @@ class MainActivity : ComponentActivity() {
     private val vm: MainViewModel by viewModels()
     private var receiver: Mt93ScanReceiver? = null
 
-    private fun setLocale(languageCode: String) {
-        val locale = Locale(languageCode)
+    companion object {
+        // Enforced locale for the application
+        private const val APP_LOCALE = "ru"
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        val locale = Locale(APP_LOCALE)
         Locale.setDefault(locale)
-        
-        val config = Configuration(resources.configuration)
+        val config = newBase.resources.configuration
         config.setLocale(locale)
-        
-        @Suppress("DEPRECATION")
-        resources.updateConfiguration(config, resources.displayMetrics)
+        val context = newBase.createConfigurationContext(config)
+        super.attachBaseContext(context)
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Enforce Russian locale
-        setLocale("ru")
 
         setContent {
             val state by vm.state.collectAsState()
