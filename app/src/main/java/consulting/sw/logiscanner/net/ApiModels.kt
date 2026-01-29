@@ -33,7 +33,8 @@ data class ScanJob(
     val id: Int,
     val name: String,
     val description: String?,
-    val status: String
+    val status: String,
+    val type: String
 )
 
 @JsonClass(generateAdapter = true)
@@ -45,4 +46,18 @@ data class ScanRequest(
 @JsonClass(generateAdapter = true)
 data class ScanResponse(
     val count: Int
+)
+
+@JsonClass(generateAdapter = true)
+data class ScanJobOpsItemDto(
+    val value: Int,
+    val name: String
+)
+
+@JsonClass(generateAdapter = true)
+data class ScanJobOps(
+    val types: List<ScanJobOpsItemDto>,
+    val operations: List<ScanJobOpsItemDto>,
+    val modes: List<ScanJobOpsItemDto>,
+    val statuses: List<ScanJobOpsItemDto>
 )
