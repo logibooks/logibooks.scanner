@@ -10,9 +10,9 @@ import consulting.sw.logiscanner.net.ScanJobOps
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class ScanJobRepository(baseUrl: String, private val token: String) {
+class ScanJobRepository(baseUrl: String, private val token: String, onUnauthorized: (() -> Unit)? = null) {
 
-    private val api = NetworkModule.createApi(baseUrl, handleUnauthorized = true)
+    private val api = NetworkModule.createApi(baseUrl, onUnauthorized)
     private var ops: ScanJobOps? = null
     private val opsMutex = Mutex()
 

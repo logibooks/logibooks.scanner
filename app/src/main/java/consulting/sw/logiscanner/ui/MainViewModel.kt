@@ -10,7 +10,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import consulting.sw.logiscanner.BuildConfig
 import consulting.sw.logiscanner.R
-import consulting.sw.logiscanner.net.NetworkModule
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobRepository
@@ -56,13 +55,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var colorResetJob: Job? = null
 
     init {
-        // Set up 401 handler to logout and return to login screen
-        NetworkModule.onUnauthorized = {
-            viewModelScope.launch {
-                logout()
-            }
-        }
-        
         viewModelScope.launch {
             loginRepo = LoginRepository(getApplication())
             loginRepo.state.collect { loginInfo ->
@@ -88,8 +80,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     throw Exception("Login failed: No token received")
                 }
                 
-                scanJobRepo = ScanJobRepository(url, token)
-                scanRepo = ScanRepository(url, token)
+                // Create repositories with 401 handler that triggers logout
+                val unauthorizedHandler: () -> Unit = {
+                    viewModelScope.launch {
+                        logout()
+                    }
+                    Unit
+                }
+                scanJobRepo = ScanJobRepository(url, token, unauthorizedHandler)
+                scanRepo = ScanRepository(url, token, unauthorizedHandler)
                 loadScanJobs()
                 _state.update { it.copy(isLoggedIn = true, password = "") } // Clear password after successful login
             } catch (ex: Exception) {
