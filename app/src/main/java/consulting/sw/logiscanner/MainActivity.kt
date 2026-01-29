@@ -120,7 +120,7 @@ class MainActivity : ComponentActivity() {
                             ScanScreen(
                                 isBusy = state.isBusy,
                                 displayName = state.displayName,
-                                selectedJob = state.selectedScanJob!!,
+                                selectedJobTypeDisplay = state.selectedScanJobTypeDisplay ?: "",
                                 isScanning = state.isScanning,
                                 lastCode = state.lastCode,
                                 lastCount = state.lastCount,
@@ -129,8 +129,7 @@ class MainActivity : ComponentActivity() {
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
                                 onBackToJobs = { vm.selectScanJob(null) },
-                                onLogout = vm::logout,
-                                getScanJobTypeDisplay = vm::getScanJobTypeDisplay
+                                onLogout = vm::logout
                             )
                         }
                     }
@@ -384,7 +383,7 @@ private fun JobSelectionScreen(
 private fun ScanScreen(
     isBusy: Boolean,
     displayName: String?,
-    selectedJob: ScanJob,
+    selectedJobTypeDisplay: String,
     isScanning: Boolean,
     lastCode: String?,
     lastCount: Int?,
@@ -393,8 +392,7 @@ private fun ScanScreen(
     onStartScanning: () -> Unit,
     onStopScanning: () -> Unit,
     onBackToJobs: () -> Unit,
-    onLogout: () -> Unit,
-    getScanJobTypeDisplay: (String) -> String
+    onLogout: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -431,7 +429,7 @@ private fun ScanScreen(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.current_job), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    getScanJobTypeDisplay(selectedJob.scanJobType),
+                    selectedJobTypeDisplay,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold
                 )

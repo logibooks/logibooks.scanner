@@ -32,6 +32,7 @@ data class MainState(
     val displayName: String? = null,
     val scanJobs: List<ScanJob> = emptyList(),
     val selectedScanJob: ScanJob? = null,
+    val selectedScanJobTypeDisplay: String? = null,
     val isScanning: Boolean = false,
     val lastCode: String? = null,
     val lastCount: Int? = null,
@@ -106,13 +107,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    
-    fun getScanJobTypeDisplay(typeKey: String): String {
-        return scanJobRepo.getScanJobTypeDisplay(typeKey)
-    }
 
     fun selectScanJob(job: ScanJob?) {
-        _state.update { it.copy(selectedScanJob = job, error = null, isScanning = false) }
+        viewModelScope.launch {
+            val typeDisplay = if (job != null && ::scanJobRepo.isInitialized) {
+                scanJobRepo.getScanJobTypeDisplay(job.scanJobType)
+            } else {
+                null
+            }
+            _state.update { 
+                it.copy(
+                    selectedScanJob = job, 
+                    selectedScanJobTypeDisplay = typeDisplay,
+                    error = null, 
+                    isScanning = false
+                ) 
+            }
+        }
     }
 
     fun startScanning() {
