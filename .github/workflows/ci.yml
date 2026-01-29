@@ -7,7 +7,6 @@ name: ci
 on:
   push:
     branches: [ main ]
-    tags:     [ 'v*' ]
   pull_request:
   workflow_dispatch:
 
@@ -47,15 +46,21 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    - name: Decode keystore
+      run: echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.keystore
+
     - name: Build with Gradle
+      env:
+        SIGNING_STORE_FILE: release.keystore
+        SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+        SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: ./gradlew build
 
     - name: Run tests
+      env:
+        SIGNING_STORE_FILE: release.keystore
+        SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+        SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: ./gradlew test
-
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: app/build/test-results/
