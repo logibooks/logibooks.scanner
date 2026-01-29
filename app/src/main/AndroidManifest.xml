@@ -16,7 +16,8 @@ This file is a part of LogiScanner application
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.LogiScanner">
+        android:theme="@style/Theme.LogiScanner"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
