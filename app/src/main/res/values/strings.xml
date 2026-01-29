@@ -45,4 +45,8 @@ This file is a part of LogiScanner application
     <string name="count_result">Count: %d</string>
     
     <string name="scan_hint">Use the hardware Scan key on the MT93. The app listens to nlscan.action.SCANNER_RESULT.</string>
+    
+    <string name="show_password">Show password</string>
+    <string name="hide_password">Hide password</string>
+    <string name="version">Version: %s</string>
 </resources>

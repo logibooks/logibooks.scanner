@@ -22,6 +22,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Read app version from gradle.properties
+        val appVersion = project.findProperty("app.version") as String? ?: "1.0.0"
+        buildConfigField("String", "APP_VERSION", "\"$appVersion\"")
     }
 
     buildTypes {

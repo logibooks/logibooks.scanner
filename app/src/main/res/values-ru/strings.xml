@@ -45,4 +45,8 @@ This file is a part of LogiScanner application
     <string name="count_result">Количество: %d</string>
     
     <string name="scan_hint">Используйте кнопку аппаратного сканирования на MT93. Приложение прослушивает nlscan.action.SCANNER_RESULT.</string>
+    
+    <string name="show_password">Показать пароль</string>
+    <string name="hide_password">Скрыть пароль</string>
+    <string name="version">Версия: %s</string>
 </resources>

@@ -83,7 +83,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { it.copy(isLoggedIn = true, password = "") } // Clear password after successful login
             } catch (ex: Exception) {
                 Log.e(javaClass.simpleName, "Login failed", ex)
-                _state.update { it.copy(error = ex.message ?: "Unknown error", password = "") } // Clear password on error
+                _state.update { it.copy(error = ex.message ?: "Unknown error") } // Do not clear password on error
             } finally {
                 _state.update { it.copy(isBusy = false) }
             }
