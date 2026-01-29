@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import consulting.sw.logiscanner.BuildConfig
+import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobRepository
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 enum class ScanResultColor {
     NONE, YELLOW, GREEN, RED
@@ -37,7 +39,6 @@ data class MainState(
     val isScanning: Boolean = false,
     val lastCode: String? = null,
     val lastCount: Int? = null,
-    val lastBarcodeType: Int? = null,
     val scanResultColor: ScanResultColor = ScanResultColor.NONE,
     val error: String? = null
 )
@@ -79,13 +80,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     throw Exception("Login failed: No token received")
                 }
                 
-                scanJobRepo = ScanJobRepository(url, token)
-                scanRepo = ScanRepository(url, token)
+                // Create repositories with 401 handler that triggers logout
+                val unauthorizedHandler: () -> Unit = {
+                    viewModelScope.launch {
+                        logout()
+                    }
+                    Unit
+                }
+                scanJobRepo = ScanJobRepository(url, token, unauthorizedHandler)
+                scanRepo = ScanRepository(url, token, unauthorizedHandler)
                 loadScanJobs()
                 _state.update { it.copy(isLoggedIn = true, password = "") } // Clear password after successful login
             } catch (ex: Exception) {
                 Log.e(javaClass.simpleName, "Login failed", ex)
-                _state.update { it.copy(error = ex.message ?: "Unknown error", password = "") } // Clear password on error
+                val errorMessage = when {
+                    ex is HttpException && ex.code() == 401 -> 
+                        getApplication<Application>().getString(R.string.login_error_invalid_credentials)
+                    else -> 
+                        getApplication<Application>().getString(R.string.login_error_server_unavailable)
+                }
+                _state.update { it.copy(error = errorMessage) }
             } finally {
                 _state.update { it.copy(isBusy = false) }
             }
@@ -139,7 +153,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(isScanning = false) }
     }
 
-    fun onScanned(code: String, barcodeType: Int) {
+    fun onScanned(code: String) {
         val job = state.value.selectedScanJob
         if (job == null) {
             Log.w(javaClass.simpleName, "Scan received but no job selected, ignoring: $code")
@@ -158,7 +172,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     it.copy(
                         lastCode = code, 
                         lastCount = count, 
-                        lastBarcodeType = barcodeType,
                         scanResultColor = color
                     ) 
                 }
@@ -173,7 +186,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     it.copy(
                         lastCode = code,
                         lastCount = null,
-                        lastBarcodeType = barcodeType,
                         error = ex.message ?: "Unknown error",
                         scanResultColor = ScanResultColor.RED
                     )

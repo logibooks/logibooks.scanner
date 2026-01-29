@@ -39,7 +39,7 @@ data class ScanJob(
 
 @JsonClass(generateAdapter = true)
 data class ScanRequest(
-    val scanJobId: Int,
+    val id: Int,
     val code: String
 )
 

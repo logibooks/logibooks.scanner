@@ -19,7 +19,8 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        val appVersionName: String by project
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -31,7 +32,7 @@ android {
         }
         release {
             // NOTE: SERVER_URL must include trailing slash
-            buildConfigField("String", "SERVER_URL", "\"https://logibooks.sw.consulting:8089/\"")
+            buildConfigField("String", "SERVER_URL", "\"https://logibooks.sw.consulting:8085/\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -59,6 +60,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.moshi.kotlin)
     ksp(libs.moshi.kotlin.codegen)
     implementation(libs.retrofit)
