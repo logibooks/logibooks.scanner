@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun attachBaseContext(newBase: Context) {
-        val locale = Locale(APP_LOCALE)
+        val locale = Locale.forLanguageTag(APP_LOCALE)
         Locale.setDefault(locale)
         val config = android.content.res.Configuration(newBase.resources.configuration)
         config.setLocale(locale)
@@ -240,7 +240,7 @@ private fun LoginScreen(
                     label = { Text(stringResource(R.string.password)) },
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrect = false),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                     trailingIcon = {
                         val icon = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
                         val description = if (passwordVisible) {
