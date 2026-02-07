@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import consulting.sw.logiscanner.BuildConfig
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.ScanJob
+import consulting.sw.logiscanner.net.ScanResultItem
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobRepository
 import consulting.sw.logiscanner.repo.ScanRepository
@@ -24,6 +25,16 @@ import retrofit2.HttpException
 
 enum class ScanResultColor {
     NONE, YELLOW, GREEN, RED, ORANGE
+}
+
+fun determineScanResultColor(result: ScanResultItem): ScanResultColor {
+    return if (result.hasIssues) {
+        ScanResultColor.ORANGE
+    } else if (result.count == 0) {
+        ScanResultColor.YELLOW
+    } else {
+        ScanResultColor.GREEN
+    }
 }
 
 data class MainState(
@@ -168,20 +179,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _state.update { it.copy(isBusy = true, error = null, scanResultColor = ScanResultColor.NONE) }
             try {
                 val result = scanRepo.scan(job.id, code)
-                // If hasIssues is true, screen splash shall be orange (overwriting default green/yellow/red scheme)
-                val color = if (result.hasIssues) {
-                    ScanResultColor.ORANGE
-                } else if (result.count == 0) {
-                    ScanResultColor.YELLOW
-                } else {
-                    ScanResultColor.GREEN
-                }
                 _state.update { 
                     it.copy(
                         lastCode = code, 
                         lastCount = result.count,
                         lastExtData = result.extData,
-                        scanResultColor = color
+                        scanResultColor = determineScanResultColor(result)
                     ) 
                 }
                 // Reset color after a short delay
