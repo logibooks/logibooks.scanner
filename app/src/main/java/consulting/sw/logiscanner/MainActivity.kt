@@ -312,11 +312,20 @@ private fun JobSelectionScreen(
                     )
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onRefresh) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Button(
+                    onClick = onRefresh,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(stringResource(R.string.refresh_jobs))
                 }
-                Button(onClick = onLogout) {
+                Button(
+                    onClick = onLogout,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout,
                         contentDescription = stringResource(R.string.logout)
@@ -373,7 +382,7 @@ private fun JobSelectionScreen(
                     )
                 }
             }
-        } else if (scanJobs.isNotEmpty()) {
+        } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
