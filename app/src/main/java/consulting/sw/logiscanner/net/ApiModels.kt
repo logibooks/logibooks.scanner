@@ -44,8 +44,10 @@ data class ScanRequest(
 )
 
 @JsonClass(generateAdapter = true)
-data class ScanResponse(
-    val count: Int
+data class ScanResultItem(
+    val count: Int,
+    val extData: String?,
+    val hasIssues: Boolean = false
 )
 
 @JsonClass(generateAdapter = true)

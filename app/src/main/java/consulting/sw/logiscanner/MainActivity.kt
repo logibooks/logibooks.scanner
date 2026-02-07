@@ -99,6 +99,7 @@ class MainActivity : ComponentActivity() {
                     ScanResultColor.YELLOW -> Color(0xFFFFEB3B)
                     ScanResultColor.GREEN -> Color(0xFF4CAF50)
                     ScanResultColor.RED -> Color(0xFFF44336)
+                    ScanResultColor.ORANGE -> Color(0xFFFF9800)
                     ScanResultColor.NONE -> MaterialTheme.colorScheme.background
                 }
                 

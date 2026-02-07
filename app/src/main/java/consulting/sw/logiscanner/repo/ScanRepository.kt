@@ -6,13 +6,13 @@ package consulting.sw.logiscanner.repo
 
 import consulting.sw.logiscanner.net.NetworkModule
 import consulting.sw.logiscanner.net.ScanRequest
+import consulting.sw.logiscanner.net.ScanResultItem
 
 class ScanRepository(baseUrl: String, private val token: String, onUnauthorized: (() -> Unit)? = null) {
 
     private val api = NetworkModule.createApi(baseUrl, onUnauthorized)
 
-    suspend fun scan(scanJobId: Int, code: String): Int {
-        val res = api.scan("Bearer $token", ScanRequest(scanJobId, code))
-        return res.count
+    suspend fun scan(scanJobId: Int, code: String): ScanResultItem {
+        return api.scan("Bearer $token", ScanRequest(scanJobId, code))
     }
 }
