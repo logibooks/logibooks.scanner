@@ -312,12 +312,16 @@ private fun JobSelectionScreen(
                     )
                 }
             }
-            Button(onClick = onLogout,
-                modifier = Modifier.weight(1.2f)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = stringResource(R.string.logout)
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onRefresh) {
+                    Text(stringResource(R.string.refresh_jobs))
+                }
+                Button(onClick = onLogout) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = stringResource(R.string.logout)
+                    )
+                }
             }
         }
 
@@ -367,12 +371,9 @@ private fun JobSelectionScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Button(onClick = onRefresh) {
-                        Text(stringResource(R.string.refresh_jobs))
-                    }
                 }
             }
-        } else {
+        } else if (scanJobs.isNotEmpty()) {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
