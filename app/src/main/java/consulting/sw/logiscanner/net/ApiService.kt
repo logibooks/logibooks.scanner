@@ -28,5 +28,5 @@ interface ApiService {
     suspend fun scan(
         @Header("Authorization") bearer: String,
         @Body req: ScanRequest
-    ): ScanResponse
+    ): ScanResultItem
 }
