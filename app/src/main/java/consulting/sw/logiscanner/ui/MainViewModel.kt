@@ -235,19 +235,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (ex: Exception) {
                 Log.e(javaClass.simpleName, "Scan failed", ex)
-                _state.update { 
-                    it.copy(
-                        lastCode = code,
-                        lastCount = null,
-                        lastExtData = null,
-                        error = ex.message ?: "Unknown error",
-                        scanResultColor = ScanResultColor.RED
-                    )
-                }
-                // Reset color after a short delay
-                colorResetJob = viewModelScope.launch {
-                    kotlinx.coroutines.delay(1500)
-                    _state.update { it.copy(scanResultColor = ScanResultColor.NONE) }
+                
+                // Check if it's a 400 Bad Request - job selection is no longer valid
+                if (ex is HttpException && ex.code() == 400) {
+                    // Return to JobSelectionScreen by deselecting the job
+                    _state.update { 
+                        it.copy(
+                            selectedScanJob = null,
+                            selectedScanJobTypeDisplay = null,
+                            isScanning = false,
+                            lastCode = null,
+                            lastCount = null,
+                            lastExtData = null,
+                            error = ex.message ?: "Задание на сканирование неактивно",
+                            scanResultColor = ScanResultColor.NONE
+                        )
+                    }
+                } else {
+                    _state.update { 
+                        it.copy(
+                            lastCode = code,
+                            lastCount = null,
+                            lastExtData = null,
+                            error = ex.message ?: "Ошибка взаимодействия с сервером. Пожалуйста, попробуйте позже",
+                            scanResultColor = ScanResultColor.RED
+                        )
+                    }
+                    // Reset color after a short delay
+                    colorResetJob = viewModelScope.launch {
+                        kotlinx.coroutines.delay(1500)
+                        _state.update { it.copy(scanResultColor = ScanResultColor.NONE) }
+                    }
                 }
             } finally {
                 _state.update { it.copy(isBusy = false) }

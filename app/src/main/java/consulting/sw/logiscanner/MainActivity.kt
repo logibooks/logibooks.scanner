@@ -312,12 +312,25 @@ private fun JobSelectionScreen(
                     )
                 }
             }
-            Button(onClick = onLogout,
-                modifier = Modifier.weight(1.2f)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = stringResource(R.string.logout)
-                )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Button(
+                    onClick = onRefresh,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.refresh_jobs))
+                }
+                Button(
+                    onClick = onLogout,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = stringResource(R.string.logout)
+                    )
+                }
             }
         }
 
@@ -367,9 +380,6 @@ private fun JobSelectionScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Button(onClick = onRefresh) {
-                        Text(stringResource(R.string.refresh_jobs))
-                    }
                 }
             }
         } else {
