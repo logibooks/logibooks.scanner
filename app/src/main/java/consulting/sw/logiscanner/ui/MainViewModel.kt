@@ -5,6 +5,7 @@
 package consulting.sw.logiscanner.ui
 
 import android.app.Application
+import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import java.util.Locale
 
 enum class ScanResultColor {
     NONE, YELLOW, GREEN, RED, ORANGE
@@ -65,6 +67,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private lateinit var scanRepo: ScanRepository
     
     private var colorResetJob: Job? = null
+    
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
 
     init {
         viewModelScope.launch {
@@ -75,6 +80,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+        
+        // Initialize TTS with Russian locale and male voice
+        tts = TextToSpeech(application) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val russianLocale = Locale("ru", "RU")
+                val result = tts?.setLanguage(russianLocale)
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Log.e(javaClass.simpleName, "Russian language not supported for TTS")
+                    ttsReady = false
+                } else {
+                    // Try to select a male voice
+                    tts?.voices?.find { voice ->
+                        voice.locale == russianLocale && voice.name.lowercase().contains("male")
+                    }?.let { maleVoice ->
+                        tts?.voice = maleVoice
+                    }
+                    ttsReady = true
+                }
+            } else {
+                Log.e(javaClass.simpleName, "TTS initialization failed")
+                ttsReady = false
+            }
+        }
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
     }
 
     fun setEmail(value: String) = _state.update { it.copy(email = value) }
@@ -187,6 +222,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         scanResultColor = determineScanResultColor(result)
                     ) 
                 }
+                
+                // Speak extData in parallel with color splash
+                if (!result.extData.isNullOrEmpty() && ttsReady) {
+                    tts?.speak(result.extData, TextToSpeech.QUEUE_FLUSH, null, "scan_result_${System.currentTimeMillis()}")
+                }
+                
                 // Reset color after a short delay
                 colorResetJob = viewModelScope.launch {
                     kotlinx.coroutines.delay(1500)
