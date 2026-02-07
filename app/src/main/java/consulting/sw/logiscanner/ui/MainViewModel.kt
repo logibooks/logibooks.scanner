@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
 enum class ScanResultColor {
-    NONE, YELLOW, GREEN, RED
+    NONE, YELLOW, GREEN, RED, ORANGE
 }
 
 data class MainState(
@@ -39,6 +39,7 @@ data class MainState(
     val isScanning: Boolean = false,
     val lastCode: String? = null,
     val lastCount: Int? = null,
+    val lastExtData: String? = null,
     val scanResultColor: ScanResultColor = ScanResultColor.NONE,
     val error: String? = null
 )
@@ -166,12 +167,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _state.update { it.copy(isBusy = true, error = null, scanResultColor = ScanResultColor.NONE) }
             try {
-                val count = scanRepo.scan(job.id, code)
-                val color = if (count == 0) ScanResultColor.YELLOW else ScanResultColor.GREEN
+                val result = scanRepo.scan(job.id, code)
+                // If hasIssues is true, screen splash shall be orange (overwriting default green/yellow/red scheme)
+                val color = if (result.hasIssues) {
+                    ScanResultColor.ORANGE
+                } else if (result.count == 0) {
+                    ScanResultColor.YELLOW
+                } else {
+                    ScanResultColor.GREEN
+                }
                 _state.update { 
                     it.copy(
                         lastCode = code, 
-                        lastCount = count, 
+                        lastCount = result.count,
+                        lastExtData = result.extData,
                         scanResultColor = color
                     ) 
                 }
@@ -186,6 +195,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     it.copy(
                         lastCode = code,
                         lastCount = null,
+                        lastExtData = null,
                         error = ex.message ?: "Unknown error",
                         scanResultColor = ScanResultColor.RED
                     )
