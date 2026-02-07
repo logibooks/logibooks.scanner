@@ -247,7 +247,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastCode = null,
                             lastCount = null,
                             lastExtData = null,
-                            error = ex.message ?: "Job selection is no longer valid",
+                            error = ex.message ?: "Invalid scan request",
                             scanResultColor = ScanResultColor.NONE
                         )
                     }
