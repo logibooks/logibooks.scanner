@@ -576,6 +576,8 @@ private fun ScanScreen(
                     if (!lastExtData.isNullOrBlank()) {
                         Text(
                             text = lastExtData,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
