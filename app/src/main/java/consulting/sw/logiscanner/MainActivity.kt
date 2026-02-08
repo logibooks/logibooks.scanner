@@ -326,7 +326,8 @@ private fun JobSelectionScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.RotateLeft,
                         contentDescription = stringResource(R.string.refresh_jobs)
-                    )                }
+                    )
+                }
                 Button(
                     onClick = onLogout,
                     modifier = Modifier.fillMaxWidth()
