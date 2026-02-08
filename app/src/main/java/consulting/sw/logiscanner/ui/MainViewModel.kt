@@ -124,7 +124,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 
                 val token = loginRepo.token
                 if (token.isNullOrBlank()) {
-                    throw Exception("Login failed: No token received")
+                    throw Exception(getApplication<Application>().getString(R.string.login_error_no_token))
                 }
                 
                 // Create repositories with 401 handler that triggers logout
@@ -167,7 +167,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { it.copy(scanJobs = jobs, scanJobTypeDisplays = typeDisplays) }
             } catch (ex: Exception) {
                 Log.e(javaClass.simpleName, "Failed to load scan jobs", ex)
-                _state.update { it.copy(error = ex.message ?: "Unknown error") }
+                _state.update { it.copy(error = ex.message ?: getApplication<Application>().getString(R.string.error_unknown)) }
             } finally {
                 _state.update { it.copy(isBusy = false) }
             }
