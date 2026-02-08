@@ -561,11 +561,6 @@ private fun ScanScreen(
         }
 
         if (lastCode != null) {
-            val countColor = when (lastCount) {
-                null -> MaterialTheme.colorScheme.onSurfaceVariant
-                0 -> colorResource(id = R.color.scan_result_server_error)
-                else -> MaterialTheme.colorScheme.primary
-            }
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -589,7 +584,7 @@ private fun ScanScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
                                 stringResource(R.string.count_result, lastCount),
-                                color = countColor,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
