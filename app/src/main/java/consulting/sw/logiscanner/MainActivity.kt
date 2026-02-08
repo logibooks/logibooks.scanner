@@ -65,6 +65,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.RotateLeft
 
 
 class MainActivity : ComponentActivity() {
@@ -458,12 +459,29 @@ private fun ScanScreen(
                     )
                 }
             }
-            Button(onClick = onLogout,
-                modifier = Modifier.weight(1.2f)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = stringResource(R.string.logout)
-                )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Button(
+                    onClick = onBackToJobs,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back_to_jobs)
+                    )
+                }
+                Button(
+                    onClick = onLogout,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = stringResource(R.string.logout)
+                    )
+                }
             }
         }
 
@@ -494,34 +512,11 @@ private fun ScanScreen(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Button(
+                    onClick = if (!isScanning) onStartScanning else onStopScanning,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Button(
-                        onClick = onBackToJobs
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back_to_jobs)
-                        )
-                    }
-                    if (!isScanning) {
-                        Button(
-                            onClick = onStartScanning,
-                            modifier = Modifier.fillMaxWidth()
-
-                        ) {
-                            Text(stringResource(R.string.start_scanning))
-                        }
-                    } else {
-                        Button(
-                            onClick = onStopScanning,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.stop_scanning))
-                        }
-                    }
+                    Text(if (!isScanning) stringResource(R.string.start_scanning) else stringResource(R.string.stop_scanning))
                 }
             }
         }
