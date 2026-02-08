@@ -46,7 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -97,10 +97,10 @@ class MainActivity : ComponentActivity() {
             LogiScannerTheme {
                 // Apply background color based on scan result
                 val backgroundColor = when (state.scanResultColor) {
-                    ScanResultColor.YELLOW -> Color(0xFFFFEB3B)
-                    ScanResultColor.GREEN -> Color(0xFF4CAF50)
-                    ScanResultColor.RED -> Color(0xFFF44336)
-                    ScanResultColor.ORANGE -> Color(0xFFFF9800)
+                    ScanResultColor.NOT_FOUND -> colorResource(id = R.color.scan_result_not_found)
+                    ScanResultColor.OK -> colorResource(id = R.color.scan_result_ok)
+                    ScanResultColor.ISSUE -> colorResource(id = R.color.scan_result_issue)
+                    ScanResultColor.SERVER_ERROR -> colorResource(id = R.color.scan_result_server_error)
                     ScanResultColor.NONE -> MaterialTheme.colorScheme.background
                 }
                 
@@ -141,6 +141,7 @@ class MainActivity : ComponentActivity() {
                                 isScanning = state.isScanning,
                                 lastCode = state.lastCode,
                                 lastCount = state.lastCount,
+                                lastExtData = state.lastExtData,
                                 error = state.error,
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
@@ -313,19 +314,23 @@ private fun JobSelectionScreen(
                     )
                 }
             }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Button(
                     onClick = onRefresh,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.refresh_jobs))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.RotateLeft,
+                        contentDescription = stringResource(R.string.refresh_jobs)
+                    )
                 }
                 Button(
                     onClick = onLogout,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout,
@@ -432,6 +437,7 @@ private fun ScanScreen(
     isScanning: Boolean,
     lastCode: String?,
     lastCount: Int?,
+    lastExtData: String?,
     error: String?,
     onStartScanning: () -> Unit,
     onStopScanning: () -> Unit,
@@ -554,35 +560,35 @@ private fun ScanScreen(
             }
         }
 
-        if (lastCode != null) {
-            val countColor = when (lastCount) {
-                null -> MaterialTheme.colorScheme.onSurfaceVariant
-                0 -> Color(0xFFFFA000) // Amber/Orange for warning
-                else -> MaterialTheme.colorScheme.primary
-            }
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.last_scan), style = MaterialTheme.typography.titleMedium)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.last_scan), style = MaterialTheme.typography.titleMedium)
+                if (lastCode != null) {
                     Text(
                         stringResource(R.string.code, lastCode),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (lastCount != null) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                stringResource(R.string.count_result, lastCount),
-                                color = countColor,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                }
+                if (lastCount != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            stringResource(R.string.count_result, lastCount),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
+                }
+                if (!lastExtData.isNullOrBlank()) {
+                    Text(
+                        text = lastExtData,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
