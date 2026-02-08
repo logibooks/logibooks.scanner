@@ -563,7 +563,7 @@ private fun ScanScreen(
         if (lastCode != null) {
             val countColor = when (lastCount) {
                 null -> MaterialTheme.colorScheme.onSurfaceVariant
-                0 -> colorResource(id = R.color.scan_result_server_error)
+                0 -> colorResource(id = R.color.scan_result_not_found)
                 else -> MaterialTheme.colorScheme.primary
             }
             Card(
