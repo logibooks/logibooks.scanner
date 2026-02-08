@@ -54,4 +54,8 @@ This file is a part of LogiScanner application
     
     <!-- General error messages -->
     <string name="error_unknown">Произошла неизвестная ошибка</string>
+    
+    <!-- Scan error messages -->
+    <string name="scan_error_job_invalid">Задание на сканирование неактивно</string>
+    <string name="scan_error_server">Ошибка взаимодействия с сервером. Пожалуйста, попробуйте позже</string>
 </resources>
