@@ -32,7 +32,7 @@ class ScanResultColorTest {
 
         val color = determineScanResultColor(item)
 
-        assertEquals(ScanResultColor.ORANGE, color)
+        assertEquals(ScanResultColor.RED, color)
     }
     
     @Test
@@ -59,7 +59,7 @@ class ScanResultColorTest {
 
         val color = determineScanResultColor(item)
 
-        assertEquals(ScanResultColor.ORANGE, color)
+        assertEquals(ScanResultColor.RED, color)
     }
     
     @Test
@@ -68,6 +68,6 @@ class ScanResultColorTest {
 
         val color = determineScanResultColor(item)
 
-        assertEquals(ScanResultColor.ORANGE, color)
+        assertEquals(ScanResultColor.RED, color)
     }
 }

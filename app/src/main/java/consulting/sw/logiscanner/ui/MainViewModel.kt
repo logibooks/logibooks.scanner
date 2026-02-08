@@ -26,16 +26,16 @@ import retrofit2.HttpException
 import java.util.Locale
 
 enum class ScanResultColor {
-    NONE, YELLOW, GREEN, RED, ORANGE
+    NONE, NOT_FOUND, OK, ISSUE, SERVER_ERROR
 }
 
 fun determineScanResultColor(result: ScanResultItem): ScanResultColor {
     return if (result.hasIssues) {
-        ScanResultColor.ORANGE
+        ScanResultColor.ISSUE
     } else if (result.count == 0) {
-        ScanResultColor.YELLOW
+        ScanResultColor.NOT_FOUND
     } else {
-        ScanResultColor.GREEN
+        ScanResultColor.OK
     }
 }
 
@@ -266,7 +266,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastCount = null,
                             lastExtData = null,
                             error = getApplication<Application>().getString(R.string.scan_error_server),
-                            scanResultColor = ScanResultColor.RED
+                            scanResultColor = ScanResultColor.SERVER_ERROR
                         )
                     }
                     // Reset color after a short delay
