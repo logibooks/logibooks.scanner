@@ -84,7 +84,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Initialize TTS with Russian locale and male voice
         tts = TextToSpeech(application) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val russianLocale = Locale("ru", "RU")
+                val russianLocale = Locale.forLanguageTag("ru")
                 val result = tts?.setLanguage(russianLocale)
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                     Log.e(javaClass.simpleName, "Russian language not supported for TTS")
