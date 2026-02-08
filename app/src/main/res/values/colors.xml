@@ -13,4 +13,9 @@ This file is a part of LogiScanner application
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="scan_result_not_found">#FFFFEB3B</color>
+    <color name="scan_result_ok">#FF4CAF50</color>
+    <color name="scan_result_issue">#FFE90A0A</color>
+    <color name="scan_result_server_error">#FF4F2292</color>
 </resources>

@@ -20,37 +20,37 @@ class ScanResultColorTest {
         // Verify all required colors exist
         val colors = ScanResultColor.entries
         assertTrue(colors.contains(ScanResultColor.NONE))
-        assertTrue(colors.contains(ScanResultColor.YELLOW))
-        assertTrue(colors.contains(ScanResultColor.GREEN))
-        assertTrue(colors.contains(ScanResultColor.RED))
-        assertTrue(colors.contains(ScanResultColor.ORANGE))
+        assertTrue(colors.contains(ScanResultColor.NOT_FOUND))
+        assertTrue(colors.contains(ScanResultColor.OK))
+        assertTrue(colors.contains(ScanResultColor.ISSUE))
+        assertTrue(colors.contains(ScanResultColor.SERVER_ERROR))
     }
     
     @Test
-    fun scanResultColor_determineColor_withHasIssuesTrue_returnsOrange() {
+    fun scanResultColor_determineColor_withHasIssuesTrue_returnsIssue() {
         val item = ScanResultItem(count = 5, extData = null, hasIssues = true)
 
         val color = determineScanResultColor(item)
 
-        assertEquals(ScanResultColor.ORANGE, color)
+        assertEquals(ScanResultColor.ISSUE, color)
     }
     
     @Test
-    fun scanResultColor_determineColor_withZeroCount_returnsYellow() {
+    fun scanResultColor_determineColor_withZeroCount_returnsNotFound() {
         val item = ScanResultItem(count = 0, extData = null, hasIssues = false)
 
         val color = determineScanResultColor(item)
 
-        assertEquals(ScanResultColor.YELLOW, color)
+        assertEquals(ScanResultColor.NOT_FOUND, color)
     }
     
     @Test
-    fun scanResultColor_determineColor_withPositiveCount_returnsGreen() {
+    fun scanResultColor_determineColor_withPositiveCount_returnsOk() {
         val item = ScanResultItem(count = 5, extData = null, hasIssues = false)
 
         val color = determineScanResultColor(item)
 
-        assertEquals(ScanResultColor.GREEN, color)
+        assertEquals(ScanResultColor.OK, color)
     }
     
     @Test
@@ -59,15 +59,15 @@ class ScanResultColorTest {
 
         val color = determineScanResultColor(item)
 
-        assertEquals(ScanResultColor.ORANGE, color)
+        assertEquals(ScanResultColor.ISSUE, color)
     }
     
     @Test
-    fun scanResultColor_determineColor_hasIssuesWithPositiveCount_returnsOrange() {
+    fun scanResultColor_determineColor_hasIssuesWithPositiveCount_returnsIssue() {
         val item = ScanResultItem(count = 10, extData = null, hasIssues = true)
 
         val color = determineScanResultColor(item)
 
-        assertEquals(ScanResultColor.ORANGE, color)
+        assertEquals(ScanResultColor.ISSUE, color)
     }
 }
