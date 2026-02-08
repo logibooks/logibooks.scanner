@@ -50,4 +50,8 @@ This file is a part of LogiScanner application
     <!-- Login error messages -->
     <string name="login_error_invalid_credentials">Неправильный адрес электронной почты или пароль</string>
     <string name="login_error_server_unavailable">Сервер временно недоступен. Пожалуйста, повторите позже</string>
+    <string name="login_error_no_token">Ошибка входа: токен аутентификации не получен</string>
+    
+    <!-- General error messages -->
+    <string name="error_unknown">Произошла неизвестная ошибка</string>
 </resources>

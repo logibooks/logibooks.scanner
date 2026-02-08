@@ -50,4 +50,8 @@ This file is a part of LogiScanner application
     <!-- Login error messages -->
     <string name="login_error_invalid_credentials">Invalid email address or password</string>
     <string name="login_error_server_unavailable">Server is temporarily unavailable. Please try again later</string>
+    <string name="login_error_no_token">Login failed: No authentication token received</string>
+    
+    <!-- General error messages -->
+    <string name="error_unknown">Unknown error occurred</string>
 </resources>
