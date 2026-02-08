@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 [![ci](https://github.com/logibooks/logibooks.scanner/actions/workflows/ci.yml/badge.svg)](https://github.com/logibooks/logibooks.scanner/actions/workflows/ci.yml)
 
 # LogiScanner
@@ -105,6 +104,7 @@ To build a release version (requires signing configuration):
 ### Server URLs
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 The app connects to different servers based on build type.
 =======
 The app connects to different servers based on build type:
@@ -113,6 +113,9 @@ The app connects to different servers based on build type:
 - **Release**: `https://logibooks.sw.consulting:8085/`
 
 >>>>>>> c4c0885 (doc: add README documentation (#40))
+=======
+The app connects to different servers based on build type.
+>>>>>>> 8d0a449 (chore: refactor README by removing unnecessary sections)
 These URLs are configured in `app/build.gradle.kts` and can be modified if needed.
 
 ### Application Version
@@ -145,8 +148,6 @@ The app communicates with the Logibooks backend API:
 
 All authenticated requests include a JWT Bearer token in the Authorization header.
 
-<<<<<<< HEAD
-=======
 ## Localization
 
 The application supports multiple languages:
@@ -185,4 +186,3 @@ For issues, questions, or contributions, please contact the development team at 
 
 **Version**: 0.2.1  
 **Last Updated**: February 2026
->>>>>>> c4c0885 (doc: add README documentation (#40))
