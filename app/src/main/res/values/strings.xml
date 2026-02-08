@@ -54,4 +54,8 @@ This file is a part of LogiScanner application
     
     <!-- General error messages -->
     <string name="error_unknown">Unknown error occurred</string>
+    
+    <!-- Scan error messages -->
+    <string name="scan_error_job_invalid">Scan job is no longer active</string>
+    <string name="scan_error_server">Server interaction error. Please try again later</string>
 </resources>

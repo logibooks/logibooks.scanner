@@ -255,7 +255,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastCode = null,
                             lastCount = null,
                             lastExtData = null,
-                            error = ex.message ?: "Задание на сканирование неактивно",
+                            error = getApplication<Application>().getString(R.string.scan_error_job_invalid),
                             scanResultColor = ScanResultColor.NONE
                         )
                     }
@@ -265,7 +265,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastCode = code,
                             lastCount = null,
                             lastExtData = null,
-                            error = ex.message ?: "Ошибка взаимодействия с сервером. Пожалуйста, попробуйте позже",
+                            error = getApplication<Application>().getString(R.string.scan_error_server),
                             scanResultColor = ScanResultColor.RED
                         )
                     }
