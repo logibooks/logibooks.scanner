@@ -139,7 +139,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     viewModelScope.launch {
                         logout()
                     }
-                    Unit
                 }
                 scanJobRepo = ScanJobRepository(url, token, unauthorizedHandler)
                 scanRepo = ScanRepository(url, token, unauthorizedHandler)
