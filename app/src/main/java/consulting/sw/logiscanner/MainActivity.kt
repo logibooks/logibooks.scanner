@@ -560,39 +560,35 @@ private fun ScanScreen(
             }
         }
 
-        if (lastCode != null) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.last_scan), style = MaterialTheme.typography.titleMedium)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.last_scan), style = MaterialTheme.typography.titleMedium)
+                if (lastCode != null) {
                     Text(
                         stringResource(R.string.code, lastCode),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (!lastExtData.isNullOrBlank()) {
+                }
+                if (lastCount != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = lastExtData,
+                            stringResource(R.string.count_result, lastCount),
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                    if (lastCount != null) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                stringResource(R.string.count_result, lastCount),
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+                }
+                if (!lastExtData.isNullOrBlank()) {
+                    Text(
+                        text = lastExtData,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
