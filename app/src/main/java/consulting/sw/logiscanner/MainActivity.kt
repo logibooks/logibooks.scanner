@@ -59,6 +59,7 @@ import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
+import consulting.sw.logiscanner.ui.HidScanInput
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -146,7 +147,8 @@ class MainActivity : ComponentActivity() {
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
                                 onBackToJobs = { vm.selectScanJob(null) },
-                                onLogout = vm::logout
+                                onLogout = vm::logout,
+                                onScanned = vm::onScanned
                             )
                         }
                     }
@@ -442,8 +444,15 @@ private fun ScanScreen(
     onStartScanning: () -> Unit,
     onStopScanning: () -> Unit,
     onBackToJobs: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onScanned: (String) -> Unit
 ) {
+    // HID scan input (Bluetooth keyboard wedge scanners like WD4)
+    HidScanInput(
+        enabled = isScanning,
+        onScan = onScanned
+    )
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
