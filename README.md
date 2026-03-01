@@ -2,13 +2,13 @@
 
 # LogiScanner
 
-LogiScanner is an Android application designed for warehouse and logistics operations, providing barcode scanning capabilities for inventory management and parcel tracking. The app works with industrial Android scanning devices (MT93) and integrates with the Logibooks backend system.
+LogiScanner is an Android application designed for warehouse and logistics operations, providing barcode scanning capabilities for inventory management and parcel tracking. The app works with industrial Android scanning devices (MT93) and Bluetooth HID ring scanners (WD4) and integrates with the Logibooks backend system.
 
 ## Features
 
 - **User Authentication**: Secure login with email and password
 - **Scan Job Management**: Select and manage different scanning jobs from the server
-- **Real-time Barcode Scanning**: Hardware-based barcode scanning using MT93 devices
+- **Real-time Barcode Scanning**: Hardware-based barcode scanning using MT93 devices or Bluetooth HID ring scanners (WD4)
 - **Visual & Audio Feedback**: Color-coded scan results with Russian text-to-speech feedback
 - **Offline Support**: Local authentication data storage using DataStore
 - **Multi-language Support**: UI strings available in English and Russian
@@ -17,7 +17,7 @@ LogiScanner is an Android application designed for warehouse and logistics opera
 
 - Android SDK 26 (Android 8.0 Oreo) or higher
 - Target SDK: 36
-- Compatible with MT93 barcode scanning devices
+- Compatible with MT93 barcode scanning devices or Bluetooth HID scanners (e.g., WD4 ring scanner)
 - Network connectivity to Logibooks backend server
 
 ## Technology Stack
@@ -130,12 +130,28 @@ appVersionName=0.2.1
 1. **Login**: Users authenticate with their email and password
 2. **Job Selection**: After login, users can view and select available scan jobs
 3. **Scanning**: With a job selected, users can activate scanning mode
-4. **Hardware Scan**: Press the hardware scan key on the MT93 device to scan barcodes
+4. **Hardware Scan**: Press the hardware scan key on the MT93 device or scan with a Bluetooth HID ring scanner (WD4)
 5. **Results**: The app displays scan results with:
    - **Green**: Item found successfully
    - **Yellow**: No items found
    - **Orange**: Issues detected
    - Audio feedback in Russian
+
+## Scanner Setup
+
+### MT93 Hardware Scanner
+
+The MT93 scanner is built into compatible Android devices and requires no additional setup.
+
+### WD4 Bluetooth Ring Scanner
+
+For using WD4 or other Bluetooth HID ring scanners with standard Android phones:
+
+1. Configure the scanner for Bluetooth HID mode (keyboard wedge)
+2. Pair the scanner with your Android phone via Bluetooth settings
+3. Configure terminating character suffix (recommended: CR or LF)
+
+**See detailed setup instructions**: [WD4 Setup Guide](docs/WD4-Setup.md)
 
 ## API Integration
 

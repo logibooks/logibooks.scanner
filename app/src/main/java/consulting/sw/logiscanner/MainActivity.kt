@@ -8,11 +8,13 @@ import android.content.Context
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import java.util.Locale
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -39,12 +41,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -59,6 +68,7 @@ import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
+import consulting.sw.logiscanner.ui.HidScanInput
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -66,6 +76,10 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
+
+// Focus request retry settings for LoginScreen
+private const val MAX_FOCUS_REQUEST_ATTEMPTS = 3
+private const val FOCUS_REQUEST_DELAY_MS = 300L
 
 
 class MainActivity : ComponentActivity() {
@@ -93,6 +107,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val state by vm.state.collectAsState()
+            val focusManager = LocalFocusManager.current
 
             LogiScannerTheme {
                 // Apply background color based on scan result
@@ -128,7 +143,10 @@ class MainActivity : ComponentActivity() {
                                 displayName = state.displayName,
                                 error = state.error,
                                 onSelectJob = vm::selectScanJob,
-                                onLogout = vm::logout,
+                                onLogout = {
+                                    focusManager.clearFocus()
+                                    vm.logout()
+                                },
                                 onRefresh = vm::loadScanJobs
                             )
                         }
@@ -145,8 +163,15 @@ class MainActivity : ComponentActivity() {
                                 error = state.error,
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
-                                onBackToJobs = { vm.selectScanJob(null) },
-                                onLogout = vm::logout
+                                onBackToJobs = { 
+                                    focusManager.clearFocus()
+                                    vm.selectScanJob(null) 
+                                },
+                                onLogout = {
+                                    focusManager.clearFocus()
+                                    vm.logout()
+                                },
+                                onScanned = vm::onScanned
                             )
                         }
                     }
@@ -190,6 +215,29 @@ private fun LoginScreen(
     onLogin: () -> Unit
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val view = LocalView.current
+
+    LaunchedEffect(Unit) {
+        // Try a few times to request focus; on some devices the focus target
+        // may not be initialized immediately, and requestFocus() can throw
+        // IllegalStateException in that case.
+        repeat(MAX_FOCUS_REQUEST_ATTEMPTS) { attempt ->
+            try {
+                delay(FOCUS_REQUEST_DELAY_MS)
+                focusRequester.requestFocus()
+                val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.showSoftInput(view, 0)
+                return@LaunchedEffect
+            } catch (e: IllegalStateException) {
+                if (attempt == MAX_FOCUS_REQUEST_ATTEMPTS - 1) {
+                    // Give up after the last attempt; avoid crashing the app.
+                    return@LaunchedEffect
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -235,8 +283,17 @@ private fun LoginScreen(
                     onValueChange = onEmailChange,
                     label = { Text(stringResource(R.string.email)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     colors = textFieldColors,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { 
+                            if (it.isFocused) {
+                                val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                                imm?.showSoftInput(view, 0)
+                            }
+                        }
                 )
 
                 OutlinedTextField(
@@ -442,8 +499,18 @@ private fun ScanScreen(
     onStartScanning: () -> Unit,
     onStopScanning: () -> Unit,
     onBackToJobs: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onScanned: (String) -> Unit
 ) {
+    // HID scan input (Bluetooth keyboard wedge scanners like WD4)
+    // Always enabled on scan screen to capture HID input and prevent it from
+    // being processed by other UI elements. Actual scan processing is gated
+    // by isScanning state in the ViewModel.
+    HidScanInput(
+        enabled = true,
+        onScan = onScanned
+    )
+    
     Column(
         modifier = Modifier
             .fillMaxSize()

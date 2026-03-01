@@ -45,7 +45,7 @@ This file is a part of LogiScanner application
     <string name="code">Code: %s</string>
     <string name="count_result">Parcels found: %d</string>
     
-    <string name="scan_hint">Use the hardware Scan key</string>
+    <string name="scan_hint">Use the hardware Scan key or Bluetooth ring scanner</string>
     
     <!-- Login error messages -->
     <string name="login_error_invalid_credentials">Invalid email address or password</string>

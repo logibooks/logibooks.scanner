@@ -1,5 +1,7 @@
 *.iml
 .gradle
+.idea/
+.vscode/
 /local.properties
 /.idea/caches
 /.idea/libraries
@@ -7,7 +9,7 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
-.DS_Store
+.DS_Storegit 
 /build
 /captures
 .externalNativeBuild
