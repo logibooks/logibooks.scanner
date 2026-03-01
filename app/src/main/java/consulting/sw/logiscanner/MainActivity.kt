@@ -8,11 +8,13 @@ import android.content.Context
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import java.util.Locale
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,7 +50,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -98,6 +103,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val state by vm.state.collectAsState()
+            val focusManager = LocalFocusManager.current
 
             LogiScannerTheme {
                 // Apply background color based on scan result
@@ -133,7 +139,10 @@ class MainActivity : ComponentActivity() {
                                 displayName = state.displayName,
                                 error = state.error,
                                 onSelectJob = vm::selectScanJob,
-                                onLogout = vm::logout,
+                                onLogout = {
+                                    focusManager.clearFocus()
+                                    vm.logout()
+                                },
                                 onRefresh = vm::loadScanJobs
                             )
                         }
@@ -150,8 +159,14 @@ class MainActivity : ComponentActivity() {
                                 error = state.error,
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
-                                onBackToJobs = { vm.selectScanJob(null) },
-                                onLogout = vm::logout,
+                                onBackToJobs = { 
+                                    focusManager.clearFocus()
+                                    vm.selectScanJob(null) 
+                                },
+                                onLogout = {
+                                    focusManager.clearFocus()
+                                    vm.logout()
+                                },
                                 onScanned = vm::onScanned
                             )
                         }
@@ -198,10 +213,13 @@ private fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val view = LocalView.current
 
     LaunchedEffect(Unit) {
+        delay(300)
         focusRequester.requestFocus()
-        keyboardController?.show()
+        val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.showSoftInput(view, 0)
     }
 
     Column(
@@ -253,6 +271,12 @@ private fun LoginScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester)
+                        .onFocusChanged { 
+                            if (it.isFocused) {
+                                val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                                imm?.showSoftInput(view, 0)
+                            }
+                        }
                 )
 
                 OutlinedTextField(

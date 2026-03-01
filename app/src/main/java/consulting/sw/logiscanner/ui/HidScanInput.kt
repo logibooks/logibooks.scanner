@@ -144,14 +144,12 @@ fun HidScanInput(
             .focusRequester(focusRequester)
             .onFocusChanged { focusState ->
                 isFocused = focusState.isFocused
-                if (enabled && !focusState.isFocused) {
-                    // Hide keyboard when focus is lost
-                    // Focus recovery is handled by the LaunchedEffect above
-                    keyboardController?.hide()
-                } else if (focusState.isFocused) {
-                    // Ensure keyboard is hidden when focus is gained
-                    keyboardController?.hide()
+                if (enabled && focusState.isFocused) {
+                     // Ensure keyboard is hidden when focus is gained
+                     keyboardController?.hide()
                 }
+                // Removed the block that hides keyboard on focus loss to prevent
+                // interfering with navigation to screens that require keyboard
             }
             .onPreviewKeyEvent { keyEvent ->
                 if (keyEvent.type == KeyEventType.KeyDown) {
