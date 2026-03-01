@@ -12,6 +12,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -25,28 +26,27 @@ import org.junit.Assert.*
 @OptIn(ExperimentalCoroutinesApi::class)
 class HidScanCollectorTest {
 
-    private lateinit var testScope: CoroutineScope
     private val capturedScans = mutableListOf<String>()
     private var virtualTime = 0L
 
     @Before
     fun setup() {
-        val testDispatcher = StandardTestDispatcher()
-        Dispatchers.setMain(testDispatcher)
-        testScope = CoroutineScope(testDispatcher)
         capturedScans.clear()
         virtualTime = 0L
     }
 
     @After
     fun tearDown() {
-        testScope.cancel()
+        Dispatchers.resetMain()
     }
 
     @Test
     fun fastBurstWithTerminator_emitsScan() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -68,9 +68,12 @@ class HidScanCollectorTest {
 
     @Test
     fun fastBurstWithoutTerminator_emitsAfterIdleTimeout() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
             idleTimeoutMs = 70,
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -93,9 +96,12 @@ class HidScanCollectorTest {
 
     @Test
     fun slowTyping_doesNotEmitScan() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
             maxMedianInterKeyMs = 35,
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -116,9 +122,12 @@ class HidScanCollectorTest {
 
     @Test
     fun tooShortInput_doesNotEmit() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
             minLength = 6,
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -139,9 +148,12 @@ class HidScanCollectorTest {
 
     @Test
     fun duplicateWithinDebounce_suppressed() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
             debounceMs = 300,
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -173,9 +185,12 @@ class HidScanCollectorTest {
 
     @Test
     fun duplicateAfterDebounce_notSuppressed() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
             debounceMs = 300,
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -210,10 +225,13 @@ class HidScanCollectorTest {
 
     @Test
     fun maxDurationExceeded_doesNotEmit() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
             maxScanDurationMs = 500,
             maxMedianInterKeyMs = 100, // Allow slower typing for this test
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -235,8 +253,11 @@ class HidScanCollectorTest {
 
     @Test
     fun trailingWhitespace_trimmed() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -256,8 +277,11 @@ class HidScanCollectorTest {
 
     @Test
     fun leadingWhitespace_trimmed() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -277,8 +301,11 @@ class HidScanCollectorTest {
 
     @Test
     fun emptyAfterTrim_doesNotEmit() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -298,8 +325,11 @@ class HidScanCollectorTest {
 
     @Test
     fun reset_clearsBuffer() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -332,9 +362,12 @@ class HidScanCollectorTest {
 
     @Test
     fun multipleScans_allEmitted() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
             debounceMs = 100,
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -378,9 +411,12 @@ class HidScanCollectorTest {
 
     @Test
     fun medianCalculation_withEvenNumberOfIntervals() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
             maxMedianInterKeyMs = 30,
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )
@@ -411,9 +447,12 @@ class HidScanCollectorTest {
 
     @Test
     fun medianCalculation_withOddNumberOfIntervals() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(testDispatcher)
+        
         val collector = HidScanCollector(
             maxMedianInterKeyMs = 25,
-            scope = testScope,
+            scope = this,
             onScan = { capturedScans.add(it) },
             currentTimeMillis = { virtualTime }
         )

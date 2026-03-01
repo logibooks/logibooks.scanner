@@ -77,6 +77,10 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 
+// Focus request retry settings for LoginScreen
+private const val MAX_FOCUS_REQUEST_ATTEMPTS = 3
+private const val FOCUS_REQUEST_DELAY_MS = 300L
+
 
 class MainActivity : ComponentActivity() {
 
@@ -216,10 +220,23 @@ private fun LoginScreen(
     val view = LocalView.current
 
     LaunchedEffect(Unit) {
-        delay(300)
-        focusRequester.requestFocus()
-        val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.showSoftInput(view, 0)
+        // Try a few times to request focus; on some devices the focus target
+        // may not be initialized immediately, and requestFocus() can throw
+        // IllegalStateException in that case.
+        repeat(MAX_FOCUS_REQUEST_ATTEMPTS) { attempt ->
+            try {
+                delay(FOCUS_REQUEST_DELAY_MS)
+                focusRequester.requestFocus()
+                val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.showSoftInput(view, 0)
+                return@LaunchedEffect
+            } catch (e: IllegalStateException) {
+                if (attempt == MAX_FOCUS_REQUEST_ATTEMPTS - 1) {
+                    // Give up after the last attempt; avoid crashing the app.
+                    return@LaunchedEffect
+                }
+            }
+        }
     }
 
     Column(

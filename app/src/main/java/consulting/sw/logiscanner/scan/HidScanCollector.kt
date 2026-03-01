@@ -29,12 +29,13 @@ class HidScanCollector(
     private val minLength: Int = 6,
     private val idleTimeoutMs: Long = 70,
     private val maxScanDurationMs: Long = 500,
-    private val maxMedianInterKeyMs: Long = 35,
+    maxMedianInterKeyMs: Long = 35,
     private val debounceMs: Long = 300,
     private val scope: CoroutineScope,
     private val onScan: (String) -> Unit,
     private val currentTimeMillis: () -> Long = { System.currentTimeMillis() }
 ) {
+    private val maxMedianInterKeyMsDouble = maxMedianInterKeyMs.toDouble()
     private val buffer = StringBuilder()
     private val timestamps = mutableListOf<Long>()
     private var idleJob: Job? = null
@@ -141,12 +142,14 @@ class HidScanCollector(
         }
         intervals.sort()
         val median = if (intervals.size % 2 == 0) {
-            (intervals[intervals.size / 2 - 1] + intervals[intervals.size / 2]) / 2
+            val upperIndex = intervals.size / 2
+            val lowerIndex = upperIndex - 1
+            (intervals[lowerIndex] + intervals[upperIndex]).toDouble() / 2.0
         } else {
-            intervals[intervals.size / 2]
+            intervals[intervals.size / 2].toDouble()
         }
 
-        if (median > maxMedianInterKeyMs) {
+        if (median > maxMedianInterKeyMsDouble) {
             return false
         }
 
