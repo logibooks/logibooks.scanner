@@ -208,6 +208,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onScanned(code: String) {
+        // Ignore scans when not in scanning mode
+        if (!state.value.isScanning) {
+            Log.d(javaClass.simpleName, "Scan received but not in scanning mode, ignoring: $code")
+            return
+        }
+        
         val job = state.value.selectedScanJob
         if (job == null) {
             Log.w(javaClass.simpleName, "Scan received but no job selected, ignoring: $code")

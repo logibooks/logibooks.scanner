@@ -39,12 +39,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -192,6 +196,13 @@ private fun LoginScreen(
     onLogin: () -> Unit
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+        keyboardController?.show()
+    }
 
     Column(
         modifier = Modifier
@@ -237,8 +248,11 @@ private fun LoginScreen(
                     onValueChange = onEmailChange,
                     label = { Text(stringResource(R.string.email)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     colors = textFieldColors,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
                 )
 
                 OutlinedTextField(
@@ -448,8 +462,11 @@ private fun ScanScreen(
     onScanned: (String) -> Unit
 ) {
     // HID scan input (Bluetooth keyboard wedge scanners like WD4)
+    // Always enabled on scan screen to capture HID input and prevent it from
+    // being processed by other UI elements. Actual scan processing is gated
+    // by isScanning state in the ViewModel.
     HidScanInput(
-        enabled = isScanning,
+        enabled = true,
         onScan = onScanned
     )
     
