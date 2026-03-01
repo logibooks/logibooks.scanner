@@ -45,7 +45,7 @@ This file is a part of LogiScanner application
     <string name="code">Код: %s</string>
     <string name="count_result">Найдено посылок: %d</string>
     
-    <string name="scan_hint">Используйте кнопку аппаратного сканирования или Bluetooth кольцевой сканер</string>
+    <string name="scan_hint">Используйте кнопку аппаратного сканирования или Bluetooth сканер</string>
     
     <!-- Login error messages -->
     <string name="login_error_invalid_credentials">Неправильный адрес электронной почты или пароль</string>

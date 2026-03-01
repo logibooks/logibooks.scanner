@@ -6,6 +6,8 @@ package consulting.sw.logiscanner.ui
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,9 +28,12 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import consulting.sw.logiscanner.scan.HidScanCollector
+import kotlinx.coroutines.delay
 
 /**
  * Invisible Compose input field that captures HID keystrokes from Bluetooth scanners.
@@ -58,6 +63,7 @@ fun HidScanInput(
     val keyboardController = LocalSoftwareKeyboardController.current
     var textValue by remember { mutableStateOf("") }
     var previousText by remember { mutableStateOf("") }
+    var isFocused by remember { mutableStateOf(false) }
     
     val collector = remember(enabled) {
         HidScanCollector(
@@ -66,14 +72,32 @@ fun HidScanInput(
         )
     }
 
-    // Request focus when enabled
+    // Request focus when enabled and continuously ensure focus is maintained
     LaunchedEffect(enabled) {
         if (enabled) {
+            // Initial focus request with retry
+            repeat(3) {
+                try {
+                    focusRequester.requestFocus()
+                    keyboardController?.hide()
+                } catch (e: IllegalStateException) {
+                    // Focus request may fail if not yet laid out, retry after delay
+                }
+                delay(100)
+            }
+        }
+    }
+    
+    // Periodic focus recovery - ensures HID input stays active
+    LaunchedEffect(enabled, isFocused) {
+        if (enabled && !isFocused) {
+            // Small delay to avoid rapid re-focus cycles
+            delay(200)
             try {
                 focusRequester.requestFocus()
                 keyboardController?.hide()
             } catch (e: IllegalStateException) {
-                // Focus request may fail if not yet laid out
+                // Ignore - will retry on next composition
             }
         }
     }
@@ -108,18 +132,25 @@ fun HidScanInput(
                 textValue = newValue
             }
         },
+        // Prevent soft keyboard from appearing for HID-only input
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Ascii,
+            imeAction = ImeAction.None,
+            autoCorrectEnabled = false
+        ),
+        keyboardActions = KeyboardActions.Default,
         modifier = modifier
             .size(1.dp) // Tiny, essentially invisible
             .focusRequester(focusRequester)
             .onFocusChanged { focusState ->
+                isFocused = focusState.isFocused
                 if (enabled && !focusState.isFocused) {
-                    // Re-request focus if lost
-                    try {
-                        // focusRequester.requestFocus()
-                        keyboardController?.hide()
-                    } catch (e: IllegalStateException) {
-                        // Ignore
-                    }
+                    // Hide keyboard when focus is lost
+                    // Focus recovery is handled by the LaunchedEffect above
+                    keyboardController?.hide()
+                } else if (focusState.isFocused) {
+                    // Ensure keyboard is hidden when focus is gained
+                    keyboardController?.hide()
                 }
             }
             .onPreviewKeyEvent { keyEvent ->
