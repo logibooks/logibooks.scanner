@@ -27,6 +27,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -141,6 +142,7 @@ fun HidScanInput(
         keyboardActions = KeyboardActions.Default,
         modifier = modifier
             .size(1.dp) // Tiny, essentially invisible
+            .clearAndSetSemantics {} // Remove from accessibility tree to avoid TalkBack focus trap
             .focusRequester(focusRequester)
             .onFocusChanged { focusState ->
                 isFocused = focusState.isFocused

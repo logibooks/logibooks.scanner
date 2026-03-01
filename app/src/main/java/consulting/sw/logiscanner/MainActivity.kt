@@ -216,10 +216,26 @@ private fun LoginScreen(
     val view = LocalView.current
 
     LaunchedEffect(Unit) {
-        delay(300)
-        focusRequester.requestFocus()
-        val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.showSoftInput(view, 0)
+        // Try a few times to request focus; on some devices the focus target
+        // may not be initialized immediately, and requestFocus() can throw
+        // IllegalStateException in that case.
+        repeat(3) { attempt ->
+            try {
+                delay(300)
+                focusRequester.requestFocus()
+                val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.showSoftInput(view, 0)
+                return@LaunchedEffect
+            } catch (e: IllegalStateException) {
+                if (attempt == 2) {
+                    // Give up after the last attempt; avoid crashing the app.
+                    return@LaunchedEffect
+                }
+                // Wait a bit before retrying.
+                // Using a small delay to give Compose more time to lay out the focus target.
+                // This keeps behavior similar while making it robust on slower devices.
+            }
+        }
     }
 
     Column(

@@ -141,12 +141,14 @@ class HidScanCollector(
         }
         intervals.sort()
         val median = if (intervals.size % 2 == 0) {
-            (intervals[intervals.size / 2 - 1] + intervals[intervals.size / 2]) / 2
+            val upperIndex = intervals.size / 2
+            val lowerIndex = upperIndex - 1
+            (intervals[lowerIndex] + intervals[upperIndex]).toDouble() / 2.0
         } else {
-            intervals[intervals.size / 2]
+            intervals[intervals.size / 2].toDouble()
         }
 
-        if (median > maxMedianInterKeyMs) {
+        if (median > maxMedianInterKeyMs.toDouble()) {
             return false
         }
 
