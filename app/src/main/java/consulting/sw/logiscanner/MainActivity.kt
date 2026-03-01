@@ -235,9 +235,6 @@ private fun LoginScreen(
                     // Give up after the last attempt; avoid crashing the app.
                     return@LaunchedEffect
                 }
-                // Wait a bit before retrying.
-                // Using a small delay to give Compose more time to lay out the focus target.
-                // This keeps behavior similar while making it robust on slower devices.
             }
         }
     }
