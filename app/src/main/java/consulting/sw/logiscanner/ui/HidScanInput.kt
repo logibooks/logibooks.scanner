@@ -115,7 +115,7 @@ fun HidScanInput(
                 if (enabled && !focusState.isFocused) {
                     // Re-request focus if lost
                     try {
-                        focusRequester.requestFocus()
+                        // focusRequester.requestFocus()
                         keyboardController?.hide()
                     } catch (e: IllegalStateException) {
                         // Ignore
