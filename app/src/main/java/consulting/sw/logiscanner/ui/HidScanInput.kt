@@ -35,8 +35,8 @@ import consulting.sw.logiscanner.scan.HidScanCollector
  * 
  * This component renders a tiny, invisible BasicTextField that stays focused while enabled.
  * It captures input via:
- * 1. onPreviewKeyEvent for Enter/Tab and printable keys
- * 2. BasicTextField value changes as fallback for IME text insertion
+ * 1. BasicTextField value changes (primary path) - handles all characters with correct case and punctuation
+ * 2. onPreviewKeyEvent for Enter/Tab terminators
  * 
  * The component forwards characters to HidScanCollector which applies heuristics
  * to distinguish scanner input from human typing.
@@ -91,10 +91,11 @@ fun HidScanInput(
             if (newValue.length > previousText.length) {
                 val addedChars = newValue.substring(previousText.length)
                 for (c in addedChars) {
-                    if (c.isLetterOrDigit() || c in " -_.") {
-                        collector.onPrintableChar(c)
-                    } else if (c == '\n' || c == '\r' || c == '\t') {
+                    if (c == '\n' || c == '\r' || c == '\t') {
                         collector.onTerminator()
+                    } else if (c.isLetterOrDigit() || c in "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ ") {
+                        // Accept all printable ASCII characters (letters, digits, punctuation, space)
+                        collector.onPrintableChar(c)
                     }
                 }
             }
@@ -133,14 +134,9 @@ fun HidScanInput(
                             true
                         }
                         else -> {
-                            // Try to get character from key
-                            val c = keyEventToChar(keyEvent.key)
-                            if (c != null && (c.isLetterOrDigit() || c in " -_.")) {
-                                collector.onPrintableChar(c)
-                                true
-                            } else {
-                                false
-                            }
+                            // Let the TextField handle the character input naturally
+                            // This will preserve case sensitivity and special characters
+                            false
                         }
                     }
                 } else {
@@ -152,53 +148,4 @@ fun HidScanInput(
             fontSize = 1.sp
         )
     )
-}
-
-/**
- * Convert Key to Char for common printable keys.
- * This is a simplified mapping for the most common scanner output.
- */
-private fun keyEventToChar(key: Key): Char? {
-    return when (key) {
-        Key.Zero -> '0'
-        Key.One -> '1'
-        Key.Two -> '2'
-        Key.Three -> '3'
-        Key.Four -> '4'
-        Key.Five -> '5'
-        Key.Six -> '6'
-        Key.Seven -> '7'
-        Key.Eight -> '8'
-        Key.Nine -> '9'
-        Key.A -> 'A'
-        Key.B -> 'B'
-        Key.C -> 'C'
-        Key.D -> 'D'
-        Key.E -> 'E'
-        Key.F -> 'F'
-        Key.G -> 'G'
-        Key.H -> 'H'
-        Key.I -> 'I'
-        Key.J -> 'J'
-        Key.K -> 'K'
-        Key.L -> 'L'
-        Key.M -> 'M'
-        Key.N -> 'N'
-        Key.O -> 'O'
-        Key.P -> 'P'
-        Key.Q -> 'Q'
-        Key.R -> 'R'
-        Key.S -> 'S'
-        Key.T -> 'T'
-        Key.U -> 'U'
-        Key.V -> 'V'
-        Key.W -> 'W'
-        Key.X -> 'X'
-        Key.Y -> 'Y'
-        Key.Z -> 'Z'
-        Key.Spacebar -> ' '
-        Key.Minus -> '-'
-        Key.Period -> '.'
-        else -> null
-    }
 }
