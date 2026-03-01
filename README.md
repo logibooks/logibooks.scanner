@@ -103,7 +103,19 @@ To build a release version (requires signing configuration):
 
 ### Server URLs
 
+<<<<<<< HEAD
+<<<<<<< HEAD
 The app connects to different servers based on build type.
+=======
+The app connects to different servers based on build type:
+
+- **Debug**: `http://192.168.11.140:8080/`
+- **Release**: `https://logibooks.sw.consulting:8085/`
+
+>>>>>>> c4c0885 (doc: add README documentation (#40))
+=======
+The app connects to different servers based on build type.
+>>>>>>> 8d0a449 (chore: refactor README by removing unnecessary sections)
 These URLs are configured in `app/build.gradle.kts` and can be modified if needed.
 
 ### Application Version
@@ -152,3 +164,41 @@ The app communicates with the Logibooks backend API:
 
 All authenticated requests include a JWT Bearer token in the Authorization header.
 
+## Localization
+
+The application supports multiple languages:
+- English (default)
+- Russian (ru)
+
+User interface adapts to the device locale, with fallback to English.
+
+## Development
+
+### Code Style
+
+The project follows the official Kotlin coding conventions:
+```properties
+kotlin.code.style=official
+```
+
+### Git Workflow
+
+1. Create a feature branch from `main`
+2. Make your changes
+3. Run tests and linting
+4. Submit a pull request
+
+## License
+
+Copyright (C) 2026 Maxim [maxirmx] Samsonov (www.sw.consulting)
+All rights reserved.
+This file is a part of LogiScanner application.
+
+## Support
+
+For issues, questions, or contributions, please contact the development team at www.sw.consulting
+
+---
+
+**Version**: 0.2.1  
+**Last Updated**: February 2026
