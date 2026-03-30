@@ -4,6 +4,7 @@
 
 package consulting.sw.logiscanner.ui
 
+import android.view.KeyCharacterMap
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -26,7 +27,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import android.view.KeyCharacterMap
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
@@ -188,8 +188,9 @@ fun HidScanInput(
                             // character using the US English VIRTUAL_KEYBOARD map.  This ensures
                             // barcode data is always interpreted as ASCII regardless of the
                             // device's configured keyboard language (e.g., Russian/Cyrillic).
+                            // FIXED: Use native Android keyCode instead of Compose's logical keyCode
                             val codePoint = keyCharMap.get(
-                                keyEvent.key.keyCode.toInt(),
+                                keyEvent.nativeKeyEvent.keyCode,
                                 keyEvent.nativeKeyEvent.metaState
                             )
                             if (codePoint > 0) {
