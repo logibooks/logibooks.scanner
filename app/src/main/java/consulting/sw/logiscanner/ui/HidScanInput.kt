@@ -188,7 +188,10 @@ fun HidScanInput(
                             // character using the US English VIRTUAL_KEYBOARD map.  This ensures
                             // barcode data is always interpreted as ASCII regardless of the
                             // device's configured keyboard language (e.g., Russian/Cyrillic).
-                            // FIXED: Use native Android keyCode instead of Compose's logical keyCode
+                            // nativeKeyEvent.keyCode is used here because KeyCharacterMap.get()
+                            // expects the platform-level Android key code, whereas
+                            // keyEvent.key.keyCode is Compose's logical representation which
+                            // may not map 1:1 to the platform values required by the API.
                             val codePoint = keyCharMap.get(
                                 keyEvent.nativeKeyEvent.keyCode,
                                 keyEvent.nativeKeyEvent.metaState
