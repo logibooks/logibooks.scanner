@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.sp
 import consulting.sw.logiscanner.scan.HidScanCollector
 import kotlinx.coroutines.delay
 
-/** Returns true if [c] is a line terminator that should end a scan burst. */
+/** Returns true if [c] is a scan terminator (e.g., Enter/Tab/CR/LF) that should end a scan burst. */
 private fun isTerminatorChar(c: Char) = c == '\n' || c == '\r' || c == '\t'
 
 /** Returns true if [c] is a printable ASCII character (0x20–0x7E). */
