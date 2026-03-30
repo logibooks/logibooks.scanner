@@ -4,6 +4,7 @@
 
 package consulting.sw.logiscanner.ui
 
+import android.view.KeyCharacterMap
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -36,13 +37,22 @@ import androidx.compose.ui.unit.sp
 import consulting.sw.logiscanner.scan.HidScanCollector
 import kotlinx.coroutines.delay
 
+/** Returns true if [c] is a scan terminator (e.g., Enter/Tab/CR/LF) that should end a scan burst. */
+private fun isTerminatorChar(c: Char) = c == '\n' || c == '\r' || c == '\t'
+
+/** Returns true if [c] is a printable ASCII character (0x20–0x7E). */
+private fun isPrintableAscii(c: Char) = c.code in 0x20..0x7E
+
 /**
  * Invisible Compose input field that captures HID keystrokes from Bluetooth scanners.
  * 
  * This component renders a tiny, invisible BasicTextField that stays focused while enabled.
  * It captures input via:
- * 1. BasicTextField value changes (primary path) - handles all characters with correct case and punctuation
- * 2. onPreviewKeyEvent for Enter/Tab terminators
+ * 1. onPreviewKeyEvent (primary path) - translates raw key codes to ASCII using the US English
+ *    VIRTUAL_KEYBOARD character map, enforcing English keyboard locale regardless of the device's
+ *    configured keyboard layout (e.g., Russian/Cyrillic).
+ * 2. BasicTextField value changes (fallback) - catches any input that bypasses key event handling,
+ *    filtered to printable ASCII only.
  * 
  * The component forwards characters to HidScanCollector which applies heuristics
  * to distinguish scanner input from human typing.
@@ -72,6 +82,12 @@ fun HidScanInput(
             onScan = onScan
         )
     }
+
+    // US English QWERTY character map used to enforce English keyboard locale for HID scanner input.
+    // KeyCharacterMap.VIRTUAL_KEYBOARD is the built-in generic US English layout, so barcode
+    // characters are always translated to ASCII regardless of the device's configured keyboard
+    // language (e.g., Russian/Cyrillic).
+    val keyCharMap = remember { KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD) }
 
     // Request focus when enabled and continuously ensure focus is maintained
     LaunchedEffect(enabled) {
@@ -112,14 +128,17 @@ fun HidScanInput(
     BasicTextField(
         value = textValue,
         onValueChange = { newValue ->
-            // Detect new characters added by IME (fallback path)
+            // Fallback path: catches any input not handled by onPreviewKeyEvent.
+            // Restricted to printable ASCII (0x20–0x7E) so that Cyrillic or other
+            // non-ASCII characters (which could arrive if the device keyboard layout
+            // is not English) are silently ignored.
             if (newValue.length > previousText.length) {
                 val addedChars = newValue.substring(previousText.length)
                 for (c in addedChars) {
-                    if (c == '\n' || c == '\r' || c == '\t') {
+                    if (isTerminatorChar(c)) {
                         collector.onTerminator()
-                    } else if (c.isLetterOrDigit() || c in "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ ") {
-                        // Accept all printable ASCII characters (letters, digits, punctuation, space)
+                    } else if (isPrintableAscii(c)) {
+                        // Accept only printable ASCII characters
                         collector.onPrintableChar(c)
                     }
                 }
@@ -165,9 +184,34 @@ fun HidScanInput(
                             true
                         }
                         else -> {
-                            // Let the TextField handle the character input naturally
-                            // This will preserve case sensitivity and special characters
-                            false
+                            // Enforce English keyboard locale: translate the raw key code to a
+                            // character using the US English VIRTUAL_KEYBOARD map.  This ensures
+                            // barcode data is always interpreted as ASCII regardless of the
+                            // device's configured keyboard language (e.g., Russian/Cyrillic).
+                            // nativeKeyEvent.keyCode is used here because KeyCharacterMap.get()
+                            // expects the platform-level Android key code, whereas
+                            // keyEvent.key.keyCode is Compose's logical representation which
+                            // may not map 1:1 to the platform values required by the API.
+                            val codePoint = keyCharMap.get(
+                                keyEvent.nativeKeyEvent.keyCode,
+                                keyEvent.nativeKeyEvent.metaState
+                            )
+                            if (codePoint > 0) {
+                                val c = codePoint.toChar()
+                                when {
+                                    isTerminatorChar(c) -> {
+                                        collector.onTerminator()
+                                        true
+                                    }
+                                    isPrintableAscii(c) -> {
+                                        collector.onPrintableChar(c)
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            } else {
+                                false
+                            }
                         }
                     }
                 } else {
