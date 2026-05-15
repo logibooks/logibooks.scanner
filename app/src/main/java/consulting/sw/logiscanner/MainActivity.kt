@@ -913,13 +913,13 @@ private fun MonitorBoxesList(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 280.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(boxes) { box ->
+                boxes.forEach { box ->
                     MonitorBoxRow(box = box, onOpenBox = onOpenBox)
                 }
             }
