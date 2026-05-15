@@ -1160,11 +1160,11 @@ private fun latestScanText(snapshot: ScanJobMonitorSnapshot): String {
         ScanJobMonitorAreas.BOX -> snapshot.boxes
             .firstOrNull { it.boxId == latest.boxId }
             ?.let { monitorBoxDisplayName(context, it) }
-            ?: context.getString(R.string.monitor_current_box_numbered, latest.boxId?.toString().orEmpty()).trim()
+            ?: stringResource(R.string.monitor_current_box_numbered, latest.boxId?.toString().orEmpty()).trim()
         ScanJobMonitorAreas.UNASSIGNED -> snapshot.boxes
             .firstOrNull { isUnassignedMonitorBox(it) && (it.bucketIndex ?: 0) == (latest.bucketIndex ?: 0) }
             ?.let { monitorBoxDisplayName(context, it) }
-            ?: context.getString(R.string.monitor_unassigned_group_numbered, (latest.bucketIndex ?: 0) + 1)
+            ?: stringResource(R.string.monitor_unassigned_group_numbered, (latest.bucketIndex ?: 0) + 1)
         ScanJobMonitorAreas.NOT_IN_REGISTER -> stringResource(R.string.monitor_not_in_register)
         else -> ""
     }
