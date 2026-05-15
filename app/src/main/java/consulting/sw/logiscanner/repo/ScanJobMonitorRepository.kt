@@ -55,26 +55,27 @@ class ScanJobMonitorRepository(
         onConnectionClosed: (Throwable?) -> Unit
     ) {
         withContext(Dispatchers.IO) {
-            hubMutex.withLock {
+            val connection = hubMutex.withLock {
                 snapshotHandler = onSnapshot
                 closedHandler = onClosed
                 connectionClosedHandler = onConnectionClosed
 
-                val connection = ensureConnection()
-                if (connection.connectionState != HubConnectionState.CONNECTED) {
-                    connection.start().blockingAwait()
-                }
-
-                connection.invoke(
-                    "ObserveScanJob",
-                    ScanJobMonitorObserveRequest(
-                        scanJobId = scanJobId,
-                        area = scope.area,
-                        boxId = scope.boxId,
-                        bucketIndex = scope.bucketIndex
-                    )
-                ).blockingAwait()
+                ensureConnection()
             }
+
+            if (connection.connectionState != HubConnectionState.CONNECTED) {
+                connection.start().blockingAwait()
+            }
+
+            connection.invoke(
+                "ObserveScanJob",
+                ScanJobMonitorObserveRequest(
+                    scanJobId = scanJobId,
+                    area = scope.area,
+                    boxId = scope.boxId,
+                    bucketIndex = scope.bucketIndex
+                )
+            ).blockingAwait()
         }
     }
 
