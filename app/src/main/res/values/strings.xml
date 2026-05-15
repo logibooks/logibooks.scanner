@@ -63,6 +63,9 @@ This file is a part of LogiScanner application
     <string name="monitor_scanned">Scanned</string>
     <string name="monitor_waiting">Waiting</string>
     <string name="monitor_unassigned_group">No box</string>
+    <string name="monitor_unassigned_group_numbered">No box %1$d</string>
+    <string name="monitor_box_display_name">Box %1$s</string>
+    <string name="monitor_current_box_numbered">Current box %1$s</string>
     <string name="monitor_closed">Monitoring stopped. Job status: %s</string>
     <string name="monitor_detail_loading">Loading detail…</string>
     <string name="monitor_error_load">Unable to load scan job monitor</string>
@@ -71,6 +74,12 @@ This file is a part of LogiScanner application
     <string name="monitor_box_sticker">Box sticker: %s</string>
     <string name="monitor_scan_user">User: %s</string>
     <string name="monitor_scan_time">Time: %s</string>
+
+    <string name="scan_job_status_created">Created</string>
+    <string name="scan_job_status_in_progress">In progress</string>
+    <string name="scan_job_status_paused">Paused</string>
+    <string name="scan_job_status_completed">Completed</string>
+    <string name="scan_job_status_unknown">Unknown</string>
     
     <string name="scan_hint">Use the hardware Scan key or Bluetooth ring scanner</string>
     

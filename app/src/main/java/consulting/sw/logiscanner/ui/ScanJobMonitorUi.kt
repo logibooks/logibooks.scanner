@@ -4,6 +4,8 @@
 
 package consulting.sw.logiscanner.ui
 
+import android.content.Context
+import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
@@ -20,12 +22,16 @@ fun isUnassignedMonitorBox(box: ScanJobMonitorBox?): Boolean {
     return box?.area == ScanJobMonitorAreas.UNASSIGNED || (box?.boxId == null && box?.bucketIndex != null)
 }
 
-fun monitorBoxDisplayName(box: ScanJobMonitorBox?): String {
+fun monitorBoxDisplayName(context: Context, box: ScanJobMonitorBox?): String {
     if (box == null) return ""
     if (isUnassignedMonitorBox(box)) {
-        return box.boxCode.ifBlank { "Без коробки ${(box.bucketIndex ?: 0) + 1}" }
+        return box.boxCode.ifBlank {
+            context.getString(R.string.monitor_unassigned_group_numbered, (box.bucketIndex ?: 0) + 1)
+        }
     }
-    return box.boxCode.ifBlank { "Коробка ${box.boxId ?: ""}".trim() }
+    return box.boxCode.ifBlank {
+        context.getString(R.string.monitor_box_display_name, box.boxId?.toString().orEmpty()).trim()
+    }
 }
 
 fun monitorScopeForBox(box: ScanJobMonitorBox): ScanJobMonitorScope? {
@@ -85,13 +91,13 @@ fun formatMonitorTime(value: String?): String {
     }
 }
 
-fun scanJobStatusText(status: Int?): String {
+fun scanJobStatusText(context: Context, status: Int?): String {
     return when (status) {
-        10 -> "Создано"
-        15 -> "Выполняется"
-        18 -> "Приостановлено"
-        20 -> "Завершено"
-        null -> "Неизвестно"
+        10 -> context.getString(R.string.scan_job_status_created)
+        15 -> context.getString(R.string.scan_job_status_in_progress)
+        18 -> context.getString(R.string.scan_job_status_paused)
+        20 -> context.getString(R.string.scan_job_status_completed)
+        null -> context.getString(R.string.scan_job_status_unknown)
         else -> status.toString()
     }
 }

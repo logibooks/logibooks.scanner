@@ -63,6 +63,9 @@ This file is a part of LogiScanner application
     <string name="monitor_scanned">Сканировано</string>
     <string name="monitor_waiting">Ожидает</string>
     <string name="monitor_unassigned_group">Без коробки</string>
+    <string name="monitor_unassigned_group_numbered">Без коробки %1$d</string>
+    <string name="monitor_box_display_name">Коробка %1$s</string>
+    <string name="monitor_current_box_numbered">Текущая коробка %1$s</string>
     <string name="monitor_closed">Мониторинг остановлен. Статус задания: %s</string>
     <string name="monitor_detail_loading">Загрузка деталей…</string>
     <string name="monitor_error_load">Не удалось загрузить монитор сканирования</string>
@@ -71,6 +74,12 @@ This file is a part of LogiScanner application
     <string name="monitor_box_sticker">Стикер коробки: %s</string>
     <string name="monitor_scan_user">Пользователь: %s</string>
     <string name="monitor_scan_time">Время: %s</string>
+
+    <string name="scan_job_status_created">Создано</string>
+    <string name="scan_job_status_in_progress">Выполняется</string>
+    <string name="scan_job_status_paused">Приостановлено</string>
+    <string name="scan_job_status_completed">Завершено</string>
+    <string name="scan_job_status_unknown">Неизвестно</string>
     
     <string name="scan_hint">Используйте кнопку аппаратного сканирования или Bluetooth сканер</string>
     

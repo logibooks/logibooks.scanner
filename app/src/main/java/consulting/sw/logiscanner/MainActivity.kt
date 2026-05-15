@@ -55,6 +55,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.Modifier
@@ -758,6 +759,7 @@ private fun ScanJobMonitorPanel(
     onOpenBox: (ScanJobMonitorBox) -> Unit,
     onToggleAutoFollow: () -> Unit
 ) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -845,7 +847,7 @@ private fun ScanJobMonitorPanel(
 
             if (closedStatus != null) {
                 Text(
-                    stringResource(R.string.monitor_closed, scanJobStatusText(closedStatus)),
+                    stringResource(R.string.monitor_closed, scanJobStatusText(context, closedStatus)),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -930,6 +932,7 @@ private fun MonitorBoxRow(
     box: ScanJobMonitorBox,
     onOpenBox: (ScanJobMonitorBox) -> Unit
 ) {
+    val context = LocalContext.current
     val isUnassigned = isUnassignedMonitorBox(box)
     val statusText = when {
         isUnassigned -> stringResource(R.string.monitor_unassigned_group)
@@ -958,7 +961,7 @@ private fun MonitorBoxRow(
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                monitorBoxDisplayName(box),
+                monitorBoxDisplayName(context, box),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -984,6 +987,7 @@ private fun MonitorBoxDetail(
     loading: Boolean,
     onOpenRegister: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = onOpenRegister, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.monitor_back_to_boxes))
@@ -1015,7 +1019,7 @@ private fun MonitorBoxDetail(
         }
 
         Text(
-            monitorBoxDisplayName(box),
+            monitorBoxDisplayName(context, box),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold
         )
@@ -1150,16 +1154,17 @@ private fun StatusPill(text: String, background: Color, contentColor: Color) {
 
 @Composable
 private fun latestScanText(snapshot: ScanJobMonitorSnapshot): String {
+    val context = LocalContext.current
     val latest = snapshot.latestScan ?: return ""
     val target = when (latest.area) {
         ScanJobMonitorAreas.BOX -> snapshot.boxes
             .firstOrNull { it.boxId == latest.boxId }
-            ?.let { monitorBoxDisplayName(it) }
-            ?: "${stringResource(R.string.monitor_current_box)} ${latest.boxId ?: ""}".trim()
+            ?.let { monitorBoxDisplayName(context, it) }
+            ?: context.getString(R.string.monitor_current_box_numbered, latest.boxId?.toString().orEmpty()).trim()
         ScanJobMonitorAreas.UNASSIGNED -> snapshot.boxes
             .firstOrNull { isUnassignedMonitorBox(it) && (it.bucketIndex ?: 0) == (latest.bucketIndex ?: 0) }
-            ?.let { monitorBoxDisplayName(it) }
-            ?: "${stringResource(R.string.monitor_unassigned_group)} ${(latest.bucketIndex ?: 0) + 1}"
+            ?.let { monitorBoxDisplayName(context, it) }
+            ?: context.getString(R.string.monitor_unassigned_group_numbered, (latest.bucketIndex ?: 0) + 1)
         ScanJobMonitorAreas.NOT_IN_REGISTER -> stringResource(R.string.monitor_not_in_register)
         else -> ""
     }
