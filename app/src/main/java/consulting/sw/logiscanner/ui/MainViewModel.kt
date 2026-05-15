@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import retrofit2.HttpException
 import java.util.Locale
 
@@ -132,7 +131,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         monitorJob?.cancel()
         monitorDetailJob?.cancel()
         if (::scanJobMonitorRepo.isInitialized) {
-            runBlocking { scanJobMonitorRepo.stop() }
+            scanJobMonitorRepo.closeInBackground()
         }
         tts?.stop()
         tts?.shutdown()

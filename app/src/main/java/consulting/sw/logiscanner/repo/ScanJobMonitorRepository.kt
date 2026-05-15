@@ -4,6 +4,7 @@
 
 package consulting.sw.logiscanner.repo
 
+import android.util.Log
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import com.microsoft.signalr.HubConnectionState
@@ -11,10 +12,15 @@ import consulting.sw.logiscanner.net.NetworkModule
 import consulting.sw.logiscanner.net.ScanJobMonitorObserveRequest
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import io.reactivex.rxjava3.core.Single
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 
 data class ScanJobMonitorScope(
     val area: Int,
@@ -30,12 +36,14 @@ class ScanJobMonitorRepository(
     private val api = NetworkModule.createApi(baseUrl, onUnauthorized)
     private val hubUrl = buildScanJobMonitorHubUrl(baseUrl)
     private val hubMutex = Mutex()
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var hubConnection: HubConnection? = null
     private var snapshotHandler: ((ScanJobMonitorSnapshot) -> Unit)? = null
     private var closedHandler: ((Int, Int) -> Unit)? = null
     private var connectionClosedHandler: ((Throwable?) -> Unit)? = null
     private var stopping = false
+    private var closeStarted = false
 
     suspend fun loadSnapshot(scanJobId: Int, scope: ScanJobMonitorScope): ScanJobMonitorSnapshot {
         return api.getScanJobMonitor(
@@ -104,15 +112,46 @@ class ScanJobMonitorRepository(
                 stopping = true
                 try {
                     if (connection.connectionState == HubConnectionState.CONNECTED) {
-                        connection.invoke("ClearScanJobMonitor").blockingAwait()
+                        runCatching {
+                            connection.invoke("ClearScanJobMonitor")
+                                .timeout(HUB_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                                .blockingAwait()
+                        }.onFailure { exception ->
+                            Log.w(TAG, "Failed to clear scan job monitor before stopping", exception)
+                        }
                     }
-                    connection.stop().blockingAwait()
-                    connection.close()
+                    runCatching {
+                        connection.stop()
+                            .timeout(HUB_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                            .blockingAwait()
+                    }.onFailure { exception ->
+                        Log.w(TAG, "Failed to stop scan job monitor hub", exception)
+                    }
+                    runCatching {
+                        connection.close()
+                    }.onFailure { exception ->
+                        Log.w(TAG, "Failed to close scan job monitor hub", exception)
+                    }
                 } finally {
                     hubConnection = null
                     stopping = false
                 }
             }
+        }
+    }
+
+    fun closeInBackground() {
+        if (closeStarted) {
+            return
+        }
+        closeStarted = true
+        cleanupScope.launch {
+            runCatching {
+                stop()
+            }.onFailure { exception ->
+                Log.w(TAG, "Failed to clean up scan job monitor repository", exception)
+            }
+            cleanupScope.cancel()
         }
     }
 
@@ -144,6 +183,9 @@ class ScanJobMonitorRepository(
         return connection
     }
 }
+
+private const val TAG = "ScanJobMonitorRepo"
+private const val HUB_STOP_TIMEOUT_SECONDS = 5L
 
 internal fun buildScanJobMonitorHubUrl(baseUrl: String): String {
     val trimmed = baseUrl.trimEnd('/')
