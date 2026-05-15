@@ -1,0 +1,155 @@
+// Copyright (C) 2026 Maxim [maxirmx] Samsonov (www.sw.consulting)
+// All rights reserved.
+// This file is a part of LogiScanner application
+
+package consulting.sw.logiscanner.repo
+
+import com.microsoft.signalr.HubConnection
+import com.microsoft.signalr.HubConnectionBuilder
+import com.microsoft.signalr.HubConnectionState
+import consulting.sw.logiscanner.net.NetworkModule
+import consulting.sw.logiscanner.net.ScanJobMonitorObserveRequest
+import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import io.reactivex.rxjava3.core.Single
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+
+data class ScanJobMonitorScope(
+    val area: Int,
+    val boxId: Int? = null,
+    val bucketIndex: Int? = null
+)
+
+class ScanJobMonitorRepository(
+    baseUrl: String,
+    private val token: String,
+    onUnauthorized: (() -> Unit)? = null
+) {
+    private val api = NetworkModule.createApi(baseUrl, onUnauthorized)
+    private val hubUrl = buildScanJobMonitorHubUrl(baseUrl)
+    private val hubMutex = Mutex()
+
+    private var hubConnection: HubConnection? = null
+    private var snapshotHandler: ((ScanJobMonitorSnapshot) -> Unit)? = null
+    private var closedHandler: ((Int, Int) -> Unit)? = null
+    private var connectionClosedHandler: ((Throwable?) -> Unit)? = null
+    private var stopping = false
+
+    suspend fun loadSnapshot(scanJobId: Int, scope: ScanJobMonitorScope): ScanJobMonitorSnapshot {
+        return api.getScanJobMonitor(
+            bearer = "Bearer $token",
+            id = scanJobId,
+            area = scope.area,
+            boxId = scope.boxId,
+            bucketIndex = scope.bucketIndex
+        )
+    }
+
+    suspend fun observe(
+        scanJobId: Int,
+        scope: ScanJobMonitorScope,
+        onSnapshot: (ScanJobMonitorSnapshot) -> Unit,
+        onClosed: (Int, Int) -> Unit,
+        onConnectionClosed: (Throwable?) -> Unit
+    ) {
+        withContext(Dispatchers.IO) {
+            hubMutex.withLock {
+                snapshotHandler = onSnapshot
+                closedHandler = onClosed
+                connectionClosedHandler = onConnectionClosed
+
+                val connection = ensureConnection()
+                if (connection.connectionState != HubConnectionState.CONNECTED) {
+                    connection.start().blockingAwait()
+                }
+
+                connection.invoke(
+                    "ObserveScanJob",
+                    ScanJobMonitorObserveRequest(
+                        scanJobId = scanJobId,
+                        area = scope.area,
+                        boxId = scope.boxId,
+                        bucketIndex = scope.bucketIndex
+                    )
+                ).blockingAwait()
+            }
+        }
+    }
+
+    suspend fun clearMonitor(): Boolean {
+        return withContext(Dispatchers.IO) {
+            hubMutex.withLock {
+                val connection = hubConnection ?: return@withLock false
+                if (connection.connectionState != HubConnectionState.CONNECTED) {
+                    return@withLock false
+                }
+
+                connection.invoke("ClearScanJobMonitor").blockingAwait()
+                true
+            }
+        }
+    }
+
+    suspend fun stop() {
+        withContext(Dispatchers.IO) {
+            hubMutex.withLock {
+                snapshotHandler = null
+                closedHandler = null
+                connectionClosedHandler = null
+
+                val connection = hubConnection ?: return@withLock
+                stopping = true
+                try {
+                    if (connection.connectionState == HubConnectionState.CONNECTED) {
+                        connection.invoke("ClearScanJobMonitor").blockingAwait()
+                    }
+                    connection.stop().blockingAwait()
+                    connection.close()
+                } finally {
+                    hubConnection = null
+                    stopping = false
+                }
+            }
+        }
+    }
+
+    private fun ensureConnection(): HubConnection {
+        hubConnection?.let { return it }
+
+        val connection = HubConnectionBuilder.create(hubUrl)
+            .withAccessTokenProvider(Single.defer { Single.just(token) })
+            .build()
+
+        connection.on(
+            "ScanJobMonitorSnapshot",
+            { snapshot: ScanJobMonitorSnapshot -> snapshotHandler?.invoke(snapshot) },
+            ScanJobMonitorSnapshot::class.java
+        )
+        connection.on(
+            "ScanJobMonitorClosed",
+            { scanJobId: Int, status: Int -> closedHandler?.invoke(scanJobId, status) },
+            Int::class.javaObjectType,
+            Int::class.javaObjectType
+        )
+        connection.onClosed { exception ->
+            if (!stopping) {
+                connectionClosedHandler?.invoke(exception)
+            }
+        }
+
+        hubConnection = connection
+        return connection
+    }
+}
+
+internal fun buildScanJobMonitorHubUrl(baseUrl: String): String {
+    val trimmed = baseUrl.trimEnd('/')
+    val root = if (trimmed.endsWith("/api", ignoreCase = true)) {
+        trimmed.dropLast(4)
+    } else {
+        trimmed
+    }
+    return "$root/hubs/scan-jobs"
+}
