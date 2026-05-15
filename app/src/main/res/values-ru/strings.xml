@@ -44,6 +44,31 @@ This file is a part of LogiScanner application
     <string name="last_scan">Последнее сканирование</string>
     <string name="code">Код: %s</string>
     <string name="count_result">Найдено посылок: %d</string>
+
+    <string name="monitor_title">Монитор работы</string>
+    <string name="monitor_live">Онлайн</string>
+    <string name="monitor_offline">Нет связи</string>
+    <string name="monitor_loading">Загрузка монитора…</string>
+    <string name="monitor_boxes_progress">Коробки всего / сканировано / осталось</string>
+    <string name="monitor_parcels_progress">Посылки всего / сканировано / осталось</string>
+    <string name="monitor_not_in_register">Не в реестре</string>
+    <string name="monitor_latest_scan">Последний скан</string>
+    <string name="monitor_current_box">Текущая коробка</string>
+    <string name="monitor_boxes">Коробки</string>
+    <string name="monitor_parcels">Посылки</string>
+    <string name="monitor_empty_boxes">Коробки не найдены</string>
+    <string name="monitor_empty_parcels">В этой группе нет посылок</string>
+    <string name="monitor_scanned">Сканировано</string>
+    <string name="monitor_waiting">Ожидает</string>
+    <string name="monitor_unassigned_group">Без коробки</string>
+    <string name="monitor_closed">Мониторинг остановлен. Статус задания: %s</string>
+    <string name="monitor_detail_loading">Загрузка деталей…</string>
+    <string name="monitor_error_load">Не удалось загрузить монитор сканирования</string>
+    <string name="monitor_error_connection">Соединение с онлайн-монитором потеряно</string>
+    <string name="monitor_back_to_boxes">К коробкам</string>
+    <string name="monitor_box_sticker">Стикер коробки: %s</string>
+    <string name="monitor_scan_user">Пользователь: %s</string>
+    <string name="monitor_scan_time">Время: %s</string>
     
     <string name="scan_hint">Используйте кнопку аппаратного сканирования или Bluetooth сканер</string>
     
