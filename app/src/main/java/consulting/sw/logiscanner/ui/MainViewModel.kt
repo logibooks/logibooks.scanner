@@ -262,6 +262,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadMonitorDetail(scope)
     }
 
+    fun toggleMonitorAutoFollow() {
+        _state.update { it.copy(monitorAutoFollow = !it.monitorAutoFollow) }
+    }
+
     private fun startScanJobMonitor(scanJobId: Int) {
         monitorScopeVersion += 1
         val version = monitorScopeVersion

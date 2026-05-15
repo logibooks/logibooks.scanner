@@ -48,6 +48,8 @@ This file is a part of LogiScanner application
     <string name="monitor_title">Монитор работы</string>
     <string name="monitor_live">Онлайн</string>
     <string name="monitor_offline">Нет связи</string>
+    <string name="monitor_auto_follow_disable">Автослежение включено. Нажмите, чтобы выключить</string>
+    <string name="monitor_auto_follow_enable">Автослежение выключено. Нажмите, чтобы включить</string>
     <string name="monitor_loading">Загрузка монитора…</string>
     <string name="monitor_boxes_progress">Коробки всего / сканировано / осталось</string>
     <string name="monitor_parcels_progress">Посылки всего / сканировано / осталось</string>

@@ -183,11 +183,13 @@ class MainActivity : ComponentActivity() {
                                 monitorConnected = state.monitorConnected,
                                 monitorClosedStatus = state.monitorClosedStatus,
                                 monitorError = state.monitorError,
+                                monitorAutoFollow = state.monitorAutoFollow,
                                 error = state.error,
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
                                 onOpenMonitorRegister = vm::openMonitorRegister,
                                 onOpenMonitorBox = vm::openMonitorBox,
+                                onToggleMonitorAutoFollow = vm::toggleMonitorAutoFollow,
                                 onBackToJobs = { 
                                     focusManager.clearFocus()
                                     vm.selectScanJob(null) 
@@ -528,11 +530,13 @@ private fun ScanScreen(
     monitorConnected: Boolean,
     monitorClosedStatus: Int?,
     monitorError: String?,
+    monitorAutoFollow: Boolean,
     error: String?,
     onStartScanning: () -> Unit,
     onStopScanning: () -> Unit,
     onOpenMonitorRegister: () -> Unit,
     onOpenMonitorBox: (ScanJobMonitorBox) -> Unit,
+    onToggleMonitorAutoFollow: () -> Unit,
     onBackToJobs: () -> Unit,
     onLogout: () -> Unit,
     onScanned: (String) -> Unit
@@ -678,8 +682,10 @@ private fun ScanScreen(
                 connected = monitorConnected,
                 closedStatus = monitorClosedStatus,
                 error = monitorError,
+                autoFollow = monitorAutoFollow,
                 onOpenRegister = onOpenMonitorRegister,
-                onOpenBox = onOpenMonitorBox
+                onOpenBox = onOpenMonitorBox,
+                onToggleAutoFollow = onToggleMonitorAutoFollow
             )
         }
 
@@ -747,8 +753,10 @@ private fun ScanJobMonitorPanel(
     connected: Boolean,
     closedStatus: Int?,
     error: String?,
+    autoFollow: Boolean,
     onOpenRegister: () -> Unit,
-    onOpenBox: (ScanJobMonitorBox) -> Unit
+    onOpenBox: (ScanJobMonitorBox) -> Unit,
+    onToggleAutoFollow: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -766,6 +774,18 @@ private fun ScanJobMonitorPanel(
                     text = if (connected) stringResource(R.string.monitor_live) else stringResource(R.string.monitor_offline),
                     background = if (connected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = if (connected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Button(
+                onClick = onToggleAutoFollow,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    if (autoFollow) {
+                        stringResource(R.string.monitor_auto_follow_disable)
+                    } else {
+                        stringResource(R.string.monitor_auto_follow_enable)
+                    }
                 )
             }
 
