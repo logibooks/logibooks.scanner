@@ -10,13 +10,17 @@ import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import java.time.OffsetDateTime
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
-private val monitorDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+private val monitorDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy")
+private val monitorLatestScanTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val monitorLatestScanDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM")
 
 fun isUnassignedMonitorBox(box: ScanJobMonitorBox?): Boolean {
     return box?.area == ScanJobMonitorAreas.UNASSIGNED || (box?.boxId == null && box?.bucketIndex != null)
@@ -86,7 +90,9 @@ fun formatMonitorProgress(total: Int, scanned: Int, notScanned: Int): String {
 fun formatMonitorTime(value: String?): String {
     if (value.isNullOrBlank()) return ""
     return try {
-        OffsetDateTime.parse(value).format(monitorDateTimeFormatter)
+        OffsetDateTime.parse(value)
+            .atZoneSameInstant(ZoneId.systemDefault())
+            .format(monitorDateTimeFormatter)
     } catch (_: DateTimeParseException) {
         try {
             LocalDateTime.parse(value).format(monitorDateTimeFormatter)
@@ -94,6 +100,23 @@ fun formatMonitorTime(value: String?): String {
             value
         }
     }
+}
+
+fun formatMonitorQuantity(value: Double): String {
+    val longValue = value.toLong()
+    return if (value == longValue.toDouble()) {
+        longValue.toString()
+    } else {
+        value.toString()
+    }
+}
+
+fun formatMonitorLatestScanTime(value: String?): String {
+    return formatMonitorDateTimePart(value, monitorLatestScanTimeFormatter)
+}
+
+fun formatMonitorLatestScanDate(value: String?): String {
+    return formatMonitorDateTimePart(value, monitorLatestScanDateFormatter)
 }
 
 fun monitorLatestScanCode(snapshot: ScanJobMonitorSnapshot?, fallbackCode: String?): String {
@@ -138,6 +161,85 @@ data class MonitorParcelAttributeSpec(
     val value: String? = null,
     val checkStatus: Int? = null
 )
+
+enum class MonitorLatestScanNumberKind {
+    PARCEL,
+    BOX
+}
+
+data class MonitorLatestScanDisplay(
+    val code: String?,
+    val scanTime: String?,
+    val parcelCount: Int,
+    val boxCount: Int,
+    val scanSource: Int?,
+    val itemNumbers: List<String>,
+    val hint: String?
+) {
+    val numberKind: MonitorLatestScanNumberKind?
+        get() {
+            if (itemNumbers.isEmpty()) {
+                return null
+            }
+            return when (scanSource) {
+                ScannedItemSources.PARCEL_STICKER -> MonitorLatestScanNumberKind.PARCEL
+                ScannedItemSources.BOX_STICKER -> MonitorLatestScanNumberKind.BOX
+                else -> null
+            }
+        }
+}
+
+fun monitorLatestScanDisplay(
+    snapshot: ScanJobMonitorSnapshot?,
+    lastCode: String?,
+    lastParcelCount: Int?,
+    lastBoxCount: Int?,
+    lastScanSource: Int?,
+    lastItemNumbers: List<String>,
+    lastExtData: String?,
+    lastScanTime: String?
+): MonitorLatestScanDisplay? {
+    val monitorScan = snapshot?.latestScan?.takeIf { it.code.isNotBlank() }
+    val localCode = lastCode?.takeIf { it.isNotBlank() }
+    val localMatchesMonitor = monitorScan != null && localCode == monitorScan.code
+    val useLocalScanResult = monitorScan == null
+    val code = monitorScan?.code ?: localCode
+    val scanTime = monitorScan?.scanTime?.takeIf { it.isNotBlank() }
+        ?: lastScanTime?.takeIf { it.isNotBlank() }?.takeIf { useLocalScanResult }
+    val hint = lastExtData?.takeIf { it.isNotBlank() && (useLocalScanResult || localMatchesMonitor) }
+
+    if (
+        code == null
+        && lastParcelCount == null
+        && lastBoxCount == null
+        && hint == null
+        && scanTime == null
+    ) {
+        return null
+    }
+
+    return if (useLocalScanResult) {
+        MonitorLatestScanDisplay(
+            code = code,
+            scanTime = scanTime,
+            parcelCount = lastParcelCount ?: 0,
+            boxCount = lastBoxCount ?: 0,
+            scanSource = lastScanSource,
+            itemNumbers = lastItemNumbers,
+            hint = hint
+        )
+    } else {
+        MonitorLatestScanDisplay(
+            code = code,
+            scanTime = scanTime,
+            parcelCount = monitorScan.parcelCount,
+            boxCount = monitorScan.boxCount,
+            scanSource = monitorScan.scanSource,
+            itemNumbers = monitorScan.itemNumbers,
+            hint = hint
+        )
+    }
+}
 
 fun checkStatusTextSpec(checkStatus: Int): CheckStatusTextSpec {
     val fc = checkStatusFc(checkStatus)
@@ -226,7 +328,7 @@ fun monitorParcelAttributeSpecs(parcel: ScanJobMonitorParcel): List<MonitorParce
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_weight_kg, it.toString())
     }
     parcel.quantity?.let {
-        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_quantity, it.toString())
+        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_quantity, formatMonitorQuantity(it))
     }
     if (parcel.zoneName.isNotBlank()) {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_zone_name, parcel.zoneName)
@@ -259,6 +361,21 @@ fun parcelSecondaryText(parcel: ScanJobMonitorParcel): String {
 
 private fun firstNotBlank(vararg values: String?): String? {
     return values.firstOrNull { !it.isNullOrBlank() }
+}
+
+private fun formatMonitorDateTimePart(value: String?, formatter: DateTimeFormatter): String {
+    if (value.isNullOrBlank()) return ""
+    return try {
+        OffsetDateTime.parse(value)
+            .atZoneSameInstant(ZoneId.systemDefault())
+            .format(formatter)
+    } catch (_: DateTimeParseException) {
+        try {
+            LocalDateTime.parse(value).format(formatter)
+        } catch (_: DateTimeParseException) {
+            ""
+        }
+    }
 }
 
 private const val SW_INHERITANCE_FLAG = 0x0080

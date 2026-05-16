@@ -32,6 +32,10 @@ class ScanJobMonitorModelsTest {
                 "scanCodeId": 900,
                 "code": "BOX-1",
                 "scanTime": "2026-05-15T21:31:00+03:00",
+                "parcelCount": 3,
+                "boxCount": 1,
+                "scanSource": 20,
+                "itemNumbers": ["BOX-1"],
                 "area": 1,
                 "boxId": 7
               },
@@ -92,6 +96,10 @@ class ScanJobMonitorModelsTest {
         assertEquals(SCAN_JOB_STATUS_IN_PROGRESS, snapshot.status)
         assertEquals(ScanJobMonitorAreas.BOXES, snapshot.area)
         assertEquals(900, snapshot.latestScan?.scanCodeId)
+        assertEquals(3, snapshot.latestScan?.parcelCount)
+        assertEquals(1, snapshot.latestScan?.boxCount)
+        assertEquals(ScannedItemSources.BOX_STICKER, snapshot.latestScan?.scanSource)
+        assertEquals(listOf("BOX-1"), snapshot.latestScan?.itemNumbers)
         assertEquals(1, snapshot.boxes.size)
         assertTrue(snapshot.boxes.first().boxStickerScanned)
         assertEquals(1, snapshot.box?.parcels?.size)
