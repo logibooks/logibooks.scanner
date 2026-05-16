@@ -915,8 +915,7 @@ private fun MonitorBoxesList(
         } else {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 280.dp),
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 boxes.forEach { box ->
