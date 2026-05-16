@@ -210,6 +210,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectScanJob(job: ScanJob?) {
         viewModelScope.launch {
+            val jobChanged = state.value.selectedScanJob?.id != job?.id
             if (job == null) {
                 stopScanJobMonitor()
             }
@@ -234,6 +235,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     monitorConnected = if (job == null) false else it.monitorConnected,
                     monitorClosedStatus = if (job == null) null else it.monitorClosedStatus,
                     monitorError = if (job == null) null else it.monitorError,
+                    lastCode = if (jobChanged) null else it.lastCode,
+                    lastCount = if (jobChanged) null else it.lastCount,
+                    lastExtData = if (jobChanged) null else it.lastExtData,
                     error = null, 
                     isScanning = false
                 ) 

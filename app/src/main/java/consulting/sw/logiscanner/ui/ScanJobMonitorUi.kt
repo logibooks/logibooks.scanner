@@ -96,6 +96,16 @@ fun formatMonitorTime(value: String?): String {
     }
 }
 
+fun monitorLatestScanCode(snapshot: ScanJobMonitorSnapshot?, fallbackCode: String?): String {
+    val monitorCode = snapshot?.latestScan?.code?.takeIf { it.isNotBlank() }
+    return monitorCode ?: fallbackCode.orEmpty()
+}
+
+fun directScanResultCode(snapshot: ScanJobMonitorSnapshot?, lastCode: String?): String? {
+    val monitorCode = snapshot?.latestScan?.code?.takeIf { it.isNotBlank() } ?: return null
+    return lastCode?.takeIf { it.isNotBlank() && it != monitorCode }
+}
+
 fun scanJobStatusText(context: Context, status: Int?): String {
     return when (status) {
         10 -> context.getString(R.string.scan_job_status_created)

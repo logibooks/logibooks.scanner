@@ -94,4 +94,54 @@ class ScanJobMonitorUiTest {
     fun formatMonitorTime_formatsIsoOffsetDateTime() {
         assertEquals("15.05.2026 21:30", formatMonitorTime("2026-05-15T21:30:45+03:00"))
     }
+
+    @Test
+    fun monitorLatestScanCode_usesFallbackWhenMonitorHasNoLatestScan() {
+        val snapshot = ScanJobMonitorSnapshot(latestScan = null)
+
+        assertEquals("LOCAL-1", monitorLatestScanCode(snapshot, "LOCAL-1"))
+    }
+
+    @Test
+    fun monitorLatestScanCode_usesFallbackWhenMonitorCodeIsBlank() {
+        val snapshot = ScanJobMonitorSnapshot(
+            latestScan = ScanJobMonitorLatestScan(code = "")
+        )
+
+        assertEquals("LOCAL-1", monitorLatestScanCode(snapshot, "LOCAL-1"))
+    }
+
+    @Test
+    fun monitorLatestScanCode_keepsMonitorCodeWhenLocalCodeDiffers() {
+        val snapshot = ScanJobMonitorSnapshot(
+            latestScan = ScanJobMonitorLatestScan(code = "MONITOR-1")
+        )
+
+        assertEquals("MONITOR-1", monitorLatestScanCode(snapshot, "LOCAL-1"))
+    }
+
+    @Test
+    fun directScanResultCode_returnsNullWhenMonitorHasNoCode() {
+        val snapshot = ScanJobMonitorSnapshot(latestScan = null)
+
+        assertNull(directScanResultCode(snapshot, "LOCAL-1"))
+    }
+
+    @Test
+    fun directScanResultCode_returnsNullWhenLocalCodeMatchesMonitorCode() {
+        val snapshot = ScanJobMonitorSnapshot(
+            latestScan = ScanJobMonitorLatestScan(code = "SAME-1")
+        )
+
+        assertNull(directScanResultCode(snapshot, "SAME-1"))
+    }
+
+    @Test
+    fun directScanResultCode_returnsLocalCodeWhenItDiffersFromMonitorCode() {
+        val snapshot = ScanJobMonitorSnapshot(
+            latestScan = ScanJobMonitorLatestScan(code = "MONITOR-1")
+        )
+
+        assertEquals("LOCAL-1", directScanResultCode(snapshot, "LOCAL-1"))
+    }
 }
