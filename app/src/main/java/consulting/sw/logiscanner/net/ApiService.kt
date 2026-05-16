@@ -7,7 +7,9 @@ package consulting.sw.logiscanner.net
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Path
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface ApiService {
 
@@ -23,6 +25,15 @@ interface ApiService {
     suspend fun getInProgressJobs(
         @Header("Authorization") bearer: String
     ): List<ScanJob>
+
+    @GET("api/ScanJobs/{id}/monitor")
+    suspend fun getScanJobMonitor(
+        @Header("Authorization") bearer: String,
+        @Path("id") id: Int,
+        @Query("area") area: Int,
+        @Query("boxId") boxId: Int? = null,
+        @Query("bucketIndex") bucketIndex: Int? = null
+    ): ScanJobMonitorSnapshot
 
     @POST("api/ScanJobs/scan")
     suspend fun scan(

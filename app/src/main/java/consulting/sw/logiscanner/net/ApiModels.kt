@@ -37,6 +37,101 @@ data class ScanJob(
     val type: String
 )
 
+object ScanJobMonitorAreas {
+    const val BOXES = 0
+    const val BOX = 1
+    const val UNASSIGNED = 2
+    const val NOT_IN_REGISTER = 3
+}
+
+const val SCAN_JOB_STATUS_IN_PROGRESS = 15
+
+@JsonClass(generateAdapter = true)
+data class ScanJobMonitorObserveRequest(
+    var scanJobId: Int = 0,
+    var area: Int = ScanJobMonitorAreas.BOXES,
+    var boxId: Int? = null,
+    var bucketIndex: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ScanJobMonitorLatestScan(
+    var scanCodeId: Int = 0,
+    var code: String = "",
+    var scanTime: String = "",
+    var area: Int = ScanJobMonitorAreas.BOXES,
+    var boxId: Int? = null,
+    var bucketIndex: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ScanJobMonitorParcel(
+    var isInRegister: Boolean = true,
+    var stickerScanned: Boolean = false,
+    var scannedSticker: String? = null,
+    var scannedUserName: String = "",
+    var scannedTime: String? = null,
+    var parcelId: Int? = null,
+    var parcelNumber: String = "",
+    var shk: String? = null,
+    var sticker: String? = null,
+    var wbSticker: String? = null,
+    var sellerSticker: String? = null,
+    var stickerCode: String? = null,
+    var postingNumber: String? = null,
+    var barcode: String? = null,
+    var productName: String? = null,
+    var weightKg: Double? = null,
+    var quantity: Double? = null,
+    var zone: Int = 0,
+    var zoneName: String = "",
+    var statusId: Int = 0,
+    var statusTitle: String = "",
+    var checkStatus: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ScanJobMonitorBox(
+    var area: Int = ScanJobMonitorAreas.BOX,
+    var boxId: Int? = null,
+    var bucketIndex: Int? = null,
+    var boxCode: String = "",
+    var boxStickerScanned: Boolean = false,
+    var boxScannedSticker: String? = null,
+    var boxScannedUserName: String = "",
+    var boxScannedTime: String? = null,
+    var totalParcels: Int = 0,
+    var parcelsWithStickerScanned: Int = 0,
+    var parcelsWithStickerNotScanned: Int = 0,
+    var parcels: List<ScanJobMonitorParcel>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ScanJobMonitorSnapshot(
+    var scanJobId: Int = 0,
+    var scanJobName: String = "",
+    var type: Int = 0,
+    var operation: Int = 0,
+    var mode: Int = 0,
+    var status: Int = 0,
+    var registerId: Int = 0,
+    var registerType: Int = 0,
+    var dealNumber: String = "",
+    var warehouseId: Int = 0,
+    var generatedAt: String = "",
+    var area: Int = ScanJobMonitorAreas.BOXES,
+    var latestScan: ScanJobMonitorLatestScan? = null,
+    var totalBoxes: Int = 0,
+    var boxesWithStickerScanned: Int = 0,
+    var boxesWithStickerNotScanned: Int = 0,
+    var totalParcels: Int = 0,
+    var parcelsWithStickerScanned: Int = 0,
+    var parcelsWithStickerNotScanned: Int = 0,
+    var scannedItemsNotInRegister: Int = 0,
+    var boxes: List<ScanJobMonitorBox> = emptyList(),
+    var box: ScanJobMonitorBox? = null
+)
+
 @JsonClass(generateAdapter = true)
 data class ScanRequest(
     val id: Int,

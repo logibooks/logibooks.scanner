@@ -11,11 +11,18 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import consulting.sw.logiscanner.BuildConfig
 import consulting.sw.logiscanner.R
+import consulting.sw.logiscanner.net.SCAN_JOB_STATUS_IN_PROGRESS
 import consulting.sw.logiscanner.net.ScanJob
+import consulting.sw.logiscanner.net.ScanJobMonitorAreas
+import consulting.sw.logiscanner.net.ScanJobMonitorBox
+import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScanResultItem
 import consulting.sw.logiscanner.repo.LoginRepository
+import consulting.sw.logiscanner.repo.ScanJobMonitorRepository
+import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import consulting.sw.logiscanner.repo.ScanJobRepository
 import consulting.sw.logiscanner.repo.ScanRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +56,15 @@ data class MainState(
     val scanJobTypeDisplays: Map<String, String> = emptyMap(),
     val selectedScanJob: ScanJob? = null,
     val selectedScanJobTypeDisplay: String? = null,
+    val monitorSnapshot: ScanJobMonitorSnapshot? = null,
+    val monitorDetailSnapshot: ScanJobMonitorSnapshot? = null,
+    val monitorSelectedScope: ScanJobMonitorScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOXES),
+    val monitorLoading: Boolean = false,
+    val monitorDetailLoading: Boolean = false,
+    val monitorConnected: Boolean = false,
+    val monitorClosedStatus: Int? = null,
+    val monitorError: String? = null,
+    val monitorAutoFollow: Boolean = true,
     val isScanning: Boolean = false,
     val lastCode: String? = null,
     val lastCount: Int? = null,
@@ -64,9 +80,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private lateinit var loginRepo: LoginRepository
     private lateinit var scanJobRepo: ScanJobRepository
+    private lateinit var scanJobMonitorRepo: ScanJobMonitorRepository
     private lateinit var scanRepo: ScanRepository
     
     private var colorResetJob: Job? = null
+    private var monitorJob: Job? = null
+    private var monitorDetailJob: Job? = null
+    private var monitorScopeVersion = 0
+    private var monitorLatestScanCodeId: Int? = null
     
     private var tts: TextToSpeech? = null
     private var ttsReady = false
@@ -107,6 +128,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     override fun onCleared() {
         super.onCleared()
+        monitorJob?.cancel()
+        monitorDetailJob?.cancel()
+        if (::scanJobMonitorRepo.isInitialized) {
+            scanJobMonitorRepo.closeInBackground()
+        }
         tts?.stop()
         tts?.shutdown()
         tts = null
@@ -141,6 +167,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 scanJobRepo = ScanJobRepository(url, token, unauthorizedHandler)
+                scanJobMonitorRepo = ScanJobMonitorRepository(url, token, unauthorizedHandler)
                 scanRepo = ScanRepository(url, token, unauthorizedHandler)
                 loadScanJobs()
                 _state.update { it.copy(isLoggedIn = true, password = "") } // Clear password after successful login
@@ -183,6 +210,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectScanJob(job: ScanJob?) {
         viewModelScope.launch {
+            if (job == null) {
+                stopScanJobMonitor()
+            }
             val typeDisplay = if (job != null && ::scanJobRepo.isInitialized) {
                 scanJobRepo.getScanJobTypeDisplay(job.type)
             } else {
@@ -192,10 +222,264 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 it.copy(
                     selectedScanJob = job, 
                     selectedScanJobTypeDisplay = typeDisplay,
+                    monitorSnapshot = if (job == null) null else it.monitorSnapshot,
+                    monitorDetailSnapshot = if (job == null) null else it.monitorDetailSnapshot,
+                    monitorSelectedScope = if (job == null) {
+                        ScanJobMonitorScope(ScanJobMonitorAreas.BOXES)
+                    } else {
+                        it.monitorSelectedScope
+                    },
+                    monitorLoading = if (job == null) false else it.monitorLoading,
+                    monitorDetailLoading = if (job == null) false else it.monitorDetailLoading,
+                    monitorConnected = if (job == null) false else it.monitorConnected,
+                    monitorClosedStatus = if (job == null) null else it.monitorClosedStatus,
+                    monitorError = if (job == null) null else it.monitorError,
                     error = null, 
                     isScanning = false
                 ) 
             }
+            if (job != null && ::scanJobMonitorRepo.isInitialized) {
+                startScanJobMonitor(job.id)
+            }
+        }
+    }
+
+    fun openMonitorRegister() {
+        monitorDetailJob?.cancel()
+        _state.update {
+            it.copy(
+                monitorSelectedScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOXES),
+                monitorDetailSnapshot = null,
+                monitorDetailLoading = false,
+                monitorError = null
+            )
+        }
+    }
+
+    fun openMonitorBox(box: ScanJobMonitorBox) {
+        val scope = monitorScopeForBox(box) ?: return
+        loadMonitorDetail(scope)
+    }
+
+    fun toggleMonitorAutoFollow() {
+        _state.update { it.copy(monitorAutoFollow = !it.monitorAutoFollow) }
+    }
+
+    private fun startScanJobMonitor(scanJobId: Int) {
+        monitorScopeVersion += 1
+        val version = monitorScopeVersion
+        monitorLatestScanCodeId = null
+        monitorJob?.cancel()
+        monitorDetailJob?.cancel()
+
+        monitorJob = viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    monitorLoading = true,
+                    monitorDetailLoading = false,
+                    monitorSnapshot = null,
+                    monitorDetailSnapshot = null,
+                    monitorSelectedScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOXES),
+                    monitorConnected = false,
+                    monitorClosedStatus = null,
+                    monitorError = null
+                )
+            }
+
+            try {
+                scanJobMonitorRepo.stop()
+
+                val registerScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOXES)
+                val snapshot = scanJobMonitorRepo.loadSnapshot(scanJobId, registerScope)
+                applyMonitorSnapshot(snapshot, version, followLatest = true)
+
+                if (snapshot.status == SCAN_JOB_STATUS_IN_PROGRESS) {
+                    scanJobMonitorRepo.observe(
+                        scanJobId = scanJobId,
+                        scope = registerScope,
+                        onSnapshot = { nextSnapshot ->
+                            viewModelScope.launch {
+                                applyMonitorSnapshot(nextSnapshot, version, followLatest = true)
+                            }
+                        },
+                        onClosed = { closedScanJobId, status ->
+                            viewModelScope.launch {
+                                handleMonitorClosed(closedScanJobId, status, version)
+                            }
+                        },
+                        onConnectionClosed = { exception ->
+                            viewModelScope.launch {
+                                handleMonitorConnectionClosed(exception, version)
+                            }
+                        }
+                    )
+
+                    if (version == monitorScopeVersion) {
+                        _state.update {
+                            it.copy(monitorConnected = true, monitorError = null)
+                        }
+                    }
+                } else if (version == monitorScopeVersion) {
+                    _state.update {
+                        it.copy(
+                            monitorConnected = false,
+                            monitorClosedStatus = snapshot.status
+                        )
+                    }
+                }
+            } catch (ex: Exception) {
+                if (ex is CancellationException) {
+                    throw ex
+                }
+                Log.e(javaClass.simpleName, "Failed to start scan job monitor", ex)
+                if (version == monitorScopeVersion) {
+                    _state.update {
+                        it.copy(
+                            monitorConnected = false,
+                            monitorError = getApplication<Application>().getString(R.string.monitor_error_load)
+                        )
+                    }
+                }
+            } finally {
+                if (version == monitorScopeVersion) {
+                    _state.update { it.copy(monitorLoading = false) }
+                }
+            }
+        }
+    }
+
+    private fun applyMonitorSnapshot(
+        snapshot: ScanJobMonitorSnapshot,
+        version: Int,
+        followLatest: Boolean
+    ) {
+        if (version != monitorScopeVersion || snapshot.scanJobId != state.value.selectedScanJob?.id) {
+            return
+        }
+
+        _state.update {
+            it.copy(
+                monitorSnapshot = snapshot,
+                monitorClosedStatus = null,
+                monitorError = null
+            )
+        }
+
+        if (!followLatest || !state.value.monitorAutoFollow) {
+            return
+        }
+
+        val latestScanId = snapshot.latestScan?.scanCodeId ?: return
+        if (latestScanId == monitorLatestScanCodeId) {
+            return
+        }
+        monitorLatestScanCodeId = latestScanId
+
+        val nextScope = latestScanScope(snapshot) ?: return
+        if (!sameMonitorScope(nextScope, state.value.monitorSelectedScope)) {
+            if (nextScope.area == ScanJobMonitorAreas.BOXES) {
+                openMonitorRegister()
+            } else {
+                loadMonitorDetail(nextScope)
+            }
+        }
+    }
+
+    private fun loadMonitorDetail(scope: ScanJobMonitorScope) {
+        val jobId = state.value.selectedScanJob?.id ?: return
+        val version = monitorScopeVersion
+
+        if (scope.area == ScanJobMonitorAreas.BOXES) {
+            openMonitorRegister()
+            return
+        }
+
+        monitorDetailJob?.cancel()
+        monitorDetailJob = viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    monitorSelectedScope = scope,
+                    monitorDetailLoading = true,
+                    monitorError = null
+                )
+            }
+
+            try {
+                val snapshot = scanJobMonitorRepo.loadSnapshot(jobId, scope)
+                if (version == monitorScopeVersion && jobId == state.value.selectedScanJob?.id) {
+                    _state.update {
+                        it.copy(
+                            monitorDetailSnapshot = snapshot,
+                            monitorDetailLoading = false,
+                            monitorError = null
+                        )
+                    }
+                }
+            } catch (ex: Exception) {
+                if (ex is CancellationException) {
+                    throw ex
+                }
+                Log.e(javaClass.simpleName, "Failed to load scan job monitor detail", ex)
+                if (version == monitorScopeVersion) {
+                    _state.update {
+                        it.copy(
+                            monitorDetailLoading = false,
+                            monitorError = getApplication<Application>().getString(R.string.monitor_error_load)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun stopScanJobMonitor() {
+        monitorScopeVersion += 1
+        monitorLatestScanCodeId = null
+        monitorJob?.cancel()
+        monitorDetailJob?.cancel()
+        if (::scanJobMonitorRepo.isInitialized) {
+            scanJobMonitorRepo.stop()
+        }
+        _state.update {
+            it.copy(
+                monitorSnapshot = null,
+                monitorDetailSnapshot = null,
+                monitorSelectedScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOXES),
+                monitorLoading = false,
+                monitorDetailLoading = false,
+                monitorConnected = false,
+                monitorClosedStatus = null,
+                monitorError = null
+            )
+        }
+    }
+
+    private suspend fun handleMonitorClosed(scanJobId: Int, status: Int, version: Int) {
+        if (version != monitorScopeVersion || scanJobId != state.value.selectedScanJob?.id) {
+            return
+        }
+
+        scanJobMonitorRepo.stop()
+        _state.update {
+            it.copy(
+                monitorConnected = false,
+                monitorClosedStatus = status,
+                isScanning = false
+            )
+        }
+    }
+
+    private fun handleMonitorConnectionClosed(exception: Throwable?, version: Int) {
+        if (version != monitorScopeVersion || exception == null) {
+            return
+        }
+
+        Log.e(javaClass.simpleName, "Scan job monitor connection closed", exception)
+        _state.update {
+            it.copy(
+                monitorConnected = false,
+                monitorError = getApplication<Application>().getString(R.string.monitor_error_connection)
+            )
         }
     }
 
@@ -251,6 +535,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 
                 // Check if it's a 400 Bad Request - job selection is no longer valid
                 if (ex is HttpException && ex.code() == 400) {
+                    stopScanJobMonitor()
                     // Return to JobSelectionScreen by deselecting the job
                     _state.update { 
                         it.copy(
@@ -288,6 +573,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         viewModelScope.launch {
+            stopScanJobMonitor()
             loginRepo.logout()
             colorResetJob?.cancel()
             _state.update { 

@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.datastore.preferences)
     implementation(libs.androidx.appcompat)
+    implementation(libs.signalr)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
