@@ -81,7 +81,11 @@ class ScanJobMonitorModelsTest {
                     "zoneName": "Green",
                     "statusId": 5,
                     "statusTitle": "Ready",
-                    "checkStatus": 0
+                    "checkStatusProjection": {
+                      "kind": 20,
+                      "title": "Запрет",
+                      "restrictionReason": "Стоп-слово"
+                    }
                   }
                 ]
               }
@@ -104,5 +108,8 @@ class ScanJobMonitorModelsTest {
         assertTrue(snapshot.boxes.first().boxStickerScanned)
         assertEquals(1, snapshot.box?.parcels?.size)
         assertTrue(snapshot.box!!.parcels!!.first().isInRegister)
+        assertEquals(ParcelCheckStatusProjectionKinds.RESTRICTION, snapshot.box!!.parcels!!.first().checkStatusProjection?.kind)
+        assertEquals("Запрет", snapshot.box!!.parcels!!.first().checkStatusProjection?.title)
+        assertEquals("Стоп-слово", snapshot.box!!.parcels!!.first().checkStatusProjection?.restrictionReason)
     }
 }

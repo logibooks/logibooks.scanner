@@ -91,6 +91,7 @@ This file is a part of LogiScanner application
     <string name="monitor_parcel_zone_name">Zone</string>
     <string name="monitor_parcel_status_title">Status</string>
     <string name="monitor_parcel_check_status">Check status</string>
+    <string name="monitor_parcel_restriction_reason">Restriction reason</string>
     <string name="dismiss_message">Dismiss message</string>
 
     <string name="check_status_separator">, </string>
