@@ -553,18 +553,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!::scanJobRepo.isInitialized) {
             return
         }
-        _state.update { it.copy(isBusy = true) }
+        val preservedMessage = _state.value.error
         try {
-            scanJobRepo.getOps()
-            val jobs = scanJobRepo.getInProgressJobs()
-            val typeDisplays = jobs.associate { job ->
-                job.type to scanJobRepo.getScanJobTypeDisplay(job.type)
-            }
-            _state.update { it.copy(scanJobs = jobs, scanJobTypeDisplays = typeDisplays) }
+            loadScanJobs()
         } catch (ex: Exception) {
             Log.e(javaClass.simpleName, "Failed to refresh scan jobs after inactive job", ex)
         } finally {
-            _state.update { it.copy(isBusy = false) }
+            _state.update { it.copy(error = preservedMessage) }
         }
     }
 
