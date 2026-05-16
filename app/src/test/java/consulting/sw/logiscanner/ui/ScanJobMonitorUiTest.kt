@@ -10,6 +10,8 @@ import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorLatestScan
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
+import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import org.junit.Assert.assertEquals
@@ -282,52 +284,12 @@ class ScanJobMonitorUiTest {
     }
 
     @Test
-    fun checkStatusTextSpec_returnsSpecialStatusText() {
-        assertEquals(
-            listOf(R.string.check_status_not_checked),
-            checkStatusTextSpec(checkStatus(0x0000, 0x0000)).stringResIds
+    fun monitorParcelAttributeSpecs_excludesHiddenFieldsAndKeepsProjectedCheckStatus() {
+        val projection = ParcelCheckStatusProjection(
+            kind = ParcelCheckStatusProjectionKinds.RESTRICTION,
+            title = "Запрет",
+            restrictionReason = "Стоп-слово"
         )
-        assertEquals(
-            listOf(R.string.check_status_duplicate),
-            checkStatusTextSpec(checkStatus(0x017E, 0x017E)).stringResIds
-        )
-    }
-
-    @Test
-    fun checkStatusTextSpec_combinesSwAndFcParts() {
-        assertEquals(
-            listOf(R.string.check_status_issue_stop_word, R.string.check_status_issue_nonexisting_feacn),
-            checkStatusTextSpec(checkStatus(0x0101, 0x0100)).stringResIds
-        )
-        assertEquals(
-            listOf(R.string.check_status_approved, R.string.check_status_fc_no_issues),
-            checkStatusTextSpec(checkStatus(0x0010, 0x00A0)).stringResIds
-        )
-    }
-
-    @Test
-    fun checkStatusTextSpec_returnsHexFallbackForUnknownStatus() {
-        assertEquals(
-            "00010001",
-            checkStatusTextSpec(checkStatus(0x0001, 0x0001)).fallbackHex
-        )
-    }
-
-    @Test
-    fun checkStatusTone_matchesUiStatusClasses() {
-        assertEquals(CheckStatusTone.NOT_CHECKED, checkStatusTone(checkStatus(0x0000, 0x0000)))
-        assertEquals(CheckStatusTone.APPROVED_WITH_EXCISE, checkStatusTone(checkStatus(0x0230, 0x0230)))
-        assertEquals(CheckStatusTone.APPROVED_WITH_NOTIFICATION, checkStatusTone(checkStatus(0x0231, 0x0231)))
-        assertEquals(CheckStatusTone.APPROVED, checkStatusTone(checkStatus(0x0010, 0x0020)))
-        assertEquals(CheckStatusTone.APPROVED_WITH_INHERITANCE, checkStatusTone(checkStatus(0x0010, 0x00A0)))
-        assertEquals(CheckStatusTone.HAS_ISSUES_WITH_INHERITANCE, checkStatusTone(checkStatus(0x0010, 0x0180)))
-        assertEquals(CheckStatusTone.HAS_ISSUES, checkStatusTone(checkStatus(0x017E, 0x017E)))
-        assertEquals(CheckStatusTone.NO_ISSUES, checkStatusTone(checkStatus(0x0010, 0x0010)))
-        assertNull(checkStatusTone(null))
-    }
-
-    @Test
-    fun monitorParcelAttributeSpecs_excludesHiddenFieldsAndKeepsCheckStatus() {
         val parcel = ScanJobMonitorParcel(
             isInRegister = false,
             stickerScanned = true,
@@ -348,7 +310,7 @@ class ScanJobMonitorUiTest {
             zoneName = "Zone A",
             statusId = 9,
             statusTitle = "Ready",
-            checkStatus = checkStatus(0x0010, 0x0010)
+            checkStatusProjection = projection
         )
 
         val specs = monitorParcelAttributeSpecs(parcel)
@@ -377,11 +339,7 @@ class ScanJobMonitorUiTest {
         assertFalse(specs.any { it.value == "4" })
         assertFalse(specs.any { it.value == "9" })
         assertTrue(specs.any { it.labelResId == R.string.monitor_parcel_quantity && it.value == "2" })
-        assertEquals(checkStatus(0x0010, 0x0010), specs.last().checkStatus)
-    }
-
-    private fun checkStatus(fc: Int, sw: Int): Int {
-        return (fc shl 16) or sw
+        assertEquals(projection, specs.last().checkStatusProjection)
     }
 
     private fun latestScan(
