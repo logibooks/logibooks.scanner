@@ -16,6 +16,7 @@ import androidx.annotation.RequiresApi
 import java.util.Locale
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -49,6 +51,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
@@ -72,23 +75,29 @@ import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
+import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
+import consulting.sw.logiscanner.ui.CheckStatusTone
 import consulting.sw.logiscanner.ui.HidScanInput
+import consulting.sw.logiscanner.ui.checkStatusText
+import consulting.sw.logiscanner.ui.checkStatusTone
 import consulting.sw.logiscanner.ui.directScanResultCode
 import consulting.sw.logiscanner.ui.formatMonitorProgress
 import consulting.sw.logiscanner.ui.formatMonitorTime
 import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
 import consulting.sw.logiscanner.ui.monitorBoxDisplayName
 import consulting.sw.logiscanner.ui.monitorLatestScanCode
+import consulting.sw.logiscanner.ui.monitorParcelAttributeSpecs
 import consulting.sw.logiscanner.ui.parcelPrimaryText
-import consulting.sw.logiscanner.ui.parcelSecondaryText
 import consulting.sw.logiscanner.ui.scanJobStatusText
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -98,6 +107,25 @@ import androidx.compose.material.icons.automirrored.filled.RotateLeft
 // Focus request retry settings for LoginScreen
 private const val MAX_FOCUS_REQUEST_ATTEMPTS = 3
 private const val FOCUS_REQUEST_DELAY_MS = 300L
+
+private val CheckStatusRedBackground = Color(0x40F44336)
+private val CheckStatusRedText = Color(0xFFD32F2F)
+private val CheckStatusRedBorder = Color(0x4DC91104)
+private val CheckStatusRedStrongBorder = Color(0xC3C91104)
+private val CheckStatusBlueBackground = Color(0x402196F3)
+private val CheckStatusBlueText = Color(0xFF1976D2)
+private val CheckStatusBlueBorder = Color(0x4D2196F3)
+private val CheckStatusGreenBackground = Color(0x404CAF50)
+private val CheckStatusGreenText = Color(0xFF388E3C)
+private val CheckStatusApprovedText = Color(0xFF2E7D32)
+private val CheckStatusGreenBorder = Color(0x4D4CAF50)
+private val CheckStatusGreenStrongBorder = Color(0xFF065F0C)
+private val CheckStatusOrangeBackground = Color(0x40FF6B35)
+private val CheckStatusOrangeText = Color(0xFFD84315)
+private val CheckStatusOrangeBorder = Color(0x80FF6B35)
+private val CheckStatusPurpleBackground = Color(0x409A35FF)
+private val CheckStatusPurpleText = Color(0xFFCE15D8)
+private val CheckStatusPurpleBorder = Color(0x809A35FF)
 
 
 class MainActivity : ComponentActivity() {
@@ -609,18 +637,34 @@ private fun ScanScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.current_job), style = MaterialTheme.typography.titleMedium)
                     Text(
                         selectedJob.name,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
-                    if (!selectedJob.description.isNullOrBlank()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            selectedJob.description,
+                            if (isScanning) {
+                                if (isBusy) stringResource(R.string.syncing_with_server)
+                                else stringResource(R.string.waiting_for_barcode)
+                            } else {
+                                stringResource(R.string.scanning_stopped)
+                            },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
                         )
+                        if (isBusy) {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .width(120.dp)
+                                    .height(6.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                     Text(
                         stringResource(R.string.job_type, selectedJobTypeDisplay),
@@ -636,41 +680,6 @@ private fun ScanScreen(
                     ) {
                         Text(if (!isScanning) stringResource(R.string.start_scanning) else stringResource(R.string.stop_scanning))
                     }
-                }
-            }
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(stringResource(R.string.status), style = MaterialTheme.typography.titleMedium)
-                        if (isBusy) {
-                            LinearProgressIndicator(
-                                modifier = Modifier
-                                    .width(120.dp)
-                                    .height(6.dp),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    Text(
-                        if (isScanning) {
-                            if (isBusy) stringResource(R.string.syncing_with_server)
-                            else stringResource(R.string.waiting_for_barcode)
-                        } else {
-                            stringResource(R.string.scanning_stopped)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
         }
@@ -786,7 +795,7 @@ private fun ScanJobMonitorPanel(
                 return@Column
             }
 
-            if (snapshot != null) {
+            if (snapshot != null && selectedScope.area == ScanJobMonitorAreas.BOXES) {
                 MonitorStat(
                     label = stringResource(R.string.monitor_boxes_progress),
                     value = formatMonitorProgress(
@@ -981,8 +990,13 @@ private fun MonitorBoxDetail(
             return@Column
         }
 
+        val boxTitle = if (!isUnassignedMonitorBox(box) && box.boxCode.isNotBlank()) {
+            stringResource(R.string.monitor_box_display_name, box.boxCode)
+        } else {
+            monitorBoxDisplayName(context, box)
+        }
         Text(
-            monitorBoxDisplayName(context, box),
+            boxTitle,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold
         )
@@ -1025,6 +1039,9 @@ private fun MonitorBoxDetail(
             fontWeight = FontWeight.SemiBold
         )
         val parcels = box.parcels.orEmpty()
+        var expandedParcelKey by rememberSaveable(box.boxId, box.bucketIndex, box.boxCode) {
+            mutableStateOf<String?>(null)
+        }
         if (parcels.isEmpty()) {
             Text(
                 stringResource(R.string.monitor_empty_parcels),
@@ -1038,8 +1055,18 @@ private fun MonitorBoxDetail(
                     .heightIn(max = 260.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(parcels) { parcel ->
-                    MonitorParcelRow(parcel)
+                itemsIndexed(
+                    items = parcels,
+                    key = { index, parcel -> parcelExpansionKey(parcel, index) }
+                ) { index, parcel ->
+                    val parcelKey = parcelExpansionKey(parcel, index)
+                    MonitorParcelRow(
+                        parcel = parcel,
+                        expanded = expandedParcelKey == parcelKey,
+                        onToggleExpanded = {
+                            expandedParcelKey = if (expandedParcelKey == parcelKey) null else parcelKey
+                        }
+                    )
                 }
             }
         }
@@ -1047,7 +1074,11 @@ private fun MonitorBoxDetail(
 }
 
 @Composable
-private fun MonitorParcelRow(parcel: consulting.sw.logiscanner.net.ScanJobMonitorParcel) {
+private fun MonitorParcelRow(
+    parcel: ScanJobMonitorParcel,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit
+) {
     val statusText = when {
         !parcel.isInRegister -> stringResource(R.string.monitor_not_in_register)
         parcel.stickerScanned -> stringResource(R.string.monitor_scanned)
@@ -1064,52 +1095,228 @@ private fun MonitorParcelRow(parcel: consulting.sw.logiscanner.net.ScanJobMonito
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
             .padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 parcelPrimaryText(parcel),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
-            val secondary = parcelSecondaryText(parcel)
-            if (secondary.isNotBlank()) {
-                Text(
-                    secondary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            if (!parcel.scannedTime.isNullOrBlank()) {
-                Text(
-                    formatMonitorTime(parcel.scannedTime),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            StatusPill(statusText, statusBackground, statusContent)
+            IconButton(
+                onClick = onToggleExpanded,
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(36.dp)
+            ) {
+                Icon(
+                    imageVector = if (expanded) {
+                        Icons.Filled.KeyboardDoubleArrowUp
+                    } else {
+                        Icons.Filled.KeyboardDoubleArrowDown
+                    },
+                    contentDescription = stringResource(
+                        if (expanded) {
+                            R.string.monitor_collapse_parcel
+                        } else {
+                            R.string.monitor_expand_parcel
+                        }
+                    ),
+                    modifier = Modifier
+                        .width(18.dp)
+                        .height(18.dp)
                 )
             }
         }
-        StatusPill(statusText, statusBackground, statusContent)
+
+        if (expanded) {
+            if (!parcel.productName.isNullOrBlank()) {
+                Text(
+                    parcel.productName.orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            MonitorParcelAttributes(parcel)
+        }
     }
 }
 
 @Composable
-private fun StatusPill(text: String, background: Color, contentColor: Color) {
+private fun MonitorParcelAttributes(parcel: ScanJobMonitorParcel) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        monitorParcelAttributeSpecs(parcel).forEach { attribute ->
+            if (attribute.checkStatus != null) {
+                MonitorParcelCheckStatusAttribute(attribute.checkStatus)
+            } else if (!attribute.value.isNullOrBlank()) {
+                MonitorParcelAttribute(stringResource(attribute.labelResId), attribute.value)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonitorParcelCheckStatusAttribute(checkStatus: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            stringResource(R.string.monitor_parcel_check_status),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.42f)
+        )
+        CheckStatusPill(
+            text = checkStatusText(LocalContext.current, checkStatus),
+            style = checkStatusStyle(checkStatusTone(checkStatus)),
+            modifier = Modifier.weight(0.58f)
+        )
+    }
+}
+
+@Composable
+private fun CheckStatusPill(
+    text: String,
+    style: CheckStatusStyle,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(4.dp)
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = style.content,
+        fontWeight = FontWeight.Medium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+        modifier = modifier
+            .background(style.background, shape)
+            .border(style.borderWidth, style.border, shape)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    )
+}
+
+private data class CheckStatusStyle(
+    val background: Color,
+    val content: Color,
+    val border: Color,
+    val borderWidth: androidx.compose.ui.unit.Dp = 1.dp
+)
+
+@Composable
+private fun checkStatusStyle(tone: CheckStatusTone?): CheckStatusStyle {
+    return when (tone) {
+        CheckStatusTone.NOT_CHECKED -> CheckStatusStyle(
+            CheckStatusBlueBackground,
+            CheckStatusBlueText,
+            CheckStatusBlueBorder
+        )
+        CheckStatusTone.APPROVED_WITH_EXCISE -> CheckStatusStyle(
+            CheckStatusOrangeBackground,
+            CheckStatusOrangeText,
+            CheckStatusOrangeBorder
+        )
+        CheckStatusTone.APPROVED_WITH_NOTIFICATION -> CheckStatusStyle(
+            CheckStatusPurpleBackground,
+            CheckStatusPurpleText,
+            CheckStatusPurpleBorder
+        )
+        CheckStatusTone.HAS_ISSUES_WITH_INHERITANCE -> CheckStatusStyle(
+            CheckStatusRedBackground,
+            CheckStatusRedText,
+            CheckStatusRedStrongBorder,
+            3.dp
+        )
+        CheckStatusTone.HAS_ISSUES -> CheckStatusStyle(
+            CheckStatusRedBackground,
+            CheckStatusRedText,
+            CheckStatusRedBorder
+        )
+        CheckStatusTone.APPROVED_WITH_INHERITANCE -> CheckStatusStyle(
+            CheckStatusGreenBackground,
+            CheckStatusApprovedText,
+            CheckStatusGreenStrongBorder,
+            3.dp
+        )
+        CheckStatusTone.APPROVED -> CheckStatusStyle(
+            CheckStatusGreenBackground,
+            CheckStatusApprovedText,
+            CheckStatusGreenBorder
+        )
+        CheckStatusTone.NO_ISSUES -> CheckStatusStyle(
+            CheckStatusGreenBackground,
+            CheckStatusGreenText,
+            CheckStatusGreenBorder
+        )
+        null -> CheckStatusStyle(
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
+            MaterialTheme.colorScheme.outline
+        )
+    }
+}
+
+@Composable
+private fun MonitorParcelAttribute(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.42f)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(0.58f)
+        )
+    }
+}
+
+private fun parcelExpansionKey(parcel: ScanJobMonitorParcel, index: Int): String {
+    return parcel.parcelId?.let { "id:$it" }
+        ?: parcel.parcelNumber.takeIf { it.isNotBlank() }?.let { "parcel:$it" }
+        ?: parcel.postingNumber?.takeIf { it.isNotBlank() }?.let { "posting:$it" }
+        ?: parcel.barcode?.takeIf { it.isNotBlank() }?.let { "barcode:$it" }
+        ?: "index:$index"
+}
+
+@Composable
+private fun StatusPill(
+    text: String,
+    background: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodySmall,
         color = contentColor,
         maxLines = 1,
-        modifier = Modifier
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
             .background(background, RoundedCornerShape(50))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     )

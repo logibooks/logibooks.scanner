@@ -4,6 +4,7 @@
 
 package consulting.sw.logiscanner.ui
 
+import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorLatestScan
@@ -143,5 +144,107 @@ class ScanJobMonitorUiTest {
         )
 
         assertEquals("LOCAL-1", directScanResultCode(snapshot, "LOCAL-1"))
+    }
+
+    @Test
+    fun checkStatusTextSpec_returnsSpecialStatusText() {
+        assertEquals(
+            listOf(R.string.check_status_not_checked),
+            checkStatusTextSpec(checkStatus(0x0000, 0x0000)).stringResIds
+        )
+        assertEquals(
+            listOf(R.string.check_status_duplicate),
+            checkStatusTextSpec(checkStatus(0x017E, 0x017E)).stringResIds
+        )
+    }
+
+    @Test
+    fun checkStatusTextSpec_combinesSwAndFcParts() {
+        assertEquals(
+            listOf(R.string.check_status_issue_stop_word, R.string.check_status_issue_nonexisting_feacn),
+            checkStatusTextSpec(checkStatus(0x0101, 0x0100)).stringResIds
+        )
+        assertEquals(
+            listOf(R.string.check_status_approved, R.string.check_status_fc_no_issues),
+            checkStatusTextSpec(checkStatus(0x0010, 0x00A0)).stringResIds
+        )
+    }
+
+    @Test
+    fun checkStatusTextSpec_returnsHexFallbackForUnknownStatus() {
+        assertEquals(
+            "00010001",
+            checkStatusTextSpec(checkStatus(0x0001, 0x0001)).fallbackHex
+        )
+    }
+
+    @Test
+    fun checkStatusTone_matchesUiStatusClasses() {
+        assertEquals(CheckStatusTone.NOT_CHECKED, checkStatusTone(checkStatus(0x0000, 0x0000)))
+        assertEquals(CheckStatusTone.APPROVED_WITH_EXCISE, checkStatusTone(checkStatus(0x0230, 0x0230)))
+        assertEquals(CheckStatusTone.APPROVED_WITH_NOTIFICATION, checkStatusTone(checkStatus(0x0231, 0x0231)))
+        assertEquals(CheckStatusTone.APPROVED, checkStatusTone(checkStatus(0x0010, 0x0020)))
+        assertEquals(CheckStatusTone.APPROVED_WITH_INHERITANCE, checkStatusTone(checkStatus(0x0010, 0x00A0)))
+        assertEquals(CheckStatusTone.HAS_ISSUES_WITH_INHERITANCE, checkStatusTone(checkStatus(0x0010, 0x0180)))
+        assertEquals(CheckStatusTone.HAS_ISSUES, checkStatusTone(checkStatus(0x017E, 0x017E)))
+        assertEquals(CheckStatusTone.NO_ISSUES, checkStatusTone(checkStatus(0x0010, 0x0010)))
+        assertNull(checkStatusTone(null))
+    }
+
+    @Test
+    fun monitorParcelAttributeSpecs_excludesHiddenFieldsAndKeepsCheckStatus() {
+        val parcel = ScanJobMonitorParcel(
+            isInRegister = false,
+            stickerScanned = true,
+            scannedSticker = "SCANNED-1",
+            scannedUserName = "User",
+            scannedTime = "2026-05-15T21:30:45+03:00",
+            parcelId = 123,
+            shk = "SHK-1",
+            sticker = "ST-1",
+            wbSticker = "WB-1",
+            sellerSticker = "SELLER-1",
+            stickerCode = "CODE-1",
+            postingNumber = "POST-1",
+            barcode = "BAR-1",
+            weightKg = 1.2,
+            quantity = 2.0,
+            zone = 4,
+            zoneName = "Zone A",
+            statusId = 9,
+            statusTitle = "Ready",
+            checkStatus = checkStatus(0x0010, 0x0010)
+        )
+
+        val specs = monitorParcelAttributeSpecs(parcel)
+
+        assertEquals(
+            listOf(
+                R.string.monitor_parcel_scanned_sticker,
+                R.string.monitor_parcel_scanned_user,
+                R.string.monitor_parcel_scanned_time,
+                R.string.monitor_parcel_shk,
+                R.string.monitor_parcel_sticker,
+                R.string.monitor_parcel_wb_sticker,
+                R.string.monitor_parcel_seller_sticker,
+                R.string.monitor_parcel_sticker_code,
+                R.string.monitor_parcel_posting_number,
+                R.string.monitor_parcel_barcode,
+                R.string.monitor_parcel_weight_kg,
+                R.string.monitor_parcel_quantity,
+                R.string.monitor_parcel_zone_name,
+                R.string.monitor_parcel_status_title,
+                R.string.monitor_parcel_check_status
+            ),
+            specs.map { it.labelResId }
+        )
+        assertFalse(specs.any { it.value == "123" })
+        assertFalse(specs.any { it.value == "4" })
+        assertFalse(specs.any { it.value == "9" })
+        assertEquals(checkStatus(0x0010, 0x0010), specs.last().checkStatus)
+    }
+
+    private fun checkStatus(fc: Int, sw: Int): Int {
+        return (fc shl 16) or sw
     }
 }
