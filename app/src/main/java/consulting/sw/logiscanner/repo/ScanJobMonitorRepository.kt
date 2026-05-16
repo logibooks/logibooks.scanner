@@ -37,13 +37,18 @@ class ScanJobMonitorRepository(
     private val api = NetworkModule.createApi(baseUrl, onUnauthorized)
     private val hubUrl = buildScanJobMonitorHubUrl(baseUrl)
     private val hubMutex = Mutex()
+    private val scanJobsHubMutex = Mutex()
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var hubConnection: HubConnection? = null
+    private var scanJobsHubConnection: HubConnection? = null
     private var snapshotHandler: ((ScanJobMonitorSnapshot) -> Unit)? = null
     private var closedHandler: ((Int, Int) -> Unit)? = null
     private var connectionClosedHandler: ((Throwable?) -> Unit)? = null
+    private var scanJobsChangedHandler: (() -> Unit)? = null
+    private var scanJobsConnectionClosedHandler: ((Throwable?) -> Unit)? = null
     private var stopping = false
+    private var scanJobsStopping = false
     private val closeStarted = AtomicBoolean(false)
 
     suspend fun loadSnapshot(scanJobId: Int, scope: ScanJobMonitorScope): ScanJobMonitorSnapshot {
@@ -111,6 +116,64 @@ class ScanJobMonitorRepository(
         }
     }
 
+    suspend fun observeScanJobs(
+        onChanged: () -> Unit,
+        onConnectionClosed: (Throwable?) -> Unit
+    ) {
+        withContext(Dispatchers.IO) {
+            val connection = scanJobsHubMutex.withLock {
+                scanJobsChangedHandler = onChanged
+                scanJobsConnectionClosedHandler = onConnectionClosed
+
+                ensureScanJobsConnection()
+            }
+
+            if (connection.connectionState != HubConnectionState.CONNECTED) {
+                connection.start().blockingAwait()
+            }
+
+            connection.invoke("ObserveScanJobs").blockingAwait()
+        }
+    }
+
+    suspend fun stopScanJobs() {
+        withContext(Dispatchers.IO) {
+            scanJobsHubMutex.withLock {
+                scanJobsChangedHandler = null
+                scanJobsConnectionClosedHandler = null
+
+                val connection = scanJobsHubConnection ?: return@withLock
+                scanJobsStopping = true
+                try {
+                    if (connection.connectionState == HubConnectionState.CONNECTED) {
+                        runCatching {
+                            connection.invoke("ClearScanJobs")
+                                .timeout(HUB_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                                .blockingAwait()
+                        }.onFailure { exception ->
+                            Log.w(TAG, "Failed to clear scan jobs subscription before stopping", exception)
+                        }
+                    }
+                    runCatching {
+                        connection.stop()
+                            .timeout(HUB_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                            .blockingAwait()
+                    }.onFailure { exception ->
+                        Log.w(TAG, "Failed to stop scan jobs hub", exception)
+                    }
+                    runCatching {
+                        connection.close()
+                    }.onFailure { exception ->
+                        Log.w(TAG, "Failed to close scan jobs hub", exception)
+                    }
+                } finally {
+                    scanJobsHubConnection = null
+                    scanJobsStopping = false
+                }
+            }
+        }
+    }
+
     suspend fun stop() {
         withContext(Dispatchers.IO) {
             hubMutex.withLock {
@@ -160,6 +223,11 @@ class ScanJobMonitorRepository(
             }.onFailure { exception ->
                 Log.w(TAG, "Failed to clean up scan job monitor repository", exception)
             }
+            runCatching {
+                stopScanJobs()
+            }.onFailure { exception ->
+                Log.w(TAG, "Failed to clean up scan jobs repository", exception)
+            }
             cleanupScope.cancel()
         }
     }
@@ -189,6 +257,26 @@ class ScanJobMonitorRepository(
         }
 
         hubConnection = connection
+        return connection
+    }
+
+    private fun ensureScanJobsConnection(): HubConnection {
+        scanJobsHubConnection?.let { return it }
+
+        val connection = HubConnectionBuilder.create(hubUrl)
+            .withAccessTokenProvider(Single.defer { Single.just(token) })
+            .build()
+
+        connection.on("ScanJobsChanged") {
+            scanJobsChangedHandler?.invoke()
+        }
+        connection.onClosed { exception ->
+            if (!scanJobsStopping) {
+                scanJobsConnectionClosedHandler?.invoke(exception)
+            }
+        }
+
+        scanJobsHubConnection = connection
         return connection
     }
 }
