@@ -16,6 +16,7 @@ datastore = "1.2.0"
 lifecycleViewmodelCompose = "2.10.0"
 appcompat = "1.7.1"
 coroutines = "1.10.2"
+signalr = "10.0.7"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +43,7 @@ okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-i
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+signalr = { group = "com.microsoft.signalr", name = "signalr", version.ref = "signalr" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

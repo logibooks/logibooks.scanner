@@ -15,6 +15,7 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import java.util.Locale
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,10 +24,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -52,9 +55,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,11 +70,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.net.ScanJob
+import consulting.sw.logiscanner.net.ScanJobMonitorAreas
+import consulting.sw.logiscanner.net.ScanJobMonitorBox
+import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.HidScanInput
+import consulting.sw.logiscanner.ui.formatMonitorProgress
+import consulting.sw.logiscanner.ui.formatMonitorTime
+import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
+import consulting.sw.logiscanner.ui.monitorBoxDisplayName
+import consulting.sw.logiscanner.ui.parcelPrimaryText
+import consulting.sw.logiscanner.ui.parcelSecondaryText
+import consulting.sw.logiscanner.ui.scanJobStatusText
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
+import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -160,9 +176,21 @@ class MainActivity : ComponentActivity() {
                                 lastCode = state.lastCode,
                                 lastCount = state.lastCount,
                                 lastExtData = state.lastExtData,
+                                monitorSnapshot = state.monitorSnapshot,
+                                monitorDetailSnapshot = state.monitorDetailSnapshot,
+                                monitorSelectedScope = state.monitorSelectedScope,
+                                monitorLoading = state.monitorLoading,
+                                monitorDetailLoading = state.monitorDetailLoading,
+                                monitorConnected = state.monitorConnected,
+                                monitorClosedStatus = state.monitorClosedStatus,
+                                monitorError = state.monitorError,
+                                monitorAutoFollow = state.monitorAutoFollow,
                                 error = state.error,
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
+                                onOpenMonitorRegister = vm::openMonitorRegister,
+                                onOpenMonitorBox = vm::openMonitorBox,
+                                onToggleMonitorAutoFollow = vm::toggleMonitorAutoFollow,
                                 onBackToJobs = { 
                                     focusManager.clearFocus()
                                     vm.selectScanJob(null) 
@@ -495,9 +523,21 @@ private fun ScanScreen(
     lastCode: String?,
     lastCount: Int?,
     lastExtData: String?,
+    monitorSnapshot: ScanJobMonitorSnapshot?,
+    monitorDetailSnapshot: ScanJobMonitorSnapshot?,
+    monitorSelectedScope: ScanJobMonitorScope,
+    monitorLoading: Boolean,
+    monitorDetailLoading: Boolean,
+    monitorConnected: Boolean,
+    monitorClosedStatus: Int?,
+    monitorError: String?,
+    monitorAutoFollow: Boolean,
     error: String?,
     onStartScanning: () -> Unit,
     onStopScanning: () -> Unit,
+    onOpenMonitorRegister: () -> Unit,
+    onOpenMonitorBox: (ScanJobMonitorBox) -> Unit,
+    onToggleMonitorAutoFollow: () -> Unit,
     onBackToJobs: () -> Unit,
     onLogout: () -> Unit,
     onScanned: (String) -> Unit
@@ -510,171 +550,625 @@ private fun ScanScreen(
         enabled = true,
         onScan = onScanned
     )
-    
-    Column(
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 24.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.weight(3f)) {
-                Text(
-                    stringResource(R.string.ready_to_scan),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                if (!displayName.isNullOrBlank()) {
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.weight(3f)) {
                     Text(
-                        stringResource(R.string.logged_in_as, displayName),
-                        style = MaterialTheme.typography.bodyMedium
+                        stringResource(R.string.ready_to_scan),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold
                     )
+                    if (!displayName.isNullOrBlank()) {
+                        Text(
+                            stringResource(R.string.logged_in_as, displayName),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
-            }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Button(
-                    onClick = onBackToJobs,
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.back_to_jobs)
-                    )
-                }
-                Button(
-                    onClick = onLogout,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Logout,
-                        contentDescription = stringResource(R.string.logout)
-                    )
+                    Button(
+                        onClick = onBackToJobs,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back_to_jobs)
+                        )
+                    }
+                    Button(
+                        onClick = onLogout,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = stringResource(R.string.logout)
+                        )
+                    }
                 }
             }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.current_job), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    selectedJob.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-                if (!selectedJob.description.isNullOrBlank()) {
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.current_job), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        selectedJob.description,
+                        selectedJob.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (!selectedJob.description.isNullOrBlank()) {
+                        Text(
+                            selectedJob.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        stringResource(R.string.job_type, selectedJobTypeDisplay),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = if (!isScanning) onStartScanning else onStopScanning,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (!isScanning) stringResource(R.string.start_scanning) else stringResource(R.string.stop_scanning))
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.status), style = MaterialTheme.typography.titleMedium)
+                        if (isBusy) {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .width(120.dp)
+                                    .height(6.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Text(
+                        if (isScanning) {
+                            if (isBusy) stringResource(R.string.syncing_with_server)
+                            else stringResource(R.string.waiting_for_barcode)
+                        } else {
+                            stringResource(R.string.scanning_stopped)
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Text(
-                    stringResource(R.string.job_type, selectedJobTypeDisplay),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Button(
-                    onClick = if (!isScanning) onStartScanning else onStopScanning,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (!isScanning) stringResource(R.string.start_scanning) else stringResource(R.string.stop_scanning))
-                }
             }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.status), style = MaterialTheme.typography.titleMedium)
-                    if (isBusy) {
-                        LinearProgressIndicator(
-                            modifier = Modifier
-                                .width(120.dp)
-                                .height(6.dp),
-                            color = MaterialTheme.colorScheme.primary
+        item {
+            ScanJobMonitorPanel(
+                snapshot = monitorSnapshot,
+                detailSnapshot = monitorDetailSnapshot,
+                selectedScope = monitorSelectedScope,
+                loading = monitorLoading,
+                detailLoading = monitorDetailLoading,
+                connected = monitorConnected,
+                closedStatus = monitorClosedStatus,
+                error = monitorError,
+                autoFollow = monitorAutoFollow,
+                onOpenRegister = onOpenMonitorRegister,
+                onOpenBox = onOpenMonitorBox,
+                onToggleAutoFollow = onToggleMonitorAutoFollow
+            )
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(stringResource(R.string.last_scan), style = MaterialTheme.typography.titleMedium)
+                    if (lastCode != null) {
+                        Text(
+                            stringResource(R.string.code, lastCode),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                }
-                Text(
-                    if (isScanning) {
-                        if (isBusy) stringResource(R.string.syncing_with_server) 
-                        else stringResource(R.string.waiting_for_barcode)
-                    } else {
-                        stringResource(R.string.scanning_stopped)
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.last_scan), style = MaterialTheme.typography.titleMedium)
-                if (lastCode != null) {
-                    Text(
-                        stringResource(R.string.code, lastCode),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                if (lastCount != null) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (lastCount != null) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                stringResource(R.string.count_result, lastCount),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    if (!lastExtData.isNullOrBlank()) {
                         Text(
-                            stringResource(R.string.count_result, lastCount),
+                            text = lastExtData,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-                if (!lastExtData.isNullOrBlank()) {
-                    Text(
-                        text = lastExtData,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
         }
 
         if (error != null) {
-            Text(error, color = MaterialTheme.colorScheme.error)
+            item {
+                Text(error, color = MaterialTheme.colorScheme.error)
+            }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        item {
+            Text(
+                stringResource(R.string.scan_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+            VersionFooter()
+        }
+    }
+}
 
+@Composable
+private fun ScanJobMonitorPanel(
+    snapshot: ScanJobMonitorSnapshot?,
+    detailSnapshot: ScanJobMonitorSnapshot?,
+    selectedScope: ScanJobMonitorScope,
+    loading: Boolean,
+    detailLoading: Boolean,
+    connected: Boolean,
+    closedStatus: Int?,
+    error: String?,
+    autoFollow: Boolean,
+    onOpenRegister: () -> Unit,
+    onOpenBox: (ScanJobMonitorBox) -> Unit,
+    onToggleAutoFollow: () -> Unit
+) {
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.monitor_title), style = MaterialTheme.typography.titleMedium)
+                StatusPill(
+                    text = if (connected) stringResource(R.string.monitor_live) else stringResource(R.string.monitor_offline),
+                    background = if (connected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (connected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Button(
+                onClick = onToggleAutoFollow,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    if (autoFollow) {
+                        stringResource(R.string.monitor_auto_follow_disable)
+                    } else {
+                        stringResource(R.string.monitor_auto_follow_enable)
+                    }
+                )
+            }
+
+            if (loading && snapshot == null) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    stringResource(R.string.monitor_loading),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                return@Column
+            }
+
+            if (snapshot != null) {
+                MonitorStat(
+                    label = stringResource(R.string.monitor_boxes_progress),
+                    value = formatMonitorProgress(
+                        snapshot.totalBoxes,
+                        snapshot.boxesWithStickerScanned,
+                        snapshot.boxesWithStickerNotScanned
+                    )
+                )
+                MonitorStat(
+                    label = stringResource(R.string.monitor_parcels_progress),
+                    value = formatMonitorProgress(
+                        snapshot.totalParcels,
+                        snapshot.parcelsWithStickerScanned,
+                        snapshot.parcelsWithStickerNotScanned
+                    )
+                )
+                MonitorStat(
+                    label = stringResource(R.string.monitor_not_in_register),
+                    value = snapshot.scannedItemsNotInRegister.toString()
+                )
+
+                snapshot.latestScan?.let { latest ->
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            stringResource(R.string.monitor_latest_scan),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            latestScanText(snapshot),
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            if (closedStatus != null) {
+                Text(
+                    stringResource(R.string.monitor_closed, scanJobStatusText(context, closedStatus)),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            if (error != null) {
+                Text(error, color = MaterialTheme.colorScheme.error)
+            }
+
+            if (snapshot != null) {
+                if (selectedScope.area == ScanJobMonitorAreas.BOXES) {
+                    MonitorBoxesList(snapshot.boxes, onOpenBox)
+                } else {
+                    MonitorBoxDetail(
+                        snapshot = detailSnapshot,
+                        loading = detailLoading,
+                        onOpenRegister = onOpenRegister
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonitorStat(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
-            stringResource(R.string.scan_hint),
+            label,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
+            modifier = Modifier.weight(1f)
         )
-        VersionFooter()
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f)
+        )
     }
+}
+
+@Composable
+private fun MonitorBoxesList(
+    boxes: List<ScanJobMonitorBox>,
+    onOpenBox: (ScanJobMonitorBox) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            stringResource(R.string.monitor_boxes),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        if (boxes.isEmpty()) {
+            Text(
+                stringResource(R.string.monitor_empty_boxes),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                boxes.forEach { box ->
+                    MonitorBoxRow(box = box, onOpenBox = onOpenBox)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonitorBoxRow(
+    box: ScanJobMonitorBox,
+    onOpenBox: (ScanJobMonitorBox) -> Unit
+) {
+    val context = LocalContext.current
+    val isUnassigned = isUnassignedMonitorBox(box)
+    val statusText = when {
+        isUnassigned -> stringResource(R.string.monitor_unassigned_group)
+        box.boxStickerScanned -> stringResource(R.string.monitor_scanned)
+        else -> stringResource(R.string.monitor_waiting)
+    }
+    val statusBackground = when {
+        isUnassigned -> MaterialTheme.colorScheme.secondaryContainer
+        box.boxStickerScanned -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val statusContent = when {
+        isUnassigned -> MaterialTheme.colorScheme.onSecondaryContainer
+        box.boxStickerScanned -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
+            .clickable { onOpenBox(box) }
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                monitorBoxDisplayName(context, box),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                formatMonitorProgress(
+                    box.totalParcels,
+                    box.parcelsWithStickerScanned,
+                    box.parcelsWithStickerNotScanned
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        StatusPill(statusText, statusBackground, statusContent)
+    }
+}
+
+@Composable
+private fun MonitorBoxDetail(
+    snapshot: ScanJobMonitorSnapshot?,
+    loading: Boolean,
+    onOpenRegister: () -> Unit
+) {
+    val context = LocalContext.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = onOpenRegister, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.monitor_back_to_boxes))
+        }
+
+        if (loading && snapshot == null) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                stringResource(R.string.monitor_detail_loading),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return@Column
+        }
+
+        val box = snapshot?.box
+        if (box == null) {
+            Text(
+                stringResource(R.string.monitor_empty_parcels),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return@Column
+        }
+
+        Text(
+            monitorBoxDisplayName(context, box),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        MonitorStat(
+            label = stringResource(R.string.monitor_parcels_progress),
+            value = formatMonitorProgress(
+                box.totalParcels,
+                box.parcelsWithStickerScanned,
+                box.parcelsWithStickerNotScanned
+            )
+        )
+        if (!isUnassignedMonitorBox(box)) {
+            Text(
+                stringResource(
+                    R.string.monitor_box_sticker,
+                    if (box.boxStickerScanned) stringResource(R.string.monitor_scanned) else stringResource(R.string.monitor_waiting)
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (box.boxScannedUserName.isNotBlank()) {
+            Text(
+                stringResource(R.string.monitor_scan_user, box.boxScannedUserName),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (!box.boxScannedTime.isNullOrBlank()) {
+            Text(
+                stringResource(R.string.monitor_scan_time, formatMonitorTime(box.boxScannedTime)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Text(
+            stringResource(R.string.monitor_parcels),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        val parcels = box.parcels.orEmpty()
+        if (parcels.isEmpty()) {
+            Text(
+                stringResource(R.string.monitor_empty_parcels),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 260.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(parcels) { parcel ->
+                    MonitorParcelRow(parcel)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonitorParcelRow(parcel: consulting.sw.logiscanner.net.ScanJobMonitorParcel) {
+    val statusText = when {
+        !parcel.isInRegister -> stringResource(R.string.monitor_not_in_register)
+        parcel.stickerScanned -> stringResource(R.string.monitor_scanned)
+        else -> stringResource(R.string.monitor_waiting)
+    }
+    val statusBackground = when {
+        !parcel.isInRegister -> MaterialTheme.colorScheme.errorContainer
+        parcel.stickerScanned -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val statusContent = when {
+        !parcel.isInRegister -> MaterialTheme.colorScheme.onErrorContainer
+        parcel.stickerScanned -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                parcelPrimaryText(parcel),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            val secondary = parcelSecondaryText(parcel)
+            if (secondary.isNotBlank()) {
+                Text(
+                    secondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (!parcel.scannedTime.isNullOrBlank()) {
+                Text(
+                    formatMonitorTime(parcel.scannedTime),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        StatusPill(statusText, statusBackground, statusContent)
+    }
+}
+
+@Composable
+private fun StatusPill(text: String, background: Color, contentColor: Color) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = contentColor,
+        maxLines = 1,
+        modifier = Modifier
+            .background(background, RoundedCornerShape(50))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    )
+}
+
+@Composable
+private fun latestScanText(snapshot: ScanJobMonitorSnapshot): String {
+    val context = LocalContext.current
+    val latest = snapshot.latestScan ?: return ""
+    val target = when (latest.area) {
+        ScanJobMonitorAreas.BOX -> snapshot.boxes
+            .firstOrNull { it.boxId == latest.boxId }
+            ?.let { monitorBoxDisplayName(context, it) }
+            ?: stringResource(R.string.monitor_current_box_numbered, latest.boxId?.toString().orEmpty()).trim()
+        ScanJobMonitorAreas.UNASSIGNED -> snapshot.boxes
+            .firstOrNull { isUnassignedMonitorBox(it) && (it.bucketIndex ?: 0) == (latest.bucketIndex ?: 0) }
+            ?.let { monitorBoxDisplayName(context, it) }
+            ?: stringResource(R.string.monitor_unassigned_group_numbered, (latest.bucketIndex ?: 0) + 1)
+        ScanJobMonitorAreas.NOT_IN_REGISTER -> stringResource(R.string.monitor_not_in_register)
+        else -> ""
+    }
+    val time = formatMonitorTime(latest.scanTime)
+    return listOf(latest.code, target, time).filter { it.isNotBlank() }.joinToString(" | ")
 }
 
 @Composable
