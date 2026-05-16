@@ -81,7 +81,7 @@ class ScanJobMonitorRepository(
                         .timeout(HUB_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                         .blockingAwait()
                 }.onFailure { exception ->
-                    Log.w(TAG, "Failed to clear previous subscription before re-observing", exception)
+                    Log.w(TAG, "Failed to clear previous subscription before re-observing; proceeding with new ObserveScanJob anyway", exception)
                 }
             }
 
