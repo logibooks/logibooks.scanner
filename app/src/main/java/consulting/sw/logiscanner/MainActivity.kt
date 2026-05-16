@@ -678,6 +678,9 @@ private fun ScanScreen(
                 snapshot = monitorSnapshot,
                 detailSnapshot = monitorDetailSnapshot,
                 selectedScope = monitorSelectedScope,
+                lastCode = lastCode,
+                lastCount = lastCount,
+                lastExtData = lastExtData,
                 loading = monitorLoading,
                 detailLoading = monitorDetailLoading,
                 connected = monitorConnected,
@@ -688,41 +691,6 @@ private fun ScanScreen(
                 onOpenBox = onOpenMonitorBox,
                 onToggleAutoFollow = onToggleMonitorAutoFollow
             )
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.last_scan), style = MaterialTheme.typography.titleMedium)
-                    if (lastCode != null) {
-                        Text(
-                            stringResource(R.string.code, lastCode),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    if (lastCount != null) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                stringResource(R.string.count_result, lastCount),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                    if (!lastExtData.isNullOrBlank()) {
-                        Text(
-                            text = lastExtData,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
         }
 
         if (error != null) {
@@ -749,6 +717,9 @@ private fun ScanJobMonitorPanel(
     snapshot: ScanJobMonitorSnapshot?,
     detailSnapshot: ScanJobMonitorSnapshot?,
     selectedScope: ScanJobMonitorScope,
+    lastCode: String?,
+    lastCount: Int?,
+    lastExtData: String?,
     loading: Boolean,
     detailLoading: Boolean,
     connected: Boolean,
@@ -827,23 +798,14 @@ private fun ScanJobMonitorPanel(
                     label = stringResource(R.string.monitor_not_in_register),
                     value = snapshot.scannedItemsNotInRegister.toString()
                 )
-
-                snapshot.latestScan?.let { latest ->
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            stringResource(R.string.monitor_latest_scan),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            latestScanText(snapshot),
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
             }
+
+            MonitorLatestScanResult(
+                snapshot = snapshot,
+                lastCode = lastCode,
+                lastCount = lastCount,
+                lastExtData = lastExtData
+            )
 
             if (closedStatus != null) {
                 Text(
@@ -1152,23 +1114,85 @@ private fun StatusPill(text: String, background: Color, contentColor: Color) {
 }
 
 @Composable
-private fun latestScanText(snapshot: ScanJobMonitorSnapshot): String {
-    val context = LocalContext.current
-    val latest = snapshot.latestScan ?: return ""
-    val target = when (latest.area) {
-        ScanJobMonitorAreas.BOX -> snapshot.boxes
-            .firstOrNull { it.boxId == latest.boxId }
-            ?.let { monitorBoxDisplayName(context, it) }
-            ?: stringResource(R.string.monitor_current_box_numbered, latest.boxId?.toString().orEmpty()).trim()
-        ScanJobMonitorAreas.UNASSIGNED -> snapshot.boxes
-            .firstOrNull { isUnassignedMonitorBox(it) && (it.bucketIndex ?: 0) == (latest.bucketIndex ?: 0) }
-            ?.let { monitorBoxDisplayName(context, it) }
-            ?: stringResource(R.string.monitor_unassigned_group_numbered, (latest.bucketIndex ?: 0) + 1)
-        ScanJobMonitorAreas.NOT_IN_REGISTER -> stringResource(R.string.monitor_not_in_register)
-        else -> ""
+private fun MonitorLatestScanResult(
+    snapshot: ScanJobMonitorSnapshot?,
+    lastCode: String?,
+    lastCount: Int?,
+    lastExtData: String?
+) {
+    val latestScanLine = latestScanText(snapshot, lastCode)
+    if (latestScanLine.isBlank() && lastCount == null && lastExtData.isNullOrBlank()) {
+        return
     }
-    val time = formatMonitorTime(latest.scanTime)
-    return listOf(latest.code, target, time).filter { it.isNotBlank() }.joinToString(" | ")
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            stringResource(R.string.monitor_latest_scan),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        if (latestScanLine.isNotBlank()) {
+            Text(
+                latestScanLine,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (lastCount != null) {
+            Text(
+                stringResource(R.string.count_result, lastCount),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (!lastExtData.isNullOrBlank()) {
+            Text(
+                text = lastExtData,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun latestScanText(snapshot: ScanJobMonitorSnapshot?, lastCode: String?): String {
+    val context = LocalContext.current
+    val latest = snapshot?.latestScan
+    val monitorCode = latest?.code?.takeIf { it.isNotBlank() }
+    val usesLastCodeFallback = !lastCode.isNullOrBlank() && lastCode != monitorCode
+    val code = if (usesLastCodeFallback) {
+        lastCode
+    } else {
+        monitorCode.orEmpty()
+    }
+    val boxes = snapshot?.boxes.orEmpty()
+    val target = if (usesLastCodeFallback) {
+        ""
+    } else latest?.let { latestScan ->
+        when (latestScan.area) {
+            ScanJobMonitorAreas.BOX -> boxes
+                .firstOrNull { it.boxId == latestScan.boxId }
+                ?.let { monitorBoxDisplayName(context, it) }
+                ?: stringResource(
+                    R.string.monitor_current_box_numbered,
+                    latestScan.boxId?.toString().orEmpty()
+                ).trim()
+            ScanJobMonitorAreas.UNASSIGNED -> boxes
+                .firstOrNull {
+                    isUnassignedMonitorBox(it) && (it.bucketIndex ?: 0) == (latestScan.bucketIndex ?: 0)
+                }
+                ?.let { monitorBoxDisplayName(context, it) }
+                ?: stringResource(R.string.monitor_unassigned_group_numbered, (latestScan.bucketIndex ?: 0) + 1)
+            ScanJobMonitorAreas.NOT_IN_REGISTER -> stringResource(R.string.monitor_not_in_register)
+            else -> ""
+        }
+    }.orEmpty()
+    val time = if (usesLastCodeFallback) "" else formatMonitorTime(latest?.scanTime)
+    return listOf(code, target, time).filter { it.isNotBlank() }.joinToString(" | ")
 }
 
 @Composable
