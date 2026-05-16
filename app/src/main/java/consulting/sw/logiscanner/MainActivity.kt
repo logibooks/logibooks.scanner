@@ -16,6 +16,7 @@ import androidx.annotation.RequiresApi
 import java.util.Locale
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -106,6 +107,25 @@ import androidx.compose.material.icons.automirrored.filled.RotateLeft
 // Focus request retry settings for LoginScreen
 private const val MAX_FOCUS_REQUEST_ATTEMPTS = 3
 private const val FOCUS_REQUEST_DELAY_MS = 300L
+
+private val CheckStatusRedBackground = Color(0x40F44336)
+private val CheckStatusRedText = Color(0xFFD32F2F)
+private val CheckStatusRedBorder = Color(0x4DC91104)
+private val CheckStatusRedStrongBorder = Color(0xC3C91104)
+private val CheckStatusBlueBackground = Color(0x402196F3)
+private val CheckStatusBlueText = Color(0xFF1976D2)
+private val CheckStatusBlueBorder = Color(0x4D2196F3)
+private val CheckStatusGreenBackground = Color(0x404CAF50)
+private val CheckStatusGreenText = Color(0xFF388E3C)
+private val CheckStatusApprovedText = Color(0xFF2E7D32)
+private val CheckStatusGreenBorder = Color(0x4D4CAF50)
+private val CheckStatusGreenStrongBorder = Color(0xFF065F0C)
+private val CheckStatusOrangeBackground = Color(0x40FF6B35)
+private val CheckStatusOrangeText = Color(0xFFD84315)
+private val CheckStatusOrangeBorder = Color(0x80FF6B35)
+private val CheckStatusPurpleBackground = Color(0x409A35FF)
+private val CheckStatusPurpleText = Color(0xFFCE15D8)
+private val CheckStatusPurpleBorder = Color(0x809A35FF)
 
 
 class MainActivity : ComponentActivity() {
@@ -1163,28 +1183,93 @@ private fun MonitorParcelCheckStatusAttribute(checkStatus: Int) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(0.42f)
         )
-        val colors = checkStatusColors(checkStatusTone(checkStatus))
-        StatusPill(
+        CheckStatusPill(
             text = checkStatusText(LocalContext.current, checkStatus),
-            background = colors.first,
-            contentColor = colors.second,
+            style = checkStatusStyle(checkStatusTone(checkStatus)),
             modifier = Modifier.weight(0.58f)
         )
     }
 }
 
 @Composable
-private fun checkStatusColors(tone: CheckStatusTone?): Pair<Color, Color> {
+private fun CheckStatusPill(
+    text: String,
+    style: CheckStatusStyle,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(4.dp)
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = style.content,
+        fontWeight = FontWeight.Medium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+        modifier = modifier
+            .background(style.background, shape)
+            .border(style.borderWidth, style.border, shape)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    )
+}
+
+private data class CheckStatusStyle(
+    val background: Color,
+    val content: Color,
+    val border: Color,
+    val borderWidth: androidx.compose.ui.unit.Dp = 1.dp
+)
+
+@Composable
+private fun checkStatusStyle(tone: CheckStatusTone?): CheckStatusStyle {
     return when (tone) {
-        CheckStatusTone.NOT_CHECKED -> MaterialTheme.colorScheme.surface to MaterialTheme.colorScheme.onSurfaceVariant
-        CheckStatusTone.APPROVED_WITH_EXCISE,
-        CheckStatusTone.APPROVED_WITH_NOTIFICATION -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-        CheckStatusTone.HAS_ISSUES_WITH_INHERITANCE,
-        CheckStatusTone.HAS_ISSUES -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-        CheckStatusTone.APPROVED_WITH_INHERITANCE,
-        CheckStatusTone.APPROVED,
-        CheckStatusTone.NO_ISSUES -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-        null -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+        CheckStatusTone.NOT_CHECKED -> CheckStatusStyle(
+            CheckStatusBlueBackground,
+            CheckStatusBlueText,
+            CheckStatusBlueBorder
+        )
+        CheckStatusTone.APPROVED_WITH_EXCISE -> CheckStatusStyle(
+            CheckStatusOrangeBackground,
+            CheckStatusOrangeText,
+            CheckStatusOrangeBorder
+        )
+        CheckStatusTone.APPROVED_WITH_NOTIFICATION -> CheckStatusStyle(
+            CheckStatusPurpleBackground,
+            CheckStatusPurpleText,
+            CheckStatusPurpleBorder
+        )
+        CheckStatusTone.HAS_ISSUES_WITH_INHERITANCE -> CheckStatusStyle(
+            CheckStatusRedBackground,
+            CheckStatusRedText,
+            CheckStatusRedStrongBorder,
+            3.dp
+        )
+        CheckStatusTone.HAS_ISSUES -> CheckStatusStyle(
+            CheckStatusRedBackground,
+            CheckStatusRedText,
+            CheckStatusRedBorder
+        )
+        CheckStatusTone.APPROVED_WITH_INHERITANCE -> CheckStatusStyle(
+            CheckStatusGreenBackground,
+            CheckStatusApprovedText,
+            CheckStatusGreenStrongBorder,
+            3.dp
+        )
+        CheckStatusTone.APPROVED -> CheckStatusStyle(
+            CheckStatusGreenBackground,
+            CheckStatusApprovedText,
+            CheckStatusGreenBorder
+        )
+        CheckStatusTone.NO_ISSUES -> CheckStatusStyle(
+            CheckStatusGreenBackground,
+            CheckStatusGreenText,
+            CheckStatusGreenBorder
+        )
+        null -> CheckStatusStyle(
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
+            MaterialTheme.colorScheme.outline
+        )
     }
 }
 
