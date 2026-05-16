@@ -113,7 +113,7 @@ This file is a part of LogiScanner application
     <string name="scan_job_status_in_progress">in progress</string>
     <string name="scan_job_status_paused">paused</string>
     <string name="scan_job_status_completed">completed</string>
-    <string name="scan_job_status_unknown">status unknown</string>
+    <string name="scan_job_status_unknown">unknown</string>
     
     <string name="scan_hint">Use the hardware Scan key or Bluetooth ring scanner</string>
     
