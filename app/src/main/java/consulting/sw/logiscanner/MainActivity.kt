@@ -94,7 +94,6 @@ import consulting.sw.logiscanner.ui.monitorBoxDisplayName
 import consulting.sw.logiscanner.ui.monitorLatestScanDisplay
 import consulting.sw.logiscanner.ui.monitorParcelAttributeSpecs
 import consulting.sw.logiscanner.ui.parcelPrimaryText
-import consulting.sw.logiscanner.ui.scanJobStatusText
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import androidx.compose.material.icons.Icons
@@ -102,6 +101,7 @@ import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
@@ -191,6 +191,7 @@ class MainActivity : ComponentActivity() {
                                 displayName = state.displayName,
                                 error = state.error,
                                 onSelectJob = vm::selectScanJob,
+                                onDismissMessage = vm::dismissMessage,
                                 onLogout = {
                                     focusManager.clearFocus()
                                     vm.logout()
@@ -217,8 +218,6 @@ class MainActivity : ComponentActivity() {
                                 monitorSelectedScope = state.monitorSelectedScope,
                                 monitorLoading = state.monitorLoading,
                                 monitorDetailLoading = state.monitorDetailLoading,
-                                monitorConnected = state.monitorConnected,
-                                monitorClosedStatus = state.monitorClosedStatus,
                                 monitorError = state.monitorError,
                                 monitorAutoFollow = state.monitorAutoFollow,
                                 error = state.error,
@@ -411,6 +410,7 @@ private fun JobSelectionScreen(
     displayName: String?,
     error: String?,
     onSelectJob: (ScanJob) -> Unit,
+    onDismissMessage: () -> Unit,
     onLogout: () -> Unit,
     onRefresh: () -> Unit
 ) {
@@ -488,7 +488,7 @@ private fun JobSelectionScreen(
         }
 
         if (error != null) {
-            Text(error, color = MaterialTheme.colorScheme.error)
+            DismissibleMessage(message = error, onDismiss = onDismissMessage)
         }
 
         if (scanJobs.isEmpty() && !isBusy) {
@@ -550,6 +550,42 @@ private fun JobSelectionScreen(
 }
 
 @Composable
+private fun DismissibleMessage(message: String, onDismiss: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.dismiss_message),
+                    tint = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ScanScreen(
     isBusy: Boolean,
     displayName: String?,
@@ -568,8 +604,6 @@ private fun ScanScreen(
     monitorSelectedScope: ScanJobMonitorScope,
     monitorLoading: Boolean,
     monitorDetailLoading: Boolean,
-    monitorConnected: Boolean,
-    monitorClosedStatus: Int?,
     monitorError: String?,
     monitorAutoFollow: Boolean,
     error: String?,
@@ -708,8 +742,6 @@ private fun ScanScreen(
                 lastScanTime = lastScanTime,
                 loading = monitorLoading,
                 detailLoading = monitorDetailLoading,
-                connected = monitorConnected,
-                closedStatus = monitorClosedStatus,
                 error = monitorError,
                 autoFollow = monitorAutoFollow,
                 onOpenRegister = onOpenMonitorRegister,
@@ -751,33 +783,19 @@ private fun ScanJobMonitorPanel(
     lastScanTime: String?,
     loading: Boolean,
     detailLoading: Boolean,
-    connected: Boolean,
-    closedStatus: Int?,
     error: String?,
     autoFollow: Boolean,
     onOpenRegister: () -> Unit,
     onOpenBox: (ScanJobMonitorBox) -> Unit,
     onToggleAutoFollow: () -> Unit
 ) {
-    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(stringResource(R.string.monitor_title), style = MaterialTheme.typography.titleMedium)
-                StatusPill(
-                    text = if (connected) stringResource(R.string.monitor_live) else stringResource(R.string.monitor_offline),
-                    background = if (connected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (connected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(stringResource(R.string.monitor_title), style = MaterialTheme.typography.titleMedium)
             Button(
                 onClick = onToggleAutoFollow,
                 modifier = Modifier.fillMaxWidth()
@@ -818,7 +836,7 @@ private fun ScanJobMonitorPanel(
             }
 
             if (snapshot != null && selectedScope.area == ScanJobMonitorAreas.BOXES) {
-                MonitorStat(
+                MonitorAttribute(
                     label = stringResource(R.string.monitor_boxes_progress),
                     value = formatMonitorProgress(
                         snapshot.totalBoxes,
@@ -826,7 +844,7 @@ private fun ScanJobMonitorPanel(
                         snapshot.boxesWithStickerNotScanned
                     )
                 )
-                MonitorStat(
+                MonitorAttribute(
                     label = stringResource(R.string.monitor_parcels_progress),
                     value = formatMonitorProgress(
                         snapshot.totalParcels,
@@ -834,17 +852,9 @@ private fun ScanJobMonitorPanel(
                         snapshot.parcelsWithStickerNotScanned
                     )
                 )
-                MonitorStat(
+                MonitorAttribute(
                     label = stringResource(R.string.monitor_not_in_register),
                     value = snapshot.scannedItemsNotInRegister.toString()
-                )
-            }
-
-            if (closedStatus != null) {
-                Text(
-                    stringResource(R.string.monitor_closed, scanJobStatusText(context, closedStatus)),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
                 )
             }
 
@@ -864,29 +874,6 @@ private fun ScanJobMonitorPanel(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun MonitorStat(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.End,
-            modifier = Modifier.weight(1f)
-        )
     }
 }
 

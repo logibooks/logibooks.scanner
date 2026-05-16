@@ -4,7 +4,7 @@ All rights reserved.
 This file is a part of LogiScanner application
 -->
 
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">LogiScanner</string>
     <string name="app_title">Logibooks Scanner</string>
     <string name="sign_in_subtitle">Войдите для выбора задания</string>
@@ -39,13 +39,11 @@ This file is a part of LogiScanner application
     <string name="count_result">Найдено посылок: %d</string>
 
     <string name="monitor_title">Монитор сканирования</string>
-    <string name="monitor_live">Онлайн</string>
-    <string name="monitor_offline">Нет связи</string>
     <string name="monitor_auto_follow_disable">Автослежение включено. Нажмите, чтобы выключить</string>
     <string name="monitor_auto_follow_enable">Автослежение выключено. Нажмите, чтобы включить</string>
     <string name="monitor_loading">Загрузка монитора…</string>
-    <string name="monitor_boxes_progress">Коробки всего / сканировано / осталось</string>
-    <string name="monitor_parcels_progress">Посылки всего / сканировано / осталось</string>
+    <string name="monitor_boxes_progress">Коробки всего / сканировано /\nне сканировано</string>
+    <string name="monitor_parcels_progress">Посылки всего / сканировано \nне сканировано</string>
     <string name="monitor_not_in_register">Не в реестре</string>
     <string name="monitor_latest_scan_title">Последнее сканирование %1$s %2$s</string>
     <string name="monitor_latest_scan_title_no_time">Последнее сканирование</string>
@@ -53,13 +51,13 @@ This file is a part of LogiScanner application
     <string name="monitor_latest_scan_boxes">Коробок: %1$d</string>
     <string name="monitor_latest_scan_sticker_label">Стикер</string>
     <plurals name="monitor_latest_scan_parcel_number_label">
-        <item quantity="one">Номер посылки</item>
+        <item quantity="one" tools:ignore="ImpliedQuantity">Номер посылки</item>
         <item quantity="few">Номера посылок</item>
         <item quantity="many">Номера посылок</item>
         <item quantity="other">Номера посылок</item>
     </plurals>
     <plurals name="monitor_latest_scan_box_number_label">
-        <item quantity="one">Номер коробки</item>
+        <item quantity="one" tools:ignore="ImpliedQuantity">Номер коробки</item>
         <item quantity="few">Номера коробок</item>
         <item quantity="many">Номера коробок</item>
         <item quantity="other">Номера коробок</item>
@@ -75,7 +73,7 @@ This file is a part of LogiScanner application
     <string name="monitor_unassigned_group_numbered">Без коробки %1$d</string>
     <string name="monitor_box_display_name">Коробка %1$s</string>
     <string name="monitor_current_box_numbered">Текущая коробка %1$s</string>
-    <string name="monitor_closed">Мониторинг остановлен. Статус задания: %s</string>
+    <string name="monitor_closed">Сканирование %s</string>
     <string name="monitor_detail_loading">Загрузка деталей…</string>
     <string name="monitor_error_load">Не удалось загрузить монитор сканирования</string>
     <string name="monitor_error_connection">Соединение с онлайн-монитором потеряно</string>
@@ -97,6 +95,7 @@ This file is a part of LogiScanner application
     <string name="monitor_parcel_zone_name">Зона</string>
     <string name="monitor_parcel_status_title">Статус</string>
     <string name="monitor_parcel_check_status">Статус проверки</string>
+    <string name="dismiss_message">Закрыть сообщение</string>
 
     <string name="check_status_separator">, </string>
     <string name="check_status_not_checked">Не проверено</string>
@@ -114,11 +113,11 @@ This file is a part of LogiScanner application
     <string name="check_status_issue_invalid_feacn_format">Формат ТН ВЭД</string>
     <string name="check_status_unknown_hex">Статус 0x%1$s</string>
 
-    <string name="scan_job_status_created">Создано</string>
-    <string name="scan_job_status_in_progress">Выполняется</string>
-    <string name="scan_job_status_paused">Приостановлено</string>
-    <string name="scan_job_status_completed">Завершено</string>
-    <string name="scan_job_status_unknown">Неизвестно</string>
+    <string name="scan_job_status_created">cоздано</string>
+    <string name="scan_job_status_in_progress">выполняется</string>
+    <string name="scan_job_status_paused">приостановлено</string>
+    <string name="scan_job_status_completed">завершено</string>
+    <string name="scan_job_status_unknown">в неизвестном статусе</string>
     
     <string name="scan_hint">Используйте кнопку аппаратного сканирования или Bluetooth сканер</string>
     
