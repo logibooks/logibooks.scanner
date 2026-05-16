@@ -45,7 +45,7 @@ This file is a part of LogiScanner application
     <string name="code">Code: %s</string>
     <string name="count_result">Parcels found: %d</string>
 
-    <string name="monitor_title">Work monitor</string>
+    <string name="monitor_title">Scan job monitor</string>
     <string name="monitor_live">Live</string>
     <string name="monitor_offline">Offline</string>
     <string name="monitor_auto_follow_disable">Auto-follow is on. Tap to turn off</string>
@@ -61,7 +61,7 @@ This file is a part of LogiScanner application
     <string name="monitor_empty_boxes">No boxes found</string>
     <string name="monitor_empty_parcels">No parcels in this group</string>
     <string name="monitor_scanned">Scanned</string>
-    <string name="monitor_waiting">Waiting</string>
+    <string name="monitor_waiting">Not scanned</string>
     <string name="monitor_unassigned_group">No box</string>
     <string name="monitor_unassigned_group_numbered">No box %1$d</string>
     <string name="monitor_box_display_name">Box %1$s</string>

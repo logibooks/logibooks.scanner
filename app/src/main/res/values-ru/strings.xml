@@ -45,7 +45,7 @@ This file is a part of LogiScanner application
     <string name="code">Код: %s</string>
     <string name="count_result">Найдено посылок: %d</string>
 
-    <string name="monitor_title">Монитор работы</string>
+    <string name="monitor_title">Монитор сканирования</string>
     <string name="monitor_live">Онлайн</string>
     <string name="monitor_offline">Нет связи</string>
     <string name="monitor_auto_follow_disable">Автослежение включено. Нажмите, чтобы выключить</string>
@@ -60,8 +60,8 @@ This file is a part of LogiScanner application
     <string name="monitor_parcels">Посылки</string>
     <string name="monitor_empty_boxes">Коробки не найдены</string>
     <string name="monitor_empty_parcels">В этой группе нет посылок</string>
-    <string name="monitor_scanned">Сканировано</string>
-    <string name="monitor_waiting">Ожидает</string>
+    <string name="monitor_scanned">Сканирована</string>
+    <string name="monitor_waiting">Не сканирована</string>
     <string name="monitor_unassigned_group">Без коробки</string>
     <string name="monitor_unassigned_group_numbered">Без коробки %1$d</string>
     <string name="monitor_box_display_name">Коробка %1$s</string>
