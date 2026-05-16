@@ -764,6 +764,13 @@ private fun ScanJobMonitorPanel(
                 )
             }
 
+            MonitorLatestScanResult(
+                snapshot = snapshot,
+                lastCode = lastCode,
+                lastCount = lastCount,
+                lastExtData = lastExtData
+            )
+
             if (loading && snapshot == null) {
                 LinearProgressIndicator(
                     modifier = Modifier
@@ -801,13 +808,6 @@ private fun ScanJobMonitorPanel(
                     value = snapshot.scannedItemsNotInRegister.toString()
                 )
             }
-
-            MonitorLatestScanResult(
-                snapshot = snapshot,
-                lastCode = lastCode,
-                lastCount = lastCount,
-                lastExtData = lastExtData
-            )
 
             if (closedStatus != null) {
                 Text(
