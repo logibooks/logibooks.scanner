@@ -77,14 +77,13 @@ import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
+import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
-import consulting.sw.logiscanner.ui.CheckStatusTone
 import consulting.sw.logiscanner.ui.HidScanInput
 import consulting.sw.logiscanner.ui.MonitorLatestScanNumberKind
-import consulting.sw.logiscanner.ui.checkStatusText
-import consulting.sw.logiscanner.ui.checkStatusTone
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanDate
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanTime
 import consulting.sw.logiscanner.ui.formatMonitorProgress
@@ -107,29 +106,33 @@ import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
+import androidx.compose.foundation.isSystemInDarkTheme
 
 // Focus request retry settings for LoginScreen
 private const val MAX_FOCUS_REQUEST_ATTEMPTS = 3
 private const val FOCUS_REQUEST_DELAY_MS = 300L
 
-private val CheckStatusRedBackground = Color(0x40F44336)
-private val CheckStatusRedText = Color(0xFFD32F2F)
-private val CheckStatusRedBorder = Color(0x4DC91104)
-private val CheckStatusRedStrongBorder = Color(0xC3C91104)
-private val CheckStatusBlueBackground = Color(0x402196F3)
-private val CheckStatusBlueText = Color(0xFF1976D2)
-private val CheckStatusBlueBorder = Color(0x4D2196F3)
-private val CheckStatusGreenBackground = Color(0x404CAF50)
-private val CheckStatusGreenText = Color(0xFF388E3C)
-private val CheckStatusApprovedText = Color(0xFF2E7D32)
-private val CheckStatusGreenBorder = Color(0x4D4CAF50)
-private val CheckStatusGreenStrongBorder = Color(0xFF065F0C)
-private val CheckStatusOrangeBackground = Color(0x40FF6B35)
-private val CheckStatusOrangeText = Color(0xFFD84315)
-private val CheckStatusOrangeBorder = Color(0x80FF6B35)
-private val CheckStatusPurpleBackground = Color(0x409A35FF)
-private val CheckStatusPurpleText = Color(0xFFCE15D8)
-private val CheckStatusPurpleBorder = Color(0x809A35FF)
+// Light theme check status pill colors
+private val CheckStatusRedBackground = Color(0x24F44336)
+private val CheckStatusRedText = Color(0xFFB71C1C)
+private val CheckStatusRedBorder = Color(0xFFC62828)
+private val CheckStatusBlueBackground = Color(0x2E2196F3)
+private val CheckStatusBlueText = Color(0xFF0D47A1)
+private val CheckStatusBlueBorder = Color(0xFF1565C0)
+private val CheckStatusGreenBackground = Color(0x2E4CAF50)
+private val CheckStatusGreenText = Color(0xFF1B5E20)
+private val CheckStatusGreenBorder = Color(0xFF2E7D32)
+
+// Dark theme check status pill colors (lighter tones for contrast on dark surfaces)
+private val CheckStatusDarkRedBackground = Color(0x30EF5350)
+private val CheckStatusDarkRedText = Color(0xFFFF8A80)
+private val CheckStatusDarkRedBorder = Color(0xFFEF5350)
+private val CheckStatusDarkBlueBackground = Color(0x3042A5F5)
+private val CheckStatusDarkBlueText = Color(0xFF90CAF9)
+private val CheckStatusDarkBlueBorder = Color(0xFF42A5F5)
+private val CheckStatusDarkGreenBackground = Color(0x3066BB6A)
+private val CheckStatusDarkGreenText = Color(0xFFA5D6A7)
+private val CheckStatusDarkGreenBorder = Color(0xFF66BB6A)
 
 
 class MainActivity : ComponentActivity() {
@@ -1216,8 +1219,8 @@ private fun MonitorParcelRow(
 private fun MonitorParcelAttributes(parcel: ScanJobMonitorParcel) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         monitorParcelAttributeSpecs(parcel).forEach { attribute ->
-            if (attribute.checkStatus != null) {
-                MonitorParcelCheckStatusAttribute(attribute.checkStatus)
+            if (attribute.checkStatusProjection != null) {
+                MonitorParcelCheckStatusAttribute(attribute.checkStatusProjection)
             } else if (!attribute.value.isNullOrBlank()) {
                 MonitorAttribute(stringResource(attribute.labelResId), attribute.value)
             }
@@ -1226,23 +1229,33 @@ private fun MonitorParcelAttributes(parcel: ScanJobMonitorParcel) {
 }
 
 @Composable
-private fun MonitorParcelCheckStatusAttribute(checkStatus: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            stringResource(R.string.monitor_parcel_check_status),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.42f)
-        )
-        CheckStatusPill(
-            text = checkStatusText(LocalContext.current, checkStatus),
-            style = checkStatusStyle(checkStatusTone(checkStatus)),
-            modifier = Modifier.weight(0.58f)
-        )
+private fun MonitorParcelCheckStatusAttribute(projection: ParcelCheckStatusProjection) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                stringResource(R.string.monitor_parcel_check_status),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(0.42f)
+            )
+            CheckStatusPill(
+                text = projection.title.ifBlank { "-" },
+                style = checkStatusStyle(projection.kind),
+                modifier = Modifier.weight(0.58f)
+            )
+        }
+        if (projection.kind == ParcelCheckStatusProjectionKinds.RESTRICTION &&
+            !projection.restrictionReason.isNullOrBlank()
+        ) {
+            MonitorAttribute(
+                stringResource(R.string.monitor_parcel_restriction_reason),
+                projection.restrictionReason.orEmpty()
+            )
+        }
     }
 }
 
@@ -1276,51 +1289,37 @@ private data class CheckStatusStyle(
 )
 
 @Composable
-private fun checkStatusStyle(tone: CheckStatusTone?): CheckStatusStyle {
-    return when (tone) {
-        CheckStatusTone.NOT_CHECKED -> CheckStatusStyle(
+private fun checkStatusStyle(kind: Int?): CheckStatusStyle {
+    val darkTheme = isSystemInDarkTheme()
+    return when (kind) {
+        ParcelCheckStatusProjectionKinds.NOT_CHECKED -> if (darkTheme) CheckStatusStyle(
+            CheckStatusDarkBlueBackground,
+            CheckStatusDarkBlueText,
+            CheckStatusDarkBlueBorder
+        ) else CheckStatusStyle(
             CheckStatusBlueBackground,
             CheckStatusBlueText,
             CheckStatusBlueBorder
         )
-        CheckStatusTone.APPROVED_WITH_EXCISE -> CheckStatusStyle(
-            CheckStatusOrangeBackground,
-            CheckStatusOrangeText,
-            CheckStatusOrangeBorder
-        )
-        CheckStatusTone.APPROVED_WITH_NOTIFICATION -> CheckStatusStyle(
-            CheckStatusPurpleBackground,
-            CheckStatusPurpleText,
-            CheckStatusPurpleBorder
-        )
-        CheckStatusTone.HAS_ISSUES_WITH_INHERITANCE -> CheckStatusStyle(
-            CheckStatusRedBackground,
-            CheckStatusRedText,
-            CheckStatusRedStrongBorder,
-            3.dp
-        )
-        CheckStatusTone.HAS_ISSUES -> CheckStatusStyle(
+        ParcelCheckStatusProjectionKinds.RESTRICTION -> if (darkTheme) CheckStatusStyle(
+            CheckStatusDarkRedBackground,
+            CheckStatusDarkRedText,
+            CheckStatusDarkRedBorder
+        ) else CheckStatusStyle(
             CheckStatusRedBackground,
             CheckStatusRedText,
             CheckStatusRedBorder
         )
-        CheckStatusTone.APPROVED_WITH_INHERITANCE -> CheckStatusStyle(
-            CheckStatusGreenBackground,
-            CheckStatusApprovedText,
-            CheckStatusGreenStrongBorder,
-            3.dp
-        )
-        CheckStatusTone.APPROVED -> CheckStatusStyle(
-            CheckStatusGreenBackground,
-            CheckStatusApprovedText,
-            CheckStatusGreenBorder
-        )
-        CheckStatusTone.NO_ISSUES -> CheckStatusStyle(
+        ParcelCheckStatusProjectionKinds.CHECKED -> if (darkTheme) CheckStatusStyle(
+            CheckStatusDarkGreenBackground,
+            CheckStatusDarkGreenText,
+            CheckStatusDarkGreenBorder
+        ) else CheckStatusStyle(
             CheckStatusGreenBackground,
             CheckStatusGreenText,
             CheckStatusGreenBorder
         )
-        null -> CheckStatusStyle(
+        else -> CheckStatusStyle(
             MaterialTheme.colorScheme.surfaceVariant,
             MaterialTheme.colorScheme.onSurfaceVariant,
             MaterialTheme.colorScheme.outline

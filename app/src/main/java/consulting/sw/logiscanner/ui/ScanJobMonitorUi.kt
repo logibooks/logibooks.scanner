@@ -6,6 +6,7 @@ package consulting.sw.logiscanner.ui
 
 import android.content.Context
 import consulting.sw.logiscanner.R
+import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
@@ -140,26 +141,10 @@ fun scanJobStatusText(context: Context, status: Int?): String {
     }
 }
 
-enum class CheckStatusTone {
-    NOT_CHECKED,
-    APPROVED_WITH_EXCISE,
-    APPROVED_WITH_NOTIFICATION,
-    HAS_ISSUES_WITH_INHERITANCE,
-    HAS_ISSUES,
-    APPROVED_WITH_INHERITANCE,
-    APPROVED,
-    NO_ISSUES
-}
-
-data class CheckStatusTextSpec(
-    val stringResIds: List<Int> = emptyList(),
-    val fallbackHex: String? = null
-)
-
 data class MonitorParcelAttributeSpec(
     val labelResId: Int,
     val value: String? = null,
-    val checkStatus: Int? = null
+    val checkStatusProjection: ParcelCheckStatusProjection? = null
 )
 
 enum class MonitorLatestScanNumberKind {
@@ -241,57 +226,6 @@ fun monitorLatestScanDisplay(
     }
 }
 
-fun checkStatusTextSpec(checkStatus: Int): CheckStatusTextSpec {
-    val fc = checkStatusFc(checkStatus)
-    val sw = checkStatusSw(checkStatus)
-    val special = when {
-        fc == FC_NOT_CHECKED && sw == SW_NOT_CHECKED -> R.string.check_status_not_checked
-        fc == FC_APPROVED_WITH_EXCISE && sw == SW_APPROVED_WITH_EXCISE -> R.string.check_status_approved_with_excise
-        fc == FC_APPROVED_WITH_NOTIFICATION && sw == SW_APPROVED_WITH_NOTIFICATION -> R.string.check_status_approved_with_notification
-        fc == FC_DUPLICATE && sw == SW_DUPLICATE -> R.string.check_status_duplicate
-        fc == FC_NOT_FOUND && sw == SW_NOT_FOUND -> R.string.check_status_not_found
-        fc == FC_MARKED_BY_PARTNER && sw == SW_MARKED_BY_PARTNER -> R.string.check_status_marked_by_partner
-        else -> null
-    }
-    if (special != null) {
-        return CheckStatusTextSpec(stringResIds = listOf(special))
-    }
-
-    val parts = listOfNotNull(swStatusStringResId(sw), fcStatusStringResId(fc))
-    return if (parts.isNotEmpty()) {
-        CheckStatusTextSpec(stringResIds = parts)
-    } else {
-        CheckStatusTextSpec(fallbackHex = checkStatus.toUInt().toString(16).uppercase().padStart(8, '0'))
-    }
-}
-
-fun checkStatusText(context: Context, checkStatus: Int): String {
-    val spec = checkStatusTextSpec(checkStatus)
-    if (spec.fallbackHex != null) {
-        return context.getString(R.string.check_status_unknown_hex, spec.fallbackHex)
-    }
-    return spec.stringResIds
-        .map { context.getString(it) }
-        .filter { it.isNotBlank() }
-        .joinToString(context.getString(R.string.check_status_separator))
-}
-
-fun checkStatusTone(checkStatus: Int?): CheckStatusTone? {
-    if (checkStatus == null) {
-        return null
-    }
-    return when {
-        checkStatus == checkStatusCompose(FC_NOT_CHECKED, SW_NOT_CHECKED) -> CheckStatusTone.NOT_CHECKED
-        checkStatus == checkStatusCompose(FC_APPROVED_WITH_EXCISE, SW_APPROVED_WITH_EXCISE) -> CheckStatusTone.APPROVED_WITH_EXCISE
-        checkStatus == checkStatusCompose(FC_APPROVED_WITH_NOTIFICATION, SW_APPROVED_WITH_NOTIFICATION) -> CheckStatusTone.APPROVED_WITH_NOTIFICATION
-        checkStatusSw(checkStatus) == SW_ISSUE_STOP_WORD_INHERITED -> CheckStatusTone.HAS_ISSUES_WITH_INHERITANCE
-        checkStatusHasIssues(checkStatus) -> CheckStatusTone.HAS_ISSUES
-        checkStatusSw(checkStatus) == SW_APPROVED_INHERITED -> CheckStatusTone.APPROVED_WITH_INHERITANCE
-        checkStatusSw(checkStatus) == SW_APPROVED -> CheckStatusTone.APPROVED
-        else -> CheckStatusTone.NO_ISSUES
-    }
-}
-
 fun monitorParcelAttributeSpecs(parcel: ScanJobMonitorParcel): List<MonitorParcelAttributeSpec> {
     val specs = mutableListOf<MonitorParcelAttributeSpec>()
     parcel.scannedSticker?.takeIf { it.isNotBlank() }?.let {
@@ -336,8 +270,8 @@ fun monitorParcelAttributeSpecs(parcel: ScanJobMonitorParcel): List<MonitorParce
     if (parcel.statusTitle.isNotBlank()) {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_status_title, parcel.statusTitle)
     }
-    parcel.checkStatus?.let {
-        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_check_status, checkStatus = it)
+    parcel.checkStatusProjection?.let {
+        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_check_status, checkStatusProjection = it)
     }
     return specs
 }
@@ -378,62 +312,3 @@ private fun formatMonitorDateTimePart(value: String?, formatter: DateTimeFormatt
     }
 }
 
-private const val SW_INHERITANCE_FLAG = 0x0080
-
-private const val SW_NOT_CHECKED = 0x0000
-private const val SW_NO_ISSUES = 0x0010
-private const val SW_APPROVED = 0x0020
-private const val SW_APPROVED_INHERITED = SW_APPROVED or SW_INHERITANCE_FLAG
-private const val SW_APPROVED_WITH_EXCISE = 0x0230
-private const val SW_APPROVED_WITH_NOTIFICATION = 0x0231
-private const val SW_ISSUE_STOP_WORD = 0x0100
-private const val SW_ISSUE_STOP_WORD_INHERITED = SW_ISSUE_STOP_WORD or SW_INHERITANCE_FLAG
-private const val SW_DUPLICATE = 0x017E
-private const val SW_NOT_FOUND = 0x017D
-private const val SW_MARKED_BY_PARTNER = 0x01FF
-
-private const val FC_NOT_CHECKED = 0x0000
-private const val FC_NO_ISSUES = 0x0010
-private const val FC_APPROVED_WITH_EXCISE = 0x0230
-private const val FC_APPROVED_WITH_NOTIFICATION = 0x0231
-private const val FC_ISSUE_FEACN_CODE = 0x0100
-private const val FC_ISSUE_NONEXISTING_FEACN = 0x0101
-private const val FC_ISSUE_INVALID_FEACN_FORMAT = 0x0102
-private const val FC_DUPLICATE = 0x017E
-private const val FC_NOT_FOUND = 0x017D
-private const val FC_MARKED_BY_PARTNER = 0x01FF
-
-private fun checkStatusFc(checkStatus: Int): Int = (checkStatus ushr 16) and 0xFFFF
-
-private fun checkStatusSw(checkStatus: Int): Int = checkStatus and 0xFFFF
-
-private fun checkStatusCompose(fc: Int, sw: Int): Int = (fc shl 16) or sw
-
-private fun checkStatusHasIssues(checkStatus: Int): Boolean {
-    return (checkStatusFc(checkStatus) and 0x0100) != 0 || (checkStatusSw(checkStatus) and 0x0100) != 0
-}
-
-private fun swStatusStringResId(sw: Int): Int? {
-    return when (sw) {
-        SW_NO_ISSUES -> R.string.check_status_sw_no_issues
-        SW_APPROVED -> R.string.check_status_approved
-        SW_APPROVED_INHERITED -> R.string.check_status_approved
-        SW_APPROVED_WITH_EXCISE -> R.string.check_status_approved_with_excise
-        SW_APPROVED_WITH_NOTIFICATION -> R.string.check_status_approved_with_notification
-        SW_ISSUE_STOP_WORD -> R.string.check_status_issue_stop_word
-        SW_ISSUE_STOP_WORD_INHERITED -> R.string.check_status_issue_stop_word
-        else -> null
-    }
-}
-
-private fun fcStatusStringResId(fc: Int): Int? {
-    return when (fc) {
-        FC_NO_ISSUES -> R.string.check_status_fc_no_issues
-        FC_APPROVED_WITH_EXCISE -> R.string.check_status_approved_with_excise
-        FC_APPROVED_WITH_NOTIFICATION -> R.string.check_status_approved_with_notification
-        FC_ISSUE_FEACN_CODE -> R.string.check_status_issue_feacn_code
-        FC_ISSUE_NONEXISTING_FEACN -> R.string.check_status_issue_nonexisting_feacn
-        FC_ISSUE_INVALID_FEACN_FORMAT -> R.string.check_status_issue_invalid_feacn_format
-        else -> null
-    }
-}

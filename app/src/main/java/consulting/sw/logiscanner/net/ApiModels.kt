@@ -51,6 +51,12 @@ object ScannedItemSources {
     const val NOT_IN_REGISTER = 30
 }
 
+object ParcelCheckStatusProjectionKinds {
+    const val NOT_CHECKED = 10
+    const val RESTRICTION = 20
+    const val CHECKED = 30
+}
+
 const val SCAN_JOB_STATUS_IN_PROGRESS = 15
 
 @JsonClass(generateAdapter = true)
@@ -76,6 +82,13 @@ data class ScanJobMonitorLatestScan(
 )
 
 @JsonClass(generateAdapter = true)
+data class ParcelCheckStatusProjection(
+    var kind: Int = 0,
+    var title: String = "",
+    var restrictionReason: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class ScanJobMonitorParcel(
     var isInRegister: Boolean = true,
     var stickerScanned: Boolean = false,
@@ -98,7 +111,7 @@ data class ScanJobMonitorParcel(
     var zoneName: String = "",
     var statusId: Int = 0,
     var statusTitle: String = "",
-    var checkStatus: Int? = null
+    var checkStatusProjection: ParcelCheckStatusProjection? = null
 )
 
 @JsonClass(generateAdapter = true)
