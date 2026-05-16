@@ -9,7 +9,6 @@ This file is a part of LogiScanner application
     <string name="app_title">Logibooks Scanner</string>
     <string name="sign_in_subtitle">Войдите для выбора задания</string>
     <string name="debug_mode_indicator">РЕЖИМ ОТЛАДКИ</string>
-    <string name="server_base_url">Базовый URL сервера</string>
     <string name="email">Email</string>
     <string name="password">Пароль</string>
     <string name="login">Войти</string>
@@ -22,30 +21,24 @@ This file is a part of LogiScanner application
     <string name="no_scan_jobs">Нет доступных заданий сканирования</string>
     <string name="loading_jobs">Загрузка заданий…</string>
     <string name="refresh_jobs">Обновить</string>
-    <string name="job_name">Название: %s</string>
     <string name="job_description">Описание: %s</string>
-    <string name="job_status">Статус: %s</string>
     <string name="job_type">Тип: %s</string>
     
     <string name="ready_to_scan">Готов к сканированию</string>
     <string name="logged_in_as">Вы вошли как: %s</string>
     <string name="logout">Выйти</string>
-    <string name="status">Статус</string>
     <string name="syncing_with_server">Синхронизация с сервером…</string>
     <string name="waiting_for_barcode">Ожидание следующего штрихкода</string>
     
-    <string name="current_job">Текущее задание</string>
     <string name="back_to_jobs">Назад</string>
     <string name="start_scanning">Сканировать</string>
     <string name="stop_scanning">Остановить</string>
-    <string name="scanning_active">Сканирование активно</string>
     <string name="scanning_stopped">Сканирование остановлено</string>
     
-    <string name="last_scan">Последнее сканирование</string>
     <string name="code">Код: %s</string>
     <string name="count_result">Найдено посылок: %d</string>
 
-    <string name="monitor_title">Монитор работы</string>
+    <string name="monitor_title">Монитор сканирования</string>
     <string name="monitor_live">Онлайн</string>
     <string name="monitor_offline">Нет связи</string>
     <string name="monitor_auto_follow_disable">Автослежение включено. Нажмите, чтобы выключить</string>
@@ -60,8 +53,8 @@ This file is a part of LogiScanner application
     <string name="monitor_parcels">Посылки</string>
     <string name="monitor_empty_boxes">Коробки не найдены</string>
     <string name="monitor_empty_parcels">В этой группе нет посылок</string>
-    <string name="monitor_scanned">Сканировано</string>
-    <string name="monitor_waiting">Ожидает</string>
+    <string name="monitor_scanned">Сканирована</string>
+    <string name="monitor_waiting">Не сканирована</string>
     <string name="monitor_unassigned_group">Без коробки</string>
     <string name="monitor_unassigned_group_numbered">Без коробки %1$d</string>
     <string name="monitor_box_display_name">Коробка %1$s</string>
@@ -74,6 +67,39 @@ This file is a part of LogiScanner application
     <string name="monitor_box_sticker">Стикер коробки: %s</string>
     <string name="monitor_scan_user">Пользователь: %s</string>
     <string name="monitor_scan_time">Время: %s</string>
+    <string name="monitor_expand_parcel">Развернуть посылку</string>
+    <string name="monitor_collapse_parcel">Свернуть посылку</string>
+    <string name="monitor_parcel_scanned_sticker">Сканированный стикер</string>
+    <string name="monitor_parcel_scanned_user">Сканировал</string>
+    <string name="monitor_parcel_scanned_time">Время сканирования</string>
+    <string name="monitor_parcel_shk">ШК</string>
+    <string name="monitor_parcel_sticker">Стикер</string>
+    <string name="monitor_parcel_wb_sticker">WB стикер</string>
+    <string name="monitor_parcel_seller_sticker">Стикер продавца</string>
+    <string name="monitor_parcel_sticker_code">Код стикера</string>
+    <string name="monitor_parcel_posting_number">Номер отправления</string>
+    <string name="monitor_parcel_barcode">Штрихкод</string>
+    <string name="monitor_parcel_weight_kg">Вес, кг</string>
+    <string name="monitor_parcel_quantity">Количество</string>
+    <string name="monitor_parcel_zone_name">Зона</string>
+    <string name="monitor_parcel_status_title">Статус</string>
+    <string name="monitor_parcel_check_status">Статус проверки</string>
+
+    <string name="check_status_separator">, </string>
+    <string name="check_status_not_checked">Не проверено</string>
+    <string name="check_status_approved">Согласовано</string>
+    <string name="check_status_approved_with_excise">Согл. с акцизом</string>
+    <string name="check_status_approved_with_notification">Согл. с нотификацией</string>
+    <string name="check_status_issue_stop_word">Стоп слово</string>
+    <string name="check_status_duplicate">Дубликат</string>
+    <string name="check_status_not_found">Не найдена</string>
+    <string name="check_status_marked_by_partner">Исключено партнёром</string>
+    <string name="check_status_sw_no_issues">Ок стоп слова</string>
+    <string name="check_status_fc_no_issues">Ок ТН ВЭД</string>
+    <string name="check_status_issue_feacn_code">Стоп ТН ВЭД</string>
+    <string name="check_status_issue_nonexisting_feacn">Нет ТН ВЭД</string>
+    <string name="check_status_issue_invalid_feacn_format">Формат ТН ВЭД</string>
+    <string name="check_status_unknown_hex">Статус 0x%1$s</string>
 
     <string name="scan_job_status_created">Создано</string>
     <string name="scan_job_status_in_progress">Выполняется</string>
