@@ -106,11 +106,13 @@ import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
+import androidx.compose.foundation.isSystemInDarkTheme
 
 // Focus request retry settings for LoginScreen
 private const val MAX_FOCUS_REQUEST_ATTEMPTS = 3
 private const val FOCUS_REQUEST_DELAY_MS = 300L
 
+// Light theme check status pill colors
 private val CheckStatusRedBackground = Color(0x24F44336)
 private val CheckStatusRedText = Color(0xFFB71C1C)
 private val CheckStatusRedBorder = Color(0xFFC62828)
@@ -120,6 +122,17 @@ private val CheckStatusBlueBorder = Color(0xFF1565C0)
 private val CheckStatusGreenBackground = Color(0x2E4CAF50)
 private val CheckStatusGreenText = Color(0xFF1B5E20)
 private val CheckStatusGreenBorder = Color(0xFF2E7D32)
+
+// Dark theme check status pill colors (lighter tones for contrast on dark surfaces)
+private val CheckStatusDarkRedBackground = Color(0x30EF5350)
+private val CheckStatusDarkRedText = Color(0xFFFF8A80)
+private val CheckStatusDarkRedBorder = Color(0xFFEF5350)
+private val CheckStatusDarkBlueBackground = Color(0x3042A5F5)
+private val CheckStatusDarkBlueText = Color(0xFF90CAF9)
+private val CheckStatusDarkBlueBorder = Color(0xFF42A5F5)
+private val CheckStatusDarkGreenBackground = Color(0x3066BB6A)
+private val CheckStatusDarkGreenText = Color(0xFFA5D6A7)
+private val CheckStatusDarkGreenBorder = Color(0xFF66BB6A)
 
 
 class MainActivity : ComponentActivity() {
@@ -1277,18 +1290,31 @@ private data class CheckStatusStyle(
 
 @Composable
 private fun checkStatusStyle(kind: Int?): CheckStatusStyle {
+    val darkTheme = isSystemInDarkTheme()
     return when (kind) {
-        ParcelCheckStatusProjectionKinds.NOT_CHECKED -> CheckStatusStyle(
+        ParcelCheckStatusProjectionKinds.NOT_CHECKED -> if (darkTheme) CheckStatusStyle(
+            CheckStatusDarkBlueBackground,
+            CheckStatusDarkBlueText,
+            CheckStatusDarkBlueBorder
+        ) else CheckStatusStyle(
             CheckStatusBlueBackground,
             CheckStatusBlueText,
             CheckStatusBlueBorder
         )
-        ParcelCheckStatusProjectionKinds.RESTRICTION -> CheckStatusStyle(
+        ParcelCheckStatusProjectionKinds.RESTRICTION -> if (darkTheme) CheckStatusStyle(
+            CheckStatusDarkRedBackground,
+            CheckStatusDarkRedText,
+            CheckStatusDarkRedBorder
+        ) else CheckStatusStyle(
             CheckStatusRedBackground,
             CheckStatusRedText,
             CheckStatusRedBorder
         )
-        ParcelCheckStatusProjectionKinds.CHECKED -> CheckStatusStyle(
+        ParcelCheckStatusProjectionKinds.CHECKED -> if (darkTheme) CheckStatusStyle(
+            CheckStatusDarkGreenBackground,
+            CheckStatusDarkGreenText,
+            CheckStatusDarkGreenBorder
+        ) else CheckStatusStyle(
             CheckStatusGreenBackground,
             CheckStatusGreenText,
             CheckStatusGreenBorder
