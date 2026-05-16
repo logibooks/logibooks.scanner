@@ -14,10 +14,11 @@ import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import java.time.OffsetDateTime
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
-private val monitorDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+private val monitorDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy")
 private val monitorLatestScanTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val monitorLatestScanDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM")
 
@@ -89,13 +90,24 @@ fun formatMonitorProgress(total: Int, scanned: Int, notScanned: Int): String {
 fun formatMonitorTime(value: String?): String {
     if (value.isNullOrBlank()) return ""
     return try {
-        OffsetDateTime.parse(value).format(monitorDateTimeFormatter)
+        OffsetDateTime.parse(value)
+            .atZoneSameInstant(ZoneId.systemDefault())
+            .format(monitorDateTimeFormatter)
     } catch (_: DateTimeParseException) {
         try {
             LocalDateTime.parse(value).format(monitorDateTimeFormatter)
         } catch (_: DateTimeParseException) {
             value
         }
+    }
+}
+
+fun formatMonitorQuantity(value: Double): String {
+    val longValue = value.toLong()
+    return if (value == longValue.toDouble()) {
+        longValue.toString()
+    } else {
+        value.toString()
     }
 }
 
@@ -316,7 +328,7 @@ fun monitorParcelAttributeSpecs(parcel: ScanJobMonitorParcel): List<MonitorParce
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_weight_kg, it.toString())
     }
     parcel.quantity?.let {
-        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_quantity, it.toString())
+        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_quantity, formatMonitorQuantity(it))
     }
     if (parcel.zoneName.isNotBlank()) {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_zone_name, parcel.zoneName)
@@ -354,7 +366,9 @@ private fun firstNotBlank(vararg values: String?): String? {
 private fun formatMonitorDateTimePart(value: String?, formatter: DateTimeFormatter): String {
     if (value.isNullOrBlank()) return ""
     return try {
-        OffsetDateTime.parse(value).format(formatter)
+        OffsetDateTime.parse(value)
+            .atZoneSameInstant(ZoneId.systemDefault())
+            .format(formatter)
     } catch (_: DateTimeParseException) {
         try {
             LocalDateTime.parse(value).format(formatter)

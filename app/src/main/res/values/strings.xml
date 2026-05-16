@@ -51,14 +51,14 @@ This file is a part of LogiScanner application
     <string name="monitor_latest_scan_title_no_time">Last scan</string>
     <string name="monitor_latest_scan_parcels">Parcels: %1$d</string>
     <string name="monitor_latest_scan_boxes">Boxes: %1$d</string>
-    <string name="monitor_latest_scan_sticker">Sticker %1$s</string>
-    <plurals name="monitor_latest_scan_parcel_number">
-        <item quantity="one">Parcel number %1$s</item>
-        <item quantity="other">Parcel numbers %1$s</item>
+    <string name="monitor_latest_scan_sticker_label">Sticker</string>
+    <plurals name="monitor_latest_scan_parcel_number_label">
+        <item quantity="one">Parcel number</item>
+        <item quantity="other">Parcel numbers</item>
     </plurals>
-    <plurals name="monitor_latest_scan_box_number">
-        <item quantity="one">Box number %1$s</item>
-        <item quantity="other">Box numbers %1$s</item>
+    <plurals name="monitor_latest_scan_box_number_label">
+        <item quantity="one">Box number</item>
+        <item quantity="other">Box numbers</item>
     </plurals>
     <string name="monitor_current_box">Current box</string>
     <string name="monitor_boxes">Boxes</string>
@@ -76,14 +76,11 @@ This file is a part of LogiScanner application
     <string name="monitor_error_load">Unable to load scan job monitor</string>
     <string name="monitor_error_connection">Live monitor connection was lost</string>
     <string name="monitor_back_to_boxes">Back to boxes</string>
-    <string name="monitor_box_sticker">Box sticker: %s</string>
-    <string name="monitor_scan_user">User: %s</string>
-    <string name="monitor_scan_time">Time: %s</string>
     <string name="monitor_expand_parcel">Expand parcel</string>
     <string name="monitor_collapse_parcel">Collapse parcel</string>
     <string name="monitor_parcel_scanned_sticker">Scanned sticker</string>
     <string name="monitor_parcel_scanned_user">Scanned by</string>
-    <string name="monitor_parcel_scanned_time">Scan time</string>
+    <string name="monitor_parcel_scanned_time">Time</string>
     <string name="monitor_parcel_shk">SHK</string>
     <string name="monitor_parcel_sticker">Sticker</string>
     <string name="monitor_parcel_wb_sticker">WB sticker</string>

@@ -17,6 +17,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class ScanJobMonitorUiTest {
 
@@ -94,7 +97,23 @@ class ScanJobMonitorUiTest {
 
     @Test
     fun formatMonitorTime_formatsIsoOffsetDateTime() {
-        assertEquals("15.05.2026 21:30", formatMonitorTime("2026-05-15T21:30:45+03:00"))
+        assertEquals("21:30 15.05.2026", formatMonitorTime("2026-05-15T21:30:45+03:00"))
+    }
+
+    @Test
+    fun formatMonitorTime_convertsUtcToLocalTime() {
+        val value = "2026-05-15T18:30:45Z"
+        val expected = OffsetDateTime.parse(value)
+            .atZoneSameInstant(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy"))
+
+        assertEquals(expected, formatMonitorTime(value))
+    }
+
+    @Test
+    fun formatMonitorQuantity_dropsFloatingPointForWholeNumbers() {
+        assertEquals("2", formatMonitorQuantity(2.0))
+        assertEquals("2.5", formatMonitorQuantity(2.5))
     }
 
     @Test
@@ -105,6 +124,15 @@ class ScanJobMonitorUiTest {
     @Test
     fun formatMonitorLatestScanDate_dropsYear() {
         assertEquals("15.05", formatMonitorLatestScanDate("2026-05-15T21:30:45+03:00"))
+    }
+
+    @Test
+    fun formatMonitorLatestScanParts_convertUtcToLocalTime() {
+        val value = "2026-05-15T18:30:45Z"
+        val local = OffsetDateTime.parse(value).atZoneSameInstant(ZoneId.systemDefault())
+
+        assertEquals(local.format(DateTimeFormatter.ofPattern("HH:mm")), formatMonitorLatestScanTime(value))
+        assertEquals(local.format(DateTimeFormatter.ofPattern("dd.MM")), formatMonitorLatestScanDate(value))
     }
 
     @Test
@@ -338,6 +366,7 @@ class ScanJobMonitorUiTest {
         assertFalse(specs.any { it.value == "123" })
         assertFalse(specs.any { it.value == "4" })
         assertFalse(specs.any { it.value == "9" })
+        assertTrue(specs.any { it.labelResId == R.string.monitor_parcel_quantity && it.value == "2" })
         assertEquals(checkStatus(0x0010, 0x0010), specs.last().checkStatus)
     }
 

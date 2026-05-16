@@ -1017,12 +1017,41 @@ private fun MonitorBoxDetail(
         } else {
             monitorBoxDisplayName(context, box)
         }
-        Text(
-            boxTitle,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-        MonitorStat(
+        val isUnassigned = isUnassignedMonitorBox(box)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                boxTitle,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            if (!isUnassigned) {
+                StatusPill(
+                    text = if (box.boxStickerScanned) {
+                        stringResource(R.string.monitor_scanned)
+                    } else {
+                        stringResource(R.string.monitor_waiting)
+                    },
+                    background = if (box.boxStickerScanned) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    contentColor = if (box.boxStickerScanned) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+        }
+        MonitorAttribute(
             label = stringResource(R.string.monitor_parcels_progress),
             value = formatMonitorProgress(
                 box.totalParcels,
@@ -1030,28 +1059,22 @@ private fun MonitorBoxDetail(
                 box.parcelsWithStickerNotScanned
             )
         )
-        if (!isUnassignedMonitorBox(box)) {
-            Text(
-                stringResource(
-                    R.string.monitor_box_sticker,
-                    if (box.boxStickerScanned) stringResource(R.string.monitor_scanned) else stringResource(R.string.monitor_waiting)
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        box.boxScannedSticker?.takeIf { it.isNotBlank() }?.let { scannedSticker ->
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_parcel_scanned_sticker),
+                value = scannedSticker
             )
         }
         if (box.boxScannedUserName.isNotBlank()) {
-            Text(
-                stringResource(R.string.monitor_scan_user, box.boxScannedUserName),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_parcel_scanned_user),
+                value = box.boxScannedUserName
             )
         }
         if (!box.boxScannedTime.isNullOrBlank()) {
-            Text(
-                stringResource(R.string.monitor_scan_time, formatMonitorTime(box.boxScannedTime)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_parcel_scanned_time),
+                value = formatMonitorTime(box.boxScannedTime)
             )
         }
 
@@ -1186,7 +1209,7 @@ private fun MonitorParcelAttributes(parcel: ScanJobMonitorParcel) {
             if (attribute.checkStatus != null) {
                 MonitorParcelCheckStatusAttribute(attribute.checkStatus)
             } else if (!attribute.value.isNullOrBlank()) {
-                MonitorParcelAttribute(stringResource(attribute.labelResId), attribute.value)
+                MonitorAttribute(stringResource(attribute.labelResId), attribute.value)
             }
         }
     }
@@ -1296,7 +1319,7 @@ private fun checkStatusStyle(tone: CheckStatusTone?): CheckStatusStyle {
 }
 
 @Composable
-private fun MonitorParcelAttribute(label: String, value: String) {
+private fun MonitorAttribute(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1367,25 +1390,24 @@ private fun MonitorLatestScanResult(
     ) ?: return
     val displayTime = formatMonitorLatestScanTime(display.scanTime)
     val displayDate = formatMonitorLatestScanDate(display.scanTime)
-    val countParts = listOfNotNull(
-        stringResource(R.string.monitor_latest_scan_parcels, display.parcelCount),
-        stringResource(R.string.monitor_latest_scan_boxes, display.boxCount),
-        display.hint
-    )
-    val stickerText = display.code?.let { stringResource(R.string.monitor_latest_scan_sticker, it) }
-    val numberText = display.numberKind?.let { numberKind ->
+    val stickerCode = display.code?.takeIf { it.isNotBlank() }
+    val numberAttribute = display.numberKind?.let { numberKind ->
         val resources = LocalContext.current.resources
-        val text = display.itemNumbers.joinToString(", ")
+        val value = display.itemNumbers.joinToString(", ")
         when (numberKind) {
-            MonitorLatestScanNumberKind.BOX -> resources.getQuantityString(
-                R.plurals.monitor_latest_scan_box_number,
-                display.itemNumbers.size,
-                text
+            MonitorLatestScanNumberKind.BOX -> Pair(
+                resources.getQuantityString(
+                    R.plurals.monitor_latest_scan_box_number_label,
+                    display.itemNumbers.size
+                ),
+                value
             )
-            MonitorLatestScanNumberKind.PARCEL -> resources.getQuantityString(
-                R.plurals.monitor_latest_scan_parcel_number,
-                display.itemNumbers.size,
-                text
+            MonitorLatestScanNumberKind.PARCEL -> Pair(
+                resources.getQuantityString(
+                    R.plurals.monitor_latest_scan_parcel_number_label,
+                    display.itemNumbers.size
+                ),
+                value
             )
         }
     }
@@ -1403,27 +1425,45 @@ private fun MonitorLatestScanResult(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        Text(
-            countParts.joinToString("  "),
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        if (stickerText != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top
+        ) {
             Text(
-                text = stickerText,
-                style = MaterialTheme.typography.bodyMedium,
+                text = stringResource(R.string.monitor_latest_scan_parcels, display.parcelCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(0.42f)
+            )
+            Text(
+                text = stringResource(R.string.monitor_latest_scan_boxes, display.boxCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(0.58f)
+            )
+        }
+        display.hint?.let { hint ->
+            Text(
+                text = hint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
         }
-        if (numberText != null) {
-            Text(
-                text = numberText,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+        stickerCode?.let { code ->
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_latest_scan_sticker_label),
+                value = code
             )
+        }
+        numberAttribute?.let { (label, value) ->
+            MonitorAttribute(label = label, value = value)
         }
     }
 }
