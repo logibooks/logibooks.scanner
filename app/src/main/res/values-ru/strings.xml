@@ -51,6 +51,7 @@ This file is a part of LogiScanner application
     <string name="monitor_latest_scan_title_no_time">Последнее сканирование</string>
     <string name="monitor_latest_scan_parcels">Посылок: %1$d</string>
     <string name="monitor_latest_scan_boxes">Коробок: %1$d</string>
+    <string name="monitor_latest_scan_sticker">Стикер %1$s</string>
     <plurals name="monitor_latest_scan_parcel_number">
         <item quantity="one">Номер посылки %1$s</item>
         <item quantity="few">Номера посылок %1$s</item>

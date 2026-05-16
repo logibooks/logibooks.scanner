@@ -82,7 +82,7 @@ import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.CheckStatusTone
 import consulting.sw.logiscanner.ui.HidScanInput
-import consulting.sw.logiscanner.ui.LatestScanNumberKind
+import consulting.sw.logiscanner.ui.MonitorLatestScanNumberKind
 import consulting.sw.logiscanner.ui.checkStatusText
 import consulting.sw.logiscanner.ui.checkStatusTone
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanDate
@@ -90,9 +90,8 @@ import consulting.sw.logiscanner.ui.formatMonitorLatestScanTime
 import consulting.sw.logiscanner.ui.formatMonitorProgress
 import consulting.sw.logiscanner.ui.formatMonitorTime
 import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
-import consulting.sw.logiscanner.ui.latestScanBoxCount
-import consulting.sw.logiscanner.ui.latestScanNumberKind
 import consulting.sw.logiscanner.ui.monitorBoxDisplayName
+import consulting.sw.logiscanner.ui.monitorLatestScanDisplay
 import consulting.sw.logiscanner.ui.monitorParcelAttributeSpecs
 import consulting.sw.logiscanner.ui.parcelPrimaryText
 import consulting.sw.logiscanner.ui.scanJobStatusText
@@ -208,6 +207,9 @@ class MainActivity : ComponentActivity() {
                                 isScanning = state.isScanning,
                                 lastCode = state.lastCode,
                                 lastCount = state.lastCount,
+                                lastBoxCount = state.lastBoxCount,
+                                lastScanSource = state.lastScanSource,
+                                lastItemNumbers = state.lastItemNumbers,
                                 lastExtData = state.lastExtData,
                                 lastScanTime = state.lastScanTime,
                                 monitorSnapshot = state.monitorSnapshot,
@@ -556,6 +558,9 @@ private fun ScanScreen(
     isScanning: Boolean,
     lastCode: String?,
     lastCount: Int?,
+    lastBoxCount: Int?,
+    lastScanSource: Int?,
+    lastItemNumbers: List<String>,
     lastExtData: String?,
     lastScanTime: String?,
     monitorSnapshot: ScanJobMonitorSnapshot?,
@@ -696,6 +701,9 @@ private fun ScanScreen(
                 selectedScope = monitorSelectedScope,
                 lastCode = lastCode,
                 lastCount = lastCount,
+                lastBoxCount = lastBoxCount,
+                lastScanSource = lastScanSource,
+                lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
                 lastScanTime = lastScanTime,
                 loading = monitorLoading,
@@ -736,6 +744,9 @@ private fun ScanJobMonitorPanel(
     selectedScope: ScanJobMonitorScope,
     lastCode: String?,
     lastCount: Int?,
+    lastBoxCount: Int?,
+    lastScanSource: Int?,
+    lastItemNumbers: List<String>,
     lastExtData: String?,
     lastScanTime: String?,
     loading: Boolean,
@@ -784,6 +795,9 @@ private fun ScanJobMonitorPanel(
                 snapshot = snapshot,
                 lastCode = lastCode,
                 lastCount = lastCount,
+                lastBoxCount = lastBoxCount,
+                lastScanSource = lastScanSource,
+                lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
                 lastScanTime = lastScanTime
             )
@@ -1335,50 +1349,43 @@ private fun MonitorLatestScanResult(
     snapshot: ScanJobMonitorSnapshot?,
     lastCode: String?,
     lastCount: Int?,
+    lastBoxCount: Int?,
+    lastScanSource: Int?,
+    lastItemNumbers: List<String>,
     lastExtData: String?,
     lastScanTime: String?
 ) {
-    val resultCode = lastCode?.takeIf { it.isNotBlank() }
-        ?: snapshot?.latestScan?.code?.takeIf { it.isNotBlank() }
-    val displayTimeSource = lastScanTime?.takeIf { it.isNotBlank() }
-        ?: snapshot?.latestScan?.scanTime?.takeIf { it.isNotBlank() }
-    val displayTime = formatMonitorLatestScanTime(displayTimeSource)
-    val displayDate = formatMonitorLatestScanDate(displayTimeSource)
-    if (
-        resultCode == null
-        && lastCount == null
-        && lastExtData.isNullOrBlank()
-        && displayTime.isBlank()
-        && displayDate.isBlank()
-    ) {
-        return
-    }
-
-    val parcelCount = lastCount ?: 0
-    val boxCount = latestScanBoxCount(snapshot, lastCount)
-    val hint = lastExtData?.takeIf { it.isNotBlank() }
+    val display = monitorLatestScanDisplay(
+        snapshot = snapshot,
+        lastCode = lastCode,
+        lastParcelCount = lastCount,
+        lastBoxCount = lastBoxCount,
+        lastScanSource = lastScanSource,
+        lastItemNumbers = lastItemNumbers,
+        lastExtData = lastExtData,
+        lastScanTime = lastScanTime
+    ) ?: return
+    val displayTime = formatMonitorLatestScanTime(display.scanTime)
+    val displayDate = formatMonitorLatestScanDate(display.scanTime)
     val countParts = listOfNotNull(
-        stringResource(R.string.monitor_latest_scan_parcels, parcelCount),
-        stringResource(R.string.monitor_latest_scan_boxes, boxCount),
-        hint
+        stringResource(R.string.monitor_latest_scan_parcels, display.parcelCount),
+        stringResource(R.string.monitor_latest_scan_boxes, display.boxCount),
+        display.hint
     )
-    val numberKind = latestScanNumberKind(snapshot, lastCount)
-    val numberQuantity = when (numberKind) {
-        LatestScanNumberKind.BOX -> boxCount.coerceAtLeast(1)
-        LatestScanNumberKind.PARCEL -> parcelCount.coerceAtLeast(1)
-    }
-    val numberText = resultCode?.let { code ->
+    val stickerText = display.code?.let { stringResource(R.string.monitor_latest_scan_sticker, it) }
+    val numberText = display.numberKind?.let { numberKind ->
         val resources = LocalContext.current.resources
+        val text = display.itemNumbers.joinToString(", ")
         when (numberKind) {
-            LatestScanNumberKind.BOX -> resources.getQuantityString(
+            MonitorLatestScanNumberKind.BOX -> resources.getQuantityString(
                 R.plurals.monitor_latest_scan_box_number,
-                numberQuantity,
-                code
+                display.itemNumbers.size,
+                text
             )
-            LatestScanNumberKind.PARCEL -> resources.getQuantityString(
+            MonitorLatestScanNumberKind.PARCEL -> resources.getQuantityString(
                 R.plurals.monitor_latest_scan_parcel_number,
-                numberQuantity,
-                code
+                display.itemNumbers.size,
+                text
             )
         }
     }
@@ -1402,6 +1409,14 @@ private fun MonitorLatestScanResult(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+        if (stickerText != null) {
+            Text(
+                text = stickerText,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
         if (numberText != null) {
             Text(
                 text = numberText,

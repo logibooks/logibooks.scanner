@@ -10,6 +10,7 @@ import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import java.time.OffsetDateTime
 import java.time.LocalDateTime
@@ -106,39 +107,6 @@ fun formatMonitorLatestScanDate(value: String?): String {
     return formatMonitorDateTimePart(value, monitorLatestScanDateFormatter)
 }
 
-fun latestScanBoxCount(snapshot: ScanJobMonitorSnapshot?, fallbackParcelCount: Int?): Int {
-    return when (snapshot?.latestScan?.area) {
-        ScanJobMonitorAreas.BOX,
-        ScanJobMonitorAreas.UNASSIGNED -> 1
-        ScanJobMonitorAreas.NOT_IN_REGISTER -> 0
-        else -> if ((fallbackParcelCount ?: 0) > 0) 1 else 0
-    }
-}
-
-enum class LatestScanNumberKind {
-    PARCEL,
-    BOX
-}
-
-fun latestScanNumberKind(
-    snapshot: ScanJobMonitorSnapshot?,
-    directParcelCount: Int?
-): LatestScanNumberKind {
-    if (directParcelCount != null) {
-        return if (directParcelCount > 1) {
-            LatestScanNumberKind.BOX
-        } else {
-            LatestScanNumberKind.PARCEL
-        }
-    }
-
-    return when (snapshot?.latestScan?.area) {
-        ScanJobMonitorAreas.BOX,
-        ScanJobMonitorAreas.UNASSIGNED -> LatestScanNumberKind.BOX
-        else -> LatestScanNumberKind.PARCEL
-    }
-}
-
 fun monitorLatestScanCode(snapshot: ScanJobMonitorSnapshot?, fallbackCode: String?): String {
     val monitorCode = snapshot?.latestScan?.code?.takeIf { it.isNotBlank() }
     return monitorCode ?: fallbackCode.orEmpty()
@@ -181,6 +149,85 @@ data class MonitorParcelAttributeSpec(
     val value: String? = null,
     val checkStatus: Int? = null
 )
+
+enum class MonitorLatestScanNumberKind {
+    PARCEL,
+    BOX
+}
+
+data class MonitorLatestScanDisplay(
+    val code: String?,
+    val scanTime: String?,
+    val parcelCount: Int,
+    val boxCount: Int,
+    val scanSource: Int?,
+    val itemNumbers: List<String>,
+    val hint: String?
+) {
+    val numberKind: MonitorLatestScanNumberKind?
+        get() {
+            if (itemNumbers.isEmpty()) {
+                return null
+            }
+            return when (scanSource) {
+                ScannedItemSources.PARCEL_STICKER -> MonitorLatestScanNumberKind.PARCEL
+                ScannedItemSources.BOX_STICKER -> MonitorLatestScanNumberKind.BOX
+                else -> null
+            }
+        }
+}
+
+fun monitorLatestScanDisplay(
+    snapshot: ScanJobMonitorSnapshot?,
+    lastCode: String?,
+    lastParcelCount: Int?,
+    lastBoxCount: Int?,
+    lastScanSource: Int?,
+    lastItemNumbers: List<String>,
+    lastExtData: String?,
+    lastScanTime: String?
+): MonitorLatestScanDisplay? {
+    val monitorScan = snapshot?.latestScan?.takeIf { it.code.isNotBlank() }
+    val localCode = lastCode?.takeIf { it.isNotBlank() }
+    val localMatchesMonitor = monitorScan != null && localCode == monitorScan.code
+    val useLocalScanResult = monitorScan == null
+    val code = monitorScan?.code ?: localCode
+    val scanTime = monitorScan?.scanTime?.takeIf { it.isNotBlank() }
+        ?: lastScanTime?.takeIf { it.isNotBlank() }?.takeIf { useLocalScanResult }
+    val hint = lastExtData?.takeIf { it.isNotBlank() && (useLocalScanResult || localMatchesMonitor) }
+
+    if (
+        code == null
+        && lastParcelCount == null
+        && lastBoxCount == null
+        && hint == null
+        && scanTime == null
+    ) {
+        return null
+    }
+
+    return if (useLocalScanResult) {
+        MonitorLatestScanDisplay(
+            code = code,
+            scanTime = scanTime,
+            parcelCount = lastParcelCount ?: 0,
+            boxCount = lastBoxCount ?: 0,
+            scanSource = lastScanSource,
+            itemNumbers = lastItemNumbers,
+            hint = hint
+        )
+    } else {
+        MonitorLatestScanDisplay(
+            code = code,
+            scanTime = scanTime,
+            parcelCount = monitorScan.parcelCount,
+            boxCount = monitorScan.boxCount,
+            scanSource = monitorScan.scanSource,
+            itemNumbers = monitorScan.itemNumbers,
+            hint = hint
+        )
+    }
+}
 
 fun checkStatusTextSpec(checkStatus: Int): CheckStatusTextSpec {
     val fc = checkStatusFc(checkStatus)

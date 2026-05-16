@@ -5,6 +5,7 @@
 package consulting.sw.logiscanner
 
 import consulting.sw.logiscanner.net.ScanResultItem
+import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.determineScanResultColor
 import org.junit.Test
@@ -28,7 +29,7 @@ class ScanResultColorTest {
     
     @Test
     fun scanResultColor_determineColor_withHasIssuesTrue_returnsIssue() {
-        val item = ScanResultItem(count = 5, extData = null, hasIssues = true)
+        val item = scanResultItem(count = 5, hasIssues = true)
 
         val color = determineScanResultColor(item)
 
@@ -37,7 +38,7 @@ class ScanResultColorTest {
     
     @Test
     fun scanResultColor_determineColor_withZeroCount_returnsNotFound() {
-        val item = ScanResultItem(count = 0, extData = null, hasIssues = false)
+        val item = scanResultItem(count = 0, hasIssues = false)
 
         val color = determineScanResultColor(item)
 
@@ -46,7 +47,7 @@ class ScanResultColorTest {
     
     @Test
     fun scanResultColor_determineColor_withPositiveCount_returnsOk() {
-        val item = ScanResultItem(count = 5, extData = null, hasIssues = false)
+        val item = scanResultItem(count = 5, hasIssues = false)
 
         val color = determineScanResultColor(item)
 
@@ -55,7 +56,7 @@ class ScanResultColorTest {
     
     @Test
     fun scanResultColor_determineColor_hasIssuesOverridesCount() {
-        val item = ScanResultItem(count = 0, extData = null, hasIssues = true)
+        val item = scanResultItem(count = 0, hasIssues = true)
 
         val color = determineScanResultColor(item)
 
@@ -64,10 +65,22 @@ class ScanResultColorTest {
     
     @Test
     fun scanResultColor_determineColor_hasIssuesWithPositiveCount_returnsIssue() {
-        val item = ScanResultItem(count = 10, extData = null, hasIssues = true)
+        val item = scanResultItem(count = 10, hasIssues = true)
 
         val color = determineScanResultColor(item)
 
         assertEquals(ScanResultColor.ISSUE, color)
+    }
+
+    private fun scanResultItem(count: Int, hasIssues: Boolean): ScanResultItem {
+        return ScanResultItem(
+            count = count,
+            parcelCount = count,
+            boxCount = 0,
+            scanSource = ScannedItemSources.PARCEL_STICKER,
+            itemNumbers = emptyList(),
+            extData = null,
+            hasIssues = hasIssues
+        )
     }
 }
