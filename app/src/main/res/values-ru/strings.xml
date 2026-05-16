@@ -113,7 +113,7 @@ This file is a part of LogiScanner application
     <string name="check_status_issue_invalid_feacn_format">Формат ТН ВЭД</string>
     <string name="check_status_unknown_hex">Статус 0x%1$s</string>
 
-    <string name="scan_job_status_created">cоздано</string>
+    <string name="scan_job_status_created">создано</string>
     <string name="scan_job_status_in_progress">выполняется</string>
     <string name="scan_job_status_paused">приостановлено</string>
     <string name="scan_job_status_completed">завершено</string>
