@@ -79,13 +79,17 @@ import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
+import consulting.sw.logiscanner.ui.CheckStatusTone
 import consulting.sw.logiscanner.ui.HidScanInput
+import consulting.sw.logiscanner.ui.checkStatusText
+import consulting.sw.logiscanner.ui.checkStatusTone
 import consulting.sw.logiscanner.ui.directScanResultCode
 import consulting.sw.logiscanner.ui.formatMonitorProgress
 import consulting.sw.logiscanner.ui.formatMonitorTime
 import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
 import consulting.sw.logiscanner.ui.monitorBoxDisplayName
 import consulting.sw.logiscanner.ui.monitorLatestScanCode
+import consulting.sw.logiscanner.ui.monitorParcelAttributeSpecs
 import consulting.sw.logiscanner.ui.parcelPrimaryText
 import consulting.sw.logiscanner.ui.scanJobStatusText
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
@@ -1136,68 +1140,51 @@ private fun MonitorParcelRow(
 @Composable
 private fun MonitorParcelAttributes(parcel: ScanJobMonitorParcel) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        MonitorParcelAttribute(
-            label = stringResource(R.string.monitor_parcel_in_register),
-            value = if (parcel.isInRegister) stringResource(R.string.monitor_yes) else stringResource(R.string.monitor_no)
+        monitorParcelAttributeSpecs(parcel).forEach { attribute ->
+            if (attribute.checkStatus != null) {
+                MonitorParcelCheckStatusAttribute(attribute.checkStatus)
+            } else if (!attribute.value.isNullOrBlank()) {
+                MonitorParcelAttribute(stringResource(attribute.labelResId), attribute.value)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonitorParcelCheckStatusAttribute(checkStatus: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            stringResource(R.string.monitor_parcel_check_status),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.42f)
         )
-        MonitorParcelAttribute(
-            label = stringResource(R.string.monitor_parcel_sticker_scanned),
-            value = if (parcel.stickerScanned) stringResource(R.string.monitor_yes) else stringResource(R.string.monitor_no)
+        val colors = checkStatusColors(checkStatusTone(checkStatus))
+        StatusPill(
+            text = checkStatusText(LocalContext.current, checkStatus),
+            background = colors.first,
+            contentColor = colors.second,
+            modifier = Modifier.weight(0.58f)
         )
-        parcel.scannedSticker?.takeIf { it.isNotBlank() }?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_scanned_sticker), it)
-        }
-        if (parcel.scannedUserName.isNotBlank()) {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_scanned_user), parcel.scannedUserName)
-        }
-        parcel.scannedTime?.takeIf { it.isNotBlank() }?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_scanned_time), formatMonitorTime(it))
-        }
-        parcel.parcelId?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_id), it.toString())
-        }
-        parcel.shk?.takeIf { it.isNotBlank() }?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_shk), it)
-        }
-        parcel.sticker?.takeIf { it.isNotBlank() }?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_sticker), it)
-        }
-        parcel.wbSticker?.takeIf { it.isNotBlank() }?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_wb_sticker), it)
-        }
-        parcel.sellerSticker?.takeIf { it.isNotBlank() }?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_seller_sticker), it)
-        }
-        parcel.stickerCode?.takeIf { it.isNotBlank() }?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_sticker_code), it)
-        }
-        parcel.postingNumber?.takeIf { it.isNotBlank() }?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_posting_number), it)
-        }
-        parcel.barcode?.takeIf { it.isNotBlank() }?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_barcode), it)
-        }
-        parcel.weightKg?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_weight_kg), it.toString())
-        }
-        parcel.quantity?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_quantity), it.toString())
-        }
-        if (parcel.zone != 0) {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_zone), parcel.zone.toString())
-        }
-        if (parcel.zoneName.isNotBlank()) {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_zone_name), parcel.zoneName)
-        }
-        if (parcel.statusId != 0) {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_status_id), parcel.statusId.toString())
-        }
-        if (parcel.statusTitle.isNotBlank()) {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_status_title), parcel.statusTitle)
-        }
-        parcel.checkStatus?.let {
-            MonitorParcelAttribute(stringResource(R.string.monitor_parcel_check_status), it.toString())
-        }
+    }
+}
+
+@Composable
+private fun checkStatusColors(tone: CheckStatusTone?): Pair<Color, Color> {
+    return when (tone) {
+        CheckStatusTone.NOT_CHECKED -> MaterialTheme.colorScheme.surface to MaterialTheme.colorScheme.onSurfaceVariant
+        CheckStatusTone.APPROVED_WITH_EXCISE,
+        CheckStatusTone.APPROVED_WITH_NOTIFICATION -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        CheckStatusTone.HAS_ISSUES_WITH_INHERITANCE,
+        CheckStatusTone.HAS_ISSUES -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+        CheckStatusTone.APPROVED_WITH_INHERITANCE,
+        CheckStatusTone.APPROVED,
+        CheckStatusTone.NO_ISSUES -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        null -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
 }
 
@@ -1233,13 +1220,19 @@ private fun parcelExpansionKey(parcel: ScanJobMonitorParcel, index: Int): String
 }
 
 @Composable
-private fun StatusPill(text: String, background: Color, contentColor: Color) {
+private fun StatusPill(
+    text: String,
+    background: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodySmall,
         color = contentColor,
         maxLines = 1,
-        modifier = Modifier
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
             .background(background, RoundedCornerShape(50))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     )

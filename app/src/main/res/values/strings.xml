@@ -69,14 +69,9 @@ This file is a part of LogiScanner application
     <string name="monitor_scan_time">Time: %s</string>
     <string name="monitor_expand_parcel">Expand parcel</string>
     <string name="monitor_collapse_parcel">Collapse parcel</string>
-    <string name="monitor_yes">Yes</string>
-    <string name="monitor_no">No</string>
-    <string name="monitor_parcel_in_register">In register</string>
-    <string name="monitor_parcel_sticker_scanned">Sticker scanned</string>
     <string name="monitor_parcel_scanned_sticker">Scanned sticker</string>
     <string name="monitor_parcel_scanned_user">Scanned by</string>
     <string name="monitor_parcel_scanned_time">Scan time</string>
-    <string name="monitor_parcel_id">Parcel ID</string>
     <string name="monitor_parcel_shk">SHK</string>
     <string name="monitor_parcel_sticker">Sticker</string>
     <string name="monitor_parcel_wb_sticker">WB sticker</string>
@@ -86,11 +81,25 @@ This file is a part of LogiScanner application
     <string name="monitor_parcel_barcode">Barcode</string>
     <string name="monitor_parcel_weight_kg">Weight, kg</string>
     <string name="monitor_parcel_quantity">Quantity</string>
-    <string name="monitor_parcel_zone">Zone</string>
-    <string name="monitor_parcel_zone_name">Zone name</string>
-    <string name="monitor_parcel_status_id">Status ID</string>
+    <string name="monitor_parcel_zone_name">Zone</string>
     <string name="monitor_parcel_status_title">Status</string>
     <string name="monitor_parcel_check_status">Check status</string>
+
+    <string name="check_status_separator">, </string>
+    <string name="check_status_not_checked">Not checked</string>
+    <string name="check_status_approved">Approved</string>
+    <string name="check_status_approved_with_excise">Approved with excise</string>
+    <string name="check_status_approved_with_notification">Approved with notification</string>
+    <string name="check_status_issue_stop_word">Stop word</string>
+    <string name="check_status_duplicate">Duplicate</string>
+    <string name="check_status_not_found">Not found</string>
+    <string name="check_status_marked_by_partner">Excluded by partner</string>
+    <string name="check_status_sw_no_issues">OK stop words</string>
+    <string name="check_status_fc_no_issues">OK FEACN</string>
+    <string name="check_status_issue_feacn_code">FEACN stop</string>
+    <string name="check_status_issue_nonexisting_feacn">No FEACN</string>
+    <string name="check_status_issue_invalid_feacn_format">Invalid FEACN format</string>
+    <string name="check_status_unknown_hex">Status 0x%1$s</string>
 
     <string name="scan_job_status_created">Created</string>
     <string name="scan_job_status_in_progress">In progress</string>
