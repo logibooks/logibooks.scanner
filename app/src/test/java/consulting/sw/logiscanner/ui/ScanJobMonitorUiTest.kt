@@ -97,6 +97,63 @@ class ScanJobMonitorUiTest {
     }
 
     @Test
+    fun formatMonitorLatestScanTime_formatsIsoOffsetDateTime() {
+        assertEquals("21:30", formatMonitorLatestScanTime("2026-05-15T21:30:45+03:00"))
+    }
+
+    @Test
+    fun formatMonitorLatestScanDate_dropsYear() {
+        assertEquals("15.05", formatMonitorLatestScanDate("2026-05-15T21:30:45+03:00"))
+    }
+
+    @Test
+    fun latestScanBoxCount_returnsOneForBoxArea() {
+        val snapshot = ScanJobMonitorSnapshot(
+            latestScan = ScanJobMonitorLatestScan(area = ScanJobMonitorAreas.BOX)
+        )
+
+        assertEquals(1, latestScanBoxCount(snapshot, fallbackParcelCount = 1))
+    }
+
+    @Test
+    fun latestScanBoxCount_returnsZeroForNotInRegister() {
+        val snapshot = ScanJobMonitorSnapshot(
+            latestScan = ScanJobMonitorLatestScan(area = ScanJobMonitorAreas.NOT_IN_REGISTER)
+        )
+
+        assertEquals(0, latestScanBoxCount(snapshot, fallbackParcelCount = 1))
+    }
+
+    @Test
+    fun latestScanBoxCount_usesFallbackParcelCountWithoutMonitorArea() {
+        assertEquals(1, latestScanBoxCount(snapshot = null, fallbackParcelCount = 5))
+        assertEquals(0, latestScanBoxCount(snapshot = null, fallbackParcelCount = 0))
+    }
+
+    @Test
+    fun latestScanNumberKind_usesBoxForMultiParcelDirectResult() {
+        assertEquals(LatestScanNumberKind.BOX, latestScanNumberKind(snapshot = null, directParcelCount = 2))
+    }
+
+    @Test
+    fun latestScanNumberKind_usesParcelForSingleDirectResultEvenWhenMonitorFoundBox() {
+        val snapshot = ScanJobMonitorSnapshot(
+            latestScan = ScanJobMonitorLatestScan(area = ScanJobMonitorAreas.BOX)
+        )
+
+        assertEquals(LatestScanNumberKind.PARCEL, latestScanNumberKind(snapshot, directParcelCount = 1))
+    }
+
+    @Test
+    fun latestScanNumberKind_usesMonitorAreaWhenDirectResultIsUnavailable() {
+        val snapshot = ScanJobMonitorSnapshot(
+            latestScan = ScanJobMonitorLatestScan(area = ScanJobMonitorAreas.UNASSIGNED)
+        )
+
+        assertEquals(LatestScanNumberKind.BOX, latestScanNumberKind(snapshot, directParcelCount = null))
+    }
+
+    @Test
     fun monitorLatestScanCode_usesFallbackWhenMonitorHasNoLatestScan() {
         val snapshot = ScanJobMonitorSnapshot(latestScan = null)
 

@@ -47,7 +47,18 @@ This file is a part of LogiScanner application
     <string name="monitor_boxes_progress">Boxes total / scanned / remaining</string>
     <string name="monitor_parcels_progress">Parcels total / scanned / remaining</string>
     <string name="monitor_not_in_register">Not in register</string>
-    <string name="monitor_latest_scan">Latest scan</string>
+    <string name="monitor_latest_scan_title">Last scan %1$s %2$s</string>
+    <string name="monitor_latest_scan_title_no_time">Last scan</string>
+    <string name="monitor_latest_scan_parcels">Parcels: %1$d</string>
+    <string name="monitor_latest_scan_boxes">Boxes: %1$d</string>
+    <plurals name="monitor_latest_scan_parcel_number">
+        <item quantity="one">Parcel number %1$s</item>
+        <item quantity="other">Parcel numbers %1$s</item>
+    </plurals>
+    <plurals name="monitor_latest_scan_box_number">
+        <item quantity="one">Box number %1$s</item>
+        <item quantity="other">Box numbers %1$s</item>
+    </plurals>
     <string name="monitor_current_box">Current box</string>
     <string name="monitor_boxes">Boxes</string>
     <string name="monitor_parcels">Parcels</string>

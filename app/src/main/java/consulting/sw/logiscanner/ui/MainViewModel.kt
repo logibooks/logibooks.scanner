@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import java.time.OffsetDateTime
 import java.util.Locale
 
 enum class ScanResultColor {
@@ -69,6 +70,7 @@ data class MainState(
     val lastCode: String? = null,
     val lastCount: Int? = null,
     val lastExtData: String? = null,
+    val lastScanTime: String? = null,
     val scanResultColor: ScanResultColor = ScanResultColor.NONE,
     val error: String? = null
 )
@@ -238,6 +240,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastCode = if (jobChanged) null else it.lastCode,
                     lastCount = if (jobChanged) null else it.lastCount,
                     lastExtData = if (jobChanged) null else it.lastExtData,
+                    lastScanTime = if (jobChanged) null else it.lastScanTime,
                     error = null, 
                     isScanning = false
                 ) 
@@ -520,6 +523,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastCode = code, 
                         lastCount = result.count,
                         lastExtData = result.extData,
+                        lastScanTime = OffsetDateTime.now().toString(),
                         scanResultColor = determineScanResultColor(result)
                     ) 
                 }
@@ -549,6 +553,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastCode = null,
                             lastCount = null,
                             lastExtData = null,
+                            lastScanTime = null,
                             error = getApplication<Application>().getString(R.string.scan_error_job_invalid),
                             scanResultColor = ScanResultColor.NONE
                         )
@@ -559,6 +564,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastCode = code,
                             lastCount = null,
                             lastExtData = null,
+                            lastScanTime = OffsetDateTime.now().toString(),
                             error = getApplication<Application>().getString(R.string.scan_error_server),
                             scanResultColor = ScanResultColor.SERVER_ERROR
                         )

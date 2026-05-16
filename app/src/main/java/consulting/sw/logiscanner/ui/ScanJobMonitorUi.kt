@@ -17,6 +17,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 private val monitorDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+private val monitorLatestScanTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val monitorLatestScanDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM")
 
 fun isUnassignedMonitorBox(box: ScanJobMonitorBox?): Boolean {
     return box?.area == ScanJobMonitorAreas.UNASSIGNED || (box?.boxId == null && box?.bucketIndex != null)
@@ -93,6 +95,47 @@ fun formatMonitorTime(value: String?): String {
         } catch (_: DateTimeParseException) {
             value
         }
+    }
+}
+
+fun formatMonitorLatestScanTime(value: String?): String {
+    return formatMonitorDateTimePart(value, monitorLatestScanTimeFormatter)
+}
+
+fun formatMonitorLatestScanDate(value: String?): String {
+    return formatMonitorDateTimePart(value, monitorLatestScanDateFormatter)
+}
+
+fun latestScanBoxCount(snapshot: ScanJobMonitorSnapshot?, fallbackParcelCount: Int?): Int {
+    return when (snapshot?.latestScan?.area) {
+        ScanJobMonitorAreas.BOX,
+        ScanJobMonitorAreas.UNASSIGNED -> 1
+        ScanJobMonitorAreas.NOT_IN_REGISTER -> 0
+        else -> if ((fallbackParcelCount ?: 0) > 0) 1 else 0
+    }
+}
+
+enum class LatestScanNumberKind {
+    PARCEL,
+    BOX
+}
+
+fun latestScanNumberKind(
+    snapshot: ScanJobMonitorSnapshot?,
+    directParcelCount: Int?
+): LatestScanNumberKind {
+    if (directParcelCount != null) {
+        return if (directParcelCount > 1) {
+            LatestScanNumberKind.BOX
+        } else {
+            LatestScanNumberKind.PARCEL
+        }
+    }
+
+    return when (snapshot?.latestScan?.area) {
+        ScanJobMonitorAreas.BOX,
+        ScanJobMonitorAreas.UNASSIGNED -> LatestScanNumberKind.BOX
+        else -> LatestScanNumberKind.PARCEL
     }
 }
 
@@ -259,6 +302,19 @@ fun parcelSecondaryText(parcel: ScanJobMonitorParcel): String {
 
 private fun firstNotBlank(vararg values: String?): String? {
     return values.firstOrNull { !it.isNullOrBlank() }
+}
+
+private fun formatMonitorDateTimePart(value: String?, formatter: DateTimeFormatter): String {
+    if (value.isNullOrBlank()) return ""
+    return try {
+        OffsetDateTime.parse(value).format(formatter)
+    } catch (_: DateTimeParseException) {
+        try {
+            LocalDateTime.parse(value).format(formatter)
+        } catch (_: DateTimeParseException) {
+            ""
+        }
+    }
 }
 
 private const val SW_INHERITANCE_FLAG = 0x0080
