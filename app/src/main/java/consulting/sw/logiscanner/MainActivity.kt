@@ -609,18 +609,34 @@ private fun ScanScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.current_job), style = MaterialTheme.typography.titleMedium)
                     Text(
                         selectedJob.name,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
-                    if (!selectedJob.description.isNullOrBlank()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            selectedJob.description,
+                            if (isScanning) {
+                                if (isBusy) stringResource(R.string.syncing_with_server)
+                                else stringResource(R.string.waiting_for_barcode)
+                            } else {
+                                stringResource(R.string.scanning_stopped)
+                            },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
                         )
+                        if (isBusy) {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .width(120.dp)
+                                    .height(6.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                     Text(
                         stringResource(R.string.job_type, selectedJobTypeDisplay),
@@ -636,41 +652,6 @@ private fun ScanScreen(
                     ) {
                         Text(if (!isScanning) stringResource(R.string.start_scanning) else stringResource(R.string.stop_scanning))
                     }
-                }
-            }
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(stringResource(R.string.status), style = MaterialTheme.typography.titleMedium)
-                        if (isBusy) {
-                            LinearProgressIndicator(
-                                modifier = Modifier
-                                    .width(120.dp)
-                                    .height(6.dp),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    Text(
-                        if (isScanning) {
-                            if (isBusy) stringResource(R.string.syncing_with_server)
-                            else stringResource(R.string.waiting_for_barcode)
-                        } else {
-                            stringResource(R.string.scanning_stopped)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
         }
