@@ -68,7 +68,7 @@ data class MainState(
     val monitorAutoFollow: Boolean = true,
     val isScanning: Boolean = false,
     val lastCode: String? = null,
-    val lastCount: Int? = null,
+    val lastParcelCount: Int? = null,
     val lastBoxCount: Int? = null,
     val lastScanSource: Int? = null,
     val lastItemNumbers: List<String> = emptyList(),
@@ -241,7 +241,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     monitorClosedStatus = if (job == null) null else it.monitorClosedStatus,
                     monitorError = if (job == null) null else it.monitorError,
                     lastCode = if (jobChanged) null else it.lastCode,
-                    lastCount = if (jobChanged) null else it.lastCount,
+                    lastParcelCount = if (jobChanged) null else it.lastParcelCount,
                     lastBoxCount = if (jobChanged) null else it.lastBoxCount,
                     lastScanSource = if (jobChanged) null else it.lastScanSource,
                     lastItemNumbers = if (jobChanged) emptyList() else it.lastItemNumbers,
@@ -527,7 +527,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { 
                     it.copy(
                         lastCode = code, 
-                        lastCount = result.parcelCount,
+                        lastParcelCount = result.parcelCount,
                         lastBoxCount = result.boxCount,
                         lastScanSource = result.scanSource,
                         lastItemNumbers = result.itemNumbers,
@@ -560,7 +560,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             selectedScanJobTypeDisplay = null,
                             isScanning = false,
                             lastCode = null,
-                            lastCount = null,
+                            lastParcelCount = null,
                             lastBoxCount = null,
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
@@ -574,7 +574,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _state.update { 
                         it.copy(
                             lastCode = code,
-                            lastCount = null,
+                            lastParcelCount = null,
                             lastBoxCount = null,
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
