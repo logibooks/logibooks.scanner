@@ -43,7 +43,7 @@ This file is a part of LogiScanner application
     <string name="monitor_auto_follow_enable">Автослежение выключено. Нажмите, чтобы включить</string>
     <string name="monitor_loading">Загрузка монитора…</string>
     <string name="monitor_boxes_progress">Коробки всего / сканировано /\nне сканировано</string>
-    <string name="monitor_parcels_progress">Посылки всего / сканировано \nне сканировано</string>
+    <string name="monitor_parcels_progress">Посылки всего / сканировано /\nне сканировано</string>
     <string name="monitor_not_in_register">Не в реестре</string>
     <string name="monitor_latest_scan_title">Последнее сканирование %1$s %2$s</string>
     <string name="monitor_latest_scan_title_no_time">Последнее сканирование</string>
@@ -113,7 +113,7 @@ This file is a part of LogiScanner application
     <string name="check_status_issue_invalid_feacn_format">Формат ТН ВЭД</string>
     <string name="check_status_unknown_hex">Статус 0x%1$s</string>
 
-    <string name="scan_job_status_created">cоздано</string>
+    <string name="scan_job_status_created">создано</string>
     <string name="scan_job_status_in_progress">выполняется</string>
     <string name="scan_job_status_paused">приостановлено</string>
     <string name="scan_job_status_completed">завершено</string>
