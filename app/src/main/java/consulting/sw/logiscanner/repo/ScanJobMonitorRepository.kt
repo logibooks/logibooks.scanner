@@ -21,6 +21,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 data class ScanJobMonitorScope(
     val area: Int,
@@ -43,7 +44,7 @@ class ScanJobMonitorRepository(
     private var closedHandler: ((Int, Int) -> Unit)? = null
     private var connectionClosedHandler: ((Throwable?) -> Unit)? = null
     private var stopping = false
-    private var closeStarted = false
+    private val closeStarted = AtomicBoolean(false)
 
     suspend fun loadSnapshot(scanJobId: Int, scope: ScanJobMonitorScope): ScanJobMonitorSnapshot {
         return api.getScanJobMonitor(
@@ -73,6 +74,15 @@ class ScanJobMonitorRepository(
 
             if (connection.connectionState != HubConnectionState.CONNECTED) {
                 connection.start().blockingAwait()
+            } else {
+                // Clear any prior subscription before starting a new one on the same connection
+                runCatching {
+                    connection.invoke("ClearScanJobMonitor")
+                        .timeout(HUB_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                        .blockingAwait()
+                }.onFailure { exception ->
+                    Log.w(TAG, "Failed to clear previous subscription before re-observing", exception)
+                }
             }
 
             connection.invoke(
@@ -141,10 +151,9 @@ class ScanJobMonitorRepository(
     }
 
     fun closeInBackground() {
-        if (closeStarted) {
+        if (!closeStarted.compareAndSet(false, true)) {
             return
         }
-        closeStarted = true
         cleanupScope.launch {
             runCatching {
                 stop()

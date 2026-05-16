@@ -26,7 +26,12 @@ fun monitorBoxDisplayName(context: Context, box: ScanJobMonitorBox?): String {
     if (box == null) return ""
     if (isUnassignedMonitorBox(box)) {
         return box.boxCode.ifBlank {
-            context.getString(R.string.monitor_unassigned_group_numbered, (box.bucketIndex ?: 0) + 1)
+            val idx = box.bucketIndex
+            if (idx != null) {
+                context.getString(R.string.monitor_unassigned_group_numbered, idx + 1)
+            } else {
+                context.getString(R.string.monitor_unassigned_group)
+            }
         }
     }
     return box.boxCode.ifBlank {
