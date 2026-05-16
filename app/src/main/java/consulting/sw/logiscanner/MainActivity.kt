@@ -1217,37 +1217,31 @@ private fun MonitorParcelAttributes(parcel: ScanJobMonitorParcel) {
 
 @Composable
 private fun MonitorParcelCheckStatusAttribute(projection: ParcelCheckStatusProjection) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            stringResource(R.string.monitor_parcel_check_status),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.42f)
-        )
-        Column(
-            modifier = Modifier.weight(0.58f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top
         ) {
+            Text(
+                stringResource(R.string.monitor_parcel_check_status),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(0.42f)
+            )
             CheckStatusPill(
                 text = projection.title.ifBlank { "-" },
                 style = checkStatusStyle(projection.kind),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.weight(0.58f)
             )
-            if (projection.kind == ParcelCheckStatusProjectionKinds.RESTRICTION &&
-                !projection.restrictionReason.isNullOrBlank()
-            ) {
-                Text(
-                    projection.restrictionReason.orEmpty(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+        }
+        if (projection.kind == ParcelCheckStatusProjectionKinds.RESTRICTION &&
+            !projection.restrictionReason.isNullOrBlank()
+        ) {
+            MonitorAttribute(
+                stringResource(R.string.monitor_parcel_restriction_reason),
+                projection.restrictionReason.orEmpty()
+            )
         }
     }
 }
