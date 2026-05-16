@@ -77,10 +77,12 @@ import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.HidScanInput
+import consulting.sw.logiscanner.ui.directScanResultCode
 import consulting.sw.logiscanner.ui.formatMonitorProgress
 import consulting.sw.logiscanner.ui.formatMonitorTime
 import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
 import consulting.sw.logiscanner.ui.monitorBoxDisplayName
+import consulting.sw.logiscanner.ui.monitorLatestScanCode
 import consulting.sw.logiscanner.ui.parcelPrimaryText
 import consulting.sw.logiscanner.ui.parcelSecondaryText
 import consulting.sw.logiscanner.ui.scanJobStatusText
@@ -1120,8 +1122,7 @@ private fun MonitorLatestScanResult(
     lastCount: Int?,
     lastExtData: String?
 ) {
-    val monitorCode = snapshot?.latestScan?.code?.takeIf { it.isNotBlank() }
-    val directScanCode = lastCode?.takeIf { monitorCode != null && it.isNotBlank() && it != monitorCode }
+    val directScanCode = directScanResultCode(snapshot, lastCode)
     val latestScanLine = latestScanText(snapshot, fallbackCode = lastCode)
     if (
         latestScanLine.isBlank()
@@ -1177,8 +1178,7 @@ private fun MonitorLatestScanResult(
 private fun latestScanText(snapshot: ScanJobMonitorSnapshot?, fallbackCode: String?): String {
     val context = LocalContext.current
     val latestWithCode = snapshot?.latestScan?.takeIf { it.code.isNotBlank() }
-    val monitorCode = latestWithCode?.code
-    val code = monitorCode ?: fallbackCode.orEmpty()
+    val code = monitorLatestScanCode(snapshot, fallbackCode)
     val boxes = snapshot?.boxes.orEmpty()
     val target = latestWithCode?.let { latest ->
         when (latest.area) {
