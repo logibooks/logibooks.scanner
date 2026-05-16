@@ -198,23 +198,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadScanJobs() {
         viewModelScope.launch {
-            _state.update { it.copy(isBusy = true, error = null) }
-            try {
-                // Fetch operations/mappings first
-                scanJobRepo.getOps()
-                val jobs = scanJobRepo.getInProgressJobs()
-                // Compute type displays for all jobs
-                val typeDisplays = jobs.associate { job ->
-                    job.type to scanJobRepo.getScanJobTypeDisplay(job.type)
-                }
-                _state.update { it.copy(scanJobs = jobs, scanJobTypeDisplays = typeDisplays) }
-            } catch (ex: Exception) {
-                Log.e(javaClass.simpleName, "Failed to load scan jobs: ${ex.message}", ex)
-                // Always show localized error message to user
-                _state.update { it.copy(error = getApplication<Application>().getString(R.string.error_unknown)) }
-            } finally {
-                _state.update { it.copy(isBusy = false) }
+            loadScanJobsInternal(clearError = true)
+        }
+    }
+
+    private suspend fun loadScanJobsInternal(clearError: Boolean): Boolean {
+        if (!::scanJobRepo.isInitialized) {
+            return false
+        }
+
+        _state.update {
+            if (clearError) {
+                it.copy(isBusy = true, error = null)
+            } else {
+                it.copy(isBusy = true)
             }
+        }
+        try {
+            // Fetch operations/mappings first
+            scanJobRepo.getOps()
+            val jobs = scanJobRepo.getInProgressJobs()
+            // Compute type displays for all jobs
+            val typeDisplays = jobs.associate { job ->
+                job.type to scanJobRepo.getScanJobTypeDisplay(job.type)
+            }
+            _state.update { it.copy(scanJobs = jobs, scanJobTypeDisplays = typeDisplays) }
+            return true
+        } catch (ex: Exception) {
+            Log.e(javaClass.simpleName, "Failed to load scan jobs: ${ex.message}", ex)
+            if (clearError) {
+                _state.update { it.copy(error = getApplication<Application>().getString(R.string.error_unknown)) }
+            }
+            return false
+        } finally {
+            _state.update { it.copy(isBusy = false) }
         }
     }
 
@@ -554,13 +571,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         val preservedMessage = _state.value.error
-        try {
-            loadScanJobs()
-        } catch (ex: Exception) {
-            Log.e(javaClass.simpleName, "Failed to refresh scan jobs after inactive job", ex)
-        } finally {
-            _state.update { it.copy(error = preservedMessage) }
-        }
+        loadScanJobsInternal(clearError = false)
+        _state.update { it.copy(error = preservedMessage) }
     }
 
     fun dismissMessage() {
