@@ -97,7 +97,12 @@ class ScanJobMonitorUiTest {
 
     @Test
     fun formatMonitorTime_formatsIsoOffsetDateTime() {
-        assertEquals("21:30 15.05.2026", formatMonitorTime("2026-05-15T21:30:45+03:00"))
+        val value = "2026-05-15T21:30:45+03:00"
+        val expected = OffsetDateTime.parse(value)
+            .atZoneSameInstant(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy"))
+
+        assertEquals(expected, formatMonitorTime(value))
     }
 
     @Test
