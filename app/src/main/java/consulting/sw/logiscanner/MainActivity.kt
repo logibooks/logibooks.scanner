@@ -1211,12 +1211,11 @@ private fun MonitorParcelAttribute(label: String, value: String) {
 }
 
 private fun parcelExpansionKey(parcel: ScanJobMonitorParcel, index: Int): String {
-    val stableKey = parcel.parcelId?.let { "id:$it" }
+    return parcel.parcelId?.let { "id:$it" }
         ?: parcel.parcelNumber.takeIf { it.isNotBlank() }?.let { "parcel:$it" }
         ?: parcel.postingNumber?.takeIf { it.isNotBlank() }?.let { "posting:$it" }
         ?: parcel.barcode?.takeIf { it.isNotBlank() }?.let { "barcode:$it" }
-        ?: "index"
-    return "$stableKey:$index"
+        ?: "index:$index"
 }
 
 @Composable
