@@ -102,6 +102,8 @@ import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
@@ -795,18 +797,39 @@ private fun ScanJobMonitorPanel(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.monitor_title), style = MaterialTheme.typography.titleMedium)
-            Button(
-                onClick = onToggleAutoFollow,
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    if (autoFollow) {
-                        stringResource(R.string.monitor_auto_follow_disable)
-                    } else {
-                        stringResource(R.string.monitor_auto_follow_enable)
-                    }
+                    stringResource(R.string.monitor_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
                 )
+                IconButton(
+                    onClick = onToggleAutoFollow,
+                    modifier = Modifier
+                        .width(36.dp)
+                        .height(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (autoFollow) Icons.Filled.Link else Icons.Filled.LinkOff,
+                        contentDescription = if (autoFollow) {
+                            stringResource(R.string.monitor_auto_follow_disable)
+                        } else {
+                            stringResource(R.string.monitor_auto_follow_enable)
+                        },
+                        tint = if (autoFollow) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier
+                            .width(18.dp)
+                            .height(18.dp)
+                    )
+                }
             }
 
             MonitorLatestScanResult(

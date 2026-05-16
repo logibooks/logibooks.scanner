@@ -69,7 +69,7 @@ This file is a part of LogiScanner application
     <string name="monitor_unassigned_group_numbered">No box %1$d</string>
     <string name="monitor_box_display_name">Box %1$s</string>
     <string name="monitor_current_box_numbered">Current box %1$s</string>
-    <string name="monitor_closed">Scan job status: %s</string>
+    <string name="monitor_closed">Scan job %s</string>
     <string name="monitor_detail_loading">Loading detail…</string>
     <string name="monitor_error_load">Unable to load scan job monitor</string>
     <string name="monitor_error_connection">Live monitor connection was lost</string>
