@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import java.time.OffsetDateTime
 import java.util.Locale
 
 enum class ScanResultColor {
@@ -67,8 +68,12 @@ data class MainState(
     val monitorAutoFollow: Boolean = true,
     val isScanning: Boolean = false,
     val lastCode: String? = null,
-    val lastCount: Int? = null,
+    val lastParcelCount: Int? = null,
+    val lastBoxCount: Int? = null,
+    val lastScanSource: Int? = null,
+    val lastItemNumbers: List<String> = emptyList(),
     val lastExtData: String? = null,
+    val lastScanTime: String? = null,
     val scanResultColor: ScanResultColor = ScanResultColor.NONE,
     val error: String? = null
 )
@@ -236,8 +241,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     monitorClosedStatus = if (job == null) null else it.monitorClosedStatus,
                     monitorError = if (job == null) null else it.monitorError,
                     lastCode = if (jobChanged) null else it.lastCode,
-                    lastCount = if (jobChanged) null else it.lastCount,
+                    lastParcelCount = if (jobChanged) null else it.lastParcelCount,
+                    lastBoxCount = if (jobChanged) null else it.lastBoxCount,
+                    lastScanSource = if (jobChanged) null else it.lastScanSource,
+                    lastItemNumbers = if (jobChanged) emptyList() else it.lastItemNumbers,
                     lastExtData = if (jobChanged) null else it.lastExtData,
+                    lastScanTime = if (jobChanged) null else it.lastScanTime,
                     error = null, 
                     isScanning = false
                 ) 
@@ -518,8 +527,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { 
                     it.copy(
                         lastCode = code, 
-                        lastCount = result.count,
+                        lastParcelCount = result.parcelCount,
+                        lastBoxCount = result.boxCount,
+                        lastScanSource = result.scanSource,
+                        lastItemNumbers = result.itemNumbers,
                         lastExtData = result.extData,
+                        lastScanTime = OffsetDateTime.now().toString(),
                         scanResultColor = determineScanResultColor(result)
                     ) 
                 }
@@ -547,8 +560,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             selectedScanJobTypeDisplay = null,
                             isScanning = false,
                             lastCode = null,
-                            lastCount = null,
+                            lastParcelCount = null,
+                            lastBoxCount = null,
+                            lastScanSource = null,
+                            lastItemNumbers = emptyList(),
                             lastExtData = null,
+                            lastScanTime = null,
                             error = getApplication<Application>().getString(R.string.scan_error_job_invalid),
                             scanResultColor = ScanResultColor.NONE
                         )
@@ -557,8 +574,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _state.update { 
                         it.copy(
                             lastCode = code,
-                            lastCount = null,
+                            lastParcelCount = null,
+                            lastBoxCount = null,
+                            lastScanSource = null,
+                            lastItemNumbers = emptyList(),
                             lastExtData = null,
+                            lastScanTime = OffsetDateTime.now().toString(),
                             error = getApplication<Application>().getString(R.string.scan_error_server),
                             scanResultColor = ScanResultColor.SERVER_ERROR
                         )

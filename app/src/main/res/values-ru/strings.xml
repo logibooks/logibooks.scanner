@@ -47,7 +47,23 @@ This file is a part of LogiScanner application
     <string name="monitor_boxes_progress">Коробки всего / сканировано / осталось</string>
     <string name="monitor_parcels_progress">Посылки всего / сканировано / осталось</string>
     <string name="monitor_not_in_register">Не в реестре</string>
-    <string name="monitor_latest_scan">Последний скан</string>
+    <string name="monitor_latest_scan_title">Последнее сканирование %1$s %2$s</string>
+    <string name="monitor_latest_scan_title_no_time">Последнее сканирование</string>
+    <string name="monitor_latest_scan_parcels">Посылок: %1$d</string>
+    <string name="monitor_latest_scan_boxes">Коробок: %1$d</string>
+    <string name="monitor_latest_scan_sticker_label">Стикер</string>
+    <plurals name="monitor_latest_scan_parcel_number_label">
+        <item quantity="one">Номер посылки</item>
+        <item quantity="few">Номера посылок</item>
+        <item quantity="many">Номера посылок</item>
+        <item quantity="other">Номера посылок</item>
+    </plurals>
+    <plurals name="monitor_latest_scan_box_number_label">
+        <item quantity="one">Номер коробки</item>
+        <item quantity="few">Номера коробок</item>
+        <item quantity="many">Номера коробок</item>
+        <item quantity="other">Номера коробок</item>
+    </plurals>
     <string name="monitor_current_box">Текущая коробка</string>
     <string name="monitor_boxes">Коробки</string>
     <string name="monitor_parcels">Посылки</string>
@@ -64,14 +80,11 @@ This file is a part of LogiScanner application
     <string name="monitor_error_load">Не удалось загрузить монитор сканирования</string>
     <string name="monitor_error_connection">Соединение с онлайн-монитором потеряно</string>
     <string name="monitor_back_to_boxes">К коробкам</string>
-    <string name="monitor_box_sticker">Стикер коробки: %s</string>
-    <string name="monitor_scan_user">Пользователь: %s</string>
-    <string name="monitor_scan_time">Время: %s</string>
     <string name="monitor_expand_parcel">Развернуть посылку</string>
     <string name="monitor_collapse_parcel">Свернуть посылку</string>
     <string name="monitor_parcel_scanned_sticker">Сканированный стикер</string>
     <string name="monitor_parcel_scanned_user">Сканировал</string>
-    <string name="monitor_parcel_scanned_time">Время сканирования</string>
+    <string name="monitor_parcel_scanned_time">Время</string>
     <string name="monitor_parcel_shk">ШК</string>
     <string name="monitor_parcel_sticker">Стикер</string>
     <string name="monitor_parcel_wb_sticker">WB стикер</string>

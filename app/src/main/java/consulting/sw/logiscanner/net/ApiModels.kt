@@ -44,6 +44,13 @@ object ScanJobMonitorAreas {
     const val NOT_IN_REGISTER = 3
 }
 
+object ScannedItemSources {
+    const val UNKNOWN = 0
+    const val PARCEL_STICKER = 10
+    const val BOX_STICKER = 20
+    const val NOT_IN_REGISTER = 30
+}
+
 const val SCAN_JOB_STATUS_IN_PROGRESS = 15
 
 @JsonClass(generateAdapter = true)
@@ -59,6 +66,10 @@ data class ScanJobMonitorLatestScan(
     var scanCodeId: Int = 0,
     var code: String = "",
     var scanTime: String = "",
+    var parcelCount: Int,
+    var boxCount: Int,
+    var scanSource: Int,
+    var itemNumbers: List<String>,
     var area: Int = ScanJobMonitorAreas.BOXES,
     var boxId: Int? = null,
     var bucketIndex: Int? = null
@@ -141,6 +152,10 @@ data class ScanRequest(
 @JsonClass(generateAdapter = true)
 data class ScanResultItem(
     val count: Int,
+    val parcelCount: Int,
+    val boxCount: Int,
+    val scanSource: Int,
+    val itemNumbers: List<String>,
     val extData: String?,
     val hasIssues: Boolean = false
 )
