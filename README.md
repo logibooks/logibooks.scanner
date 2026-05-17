@@ -2,203 +2,184 @@
 
 # LogiScanner
 
-LogiScanner is an Android application designed for warehouse and logistics operations, providing barcode scanning capabilities for inventory management and parcel tracking. The app works with industrial Android scanning devices (MT93) and Bluetooth HID ring scanners (WD4) and integrates with the Logibooks backend system.
+LogiScanner is an Android barcode scanning app for Logibooks warehouse and logistics workflows. It lets an operator sign in, select an in-progress scan job, scan parcels or boxes, and watch the job state update while work is in progress.
+
+The app supports industrial Android devices with an MT93 hardware scanner and standard Android phones paired with Bluetooth HID scanners such as the WD4 ring scanner.
 
 ## Features
 
-- **User Authentication**: Secure login with email and password
-- **Scan Job Management**: Select and manage different scanning jobs from the server
-- **Real-time Barcode Scanning**: Hardware-based barcode scanning using MT93 devices or Bluetooth HID ring scanners (WD4)
-- **Visual & Audio Feedback**: Color-coded scan results with Russian text-to-speech feedback
-- **Offline Support**: Local authentication data storage using DataStore
-- **Multi-language Support**: UI strings available in English and Russian
+- Email/password authentication against the Logibooks backend
+- In-progress scan job list with live refresh
+- Parcel and box barcode submission for the selected scan job
+- Live scan job monitor with register, box, unassigned, and not-in-register views
+- Auto-follow for the latest scan in the monitor
+- MT93 hardware scanner input
+- Bluetooth HID keyboard-wedge scanner input with scan-speed heuristics
+- Visual scan-result feedback and Russian text-to-speech for backend scan messages
+- Local auth state storage with DataStore Preferences
+- English and Russian UI resources
 
 ## Requirements
 
-- Android SDK 26 (Android 8.0 Oreo) or higher
-- Target SDK: 36
-- Compatible with MT93 barcode scanning devices or Bluetooth HID scanners (e.g., WD4 ring scanner)
-- Network connectivity to Logibooks backend server
+- Android Studio with Android SDK support
+- JDK 17 for local builds and CI
+- Android 8.0 (API 26) or newer device
+- Network access to a Logibooks backend
+- MT93 scanner device or a Bluetooth HID scanner such as WD4
+
+The app currently compiles with SDK 36 and targets SDK 36.
 
 ## Technology Stack
 
-- **Language**: Kotlin
-- **UI Framework**: Jetpack Compose with Material 3
-- **Architecture**: MVVM (Model-View-ViewModel)
-- **Networking**: Retrofit + Moshi for REST API communication
-- **Dependency Injection**: Manual dependency injection
-- **Local Storage**: DataStore Preferences
-- **Build System**: Gradle (Kotlin DSL)
+- Kotlin
+- Jetpack Compose and Material 3
+- Android ViewModel and Kotlin coroutines
+- Retrofit, Moshi, and OkHttp
+- Microsoft SignalR client for live scan job updates
+- DataStore Preferences
+- Gradle Kotlin DSL
 
 ## Project Structure
 
-```
+```text
 app/
-├── src/main/
-│   ├── java/consulting/sw/logiscanner/
-│   │   ├── MainActivity.kt              # Main activity with Compose UI
-│   │   ├── net/                         # Network layer
-│   │   │   ├── ApiService.kt           # REST API definitions
-│   │   │   ├── ApiModels.kt            # Data models
-│   │   │   └── NetworkModule.kt        # Network configuration
-│   │   ├── repo/                        # Repository layer
-│   │   │   ├── LoginRepository.kt      # Authentication logic
-│   │   │   ├── ScanJobRepository.kt    # Scan job management
-│   │   │   └── ScanRepository.kt       # Barcode scanning operations
-│   │   ├── scan/                        # Scanner integration
-│   │   │   └── Mt93ScanReceiver.kt     # MT93 device receiver
-│   │   ├── store/                       # Local data storage
-│   │   │   └── AuthStore.kt            # Authentication data store
-│   │   └── ui/                          # UI components
-│   │       ├── MainViewModel.kt         # Main view model
-│   │       └── theme/                   # Material theme
-│   └── res/                             # Resources
-│       ├── values/strings.xml           # English strings
-│       └── values-ru/strings.xml        # Russian strings
+  src/main/java/consulting/sw/logiscanner/
+    MainActivity.kt
+    net/                         REST API models and service definitions
+    repo/                        Login, scan job, scan, and monitor repositories
+    scan/                        MT93 and HID scanner input handling
+    store/                       DataStore-backed auth state
+    ui/                          Compose UI and main view model
+  src/main/res/
+    values/                      English resources
+    values-ru/                   Russian resources
+docs/
+  WD4-Setup.md                   Bluetooth HID ring scanner setup guide
 ```
 
-## Building the Project
+## Building
 
-### Prerequisites
-
-1. Install [Android Studio](https://developer.android.com/studio) (latest version recommended)
-2. Install JDK 11 or higher
-3. Clone the repository:
-   ```bash
-   git clone https://github.com/logibooks/logibooks.scanner.git
-   cd logibooks.scanner
-   ```
-
-### Debug Build
-
-To build a debug version of the app:
+Clone the repository and build with the Gradle wrapper:
 
 ```bash
+git clone https://github.com/logibooks/logibooks.scanner.git
+cd logibooks.scanner
 ./gradlew assembleDebug
 ```
 
-The APK will be generated at: `app/build/outputs/apk/debug/app-debug.apk`
+On Windows PowerShell, use:
 
-### Release Build
+```powershell
+.\gradlew.bat assembleDebug
+```
 
-To build a release version (requires signing configuration):
+The debug APK is written to:
+
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+## Release Builds
+
+Release builds use the signing configuration in [app/build.gradle.kts](app/build.gradle.kts). Provide these environment variables before running `assembleRelease` or `build`:
+
+- `SIGNING_STORE_FILE`: path to the keystore file
+- `SIGNING_STORE_PASSWORD`: keystore password
+- `SIGNING_KEY_ALIAS`: key alias
+- `SIGNING_KEY_PASSWORD`: key password
+
+Then run:
 
 ```bash
 ./gradlew assembleRelease
 ```
 
-**Note**: Release builds require the following environment variables to be set:
-- `SIGNING_STORE_FILE`: Path to the keystore file
-- `SIGNING_STORE_PASSWORD`: Keystore password
-- `SIGNING_KEY_ALIAS`: Key alias
-- `SIGNING_KEY_PASSWORD`: Key password
+## Tests
 
-### Running Tests
+Run the JVM unit tests with:
 
 ```bash
 ./gradlew test
 ```
 
+Run the full Gradle build with:
+
+```bash
+./gradlew build
+```
+
+CI runs `./gradlew build` and `./gradlew test` on GitHub Actions.
+
 ## Configuration
 
 ### Server URLs
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-The app connects to different servers based on build type.
-=======
-The app connects to different servers based on build type:
+The backend base URL is compiled into `BuildConfig.SERVER_URL` by build type in [app/build.gradle.kts](app/build.gradle.kts):
 
-- **Debug**: `http://192.168.11.140:8080/`
-- **Release**: `https://logibooks.sw.consulting:8085/`
+- Debug: `http://192.168.11.140:8080/`
+- Release: `https://logibooks.sw.consulting:8085/`
 
->>>>>>> c4c0885 (doc: add README documentation (#40))
-=======
-The app connects to different servers based on build type.
->>>>>>> 8d0a449 (chore: refactor README by removing unnecessary sections)
-These URLs are configured in `app/build.gradle.kts` and can be modified if needed.
+The URL must include a trailing slash.
 
 ### Application Version
 
-The app version is managed in `gradle.properties`:
+The display version is managed in [gradle.properties](gradle.properties):
+
 ```properties
-appVersionName=0.2.1
+appVersionName=0.4.0
 ```
 
-## How It Works
+## Backend Integration
 
-1. **Login**: Users authenticate with their email and password
-2. **Job Selection**: After login, users can view and select available scan jobs
-3. **Scanning**: With a job selected, users can activate scanning mode
-4. **Hardware Scan**: Press the hardware scan key on the MT93 device or scan with a Bluetooth HID ring scanner (WD4)
-5. **Results**: The app displays scan results with:
-   - **Green**: Item found successfully
-   - **Yellow**: No items found
-   - **Orange**: Issues detected
-   - Audio feedback in Russian
+The app uses these REST endpoints relative to `SERVER_URL`:
+
+- `POST api/Auth/login` for authentication
+- `GET api/ScanJobs/ops` for scan job operation metadata
+- `GET api/ScanJobs/in-progress` for available scan jobs
+- `GET api/ScanJobs/{id}/monitor` for monitor snapshots
+- `POST api/ScanJobs/scan` for scanned barcode submission
+
+Authenticated REST requests send the JWT token as a Bearer token.
+
+Live updates use the SignalR hub at:
+
+```text
+/hubs/scan-jobs
+```
+
+The app subscribes to scan job list changes and per-job monitor snapshots through that hub.
 
 ## Scanner Setup
 
-### MT93 Hardware Scanner
+### MT93
 
-The MT93 scanner is built into compatible Android devices and requires no additional setup.
+MT93-compatible devices use the built-in hardware scanner. No additional pairing is required.
 
-### WD4 Bluetooth Ring Scanner
+### WD4 and Other Bluetooth HID Scanners
 
-For using WD4 or other Bluetooth HID ring scanners with standard Android phones:
+Configure the scanner as a Bluetooth HID keyboard, pair it with Android, and configure a scan terminator such as CR or LF when available.
 
-1. Configure the scanner for Bluetooth HID mode (keyboard wedge)
-2. Pair the scanner with your Android phone via Bluetooth settings
-3. Configure terminating character suffix (recommended: CR or LF)
+See [docs/WD4-Setup.md](docs/WD4-Setup.md) for detailed WD4 setup and troubleshooting.
 
-**See detailed setup instructions**: [WD4 Setup Guide](docs/WD4-Setup.md)
+## Operator Flow
 
-## API Integration
-
-The app communicates with the Logibooks backend API:
-
-- `POST /logibooks/api/login` - User authentication
-- `GET /logibooks/api/scanjobs` - Fetch available scan jobs
-- `GET /logibooks/api/scanjobs/ops` - Fetch job type descriptions
-- `POST /logibooks/api/scan` - Submit scanned barcode
-
-All authenticated requests include a JWT Bearer token in the Authorization header.
+1. Sign in with a Logibooks account.
+2. Select an in-progress scan job.
+3. Start scanning.
+4. Scan a parcel or box barcode with the hardware scanner or paired HID scanner.
+5. Review the result color, spoken backend message, and live monitor update.
+6. Return to the job list or log out when finished.
 
 ## Localization
 
-The application supports multiple languages:
-- English (default)
-- Russian (ru)
-
-User interface adapts to the device locale, with fallback to English.
-
-## Development
-
-### Code Style
-
-The project follows the official Kotlin coding conventions:
-```properties
-kotlin.code.style=official
-```
-
-### Git Workflow
-
-1. Create a feature branch from `main`
-2. Make your changes
-3. Run tests and linting
-4. Submit a pull request
+The app includes English resources in `values/` and Russian resources in `values-ru/`. Android selects the language from the device locale and falls back to English.
 
 ## License
 
-Copyright (C) 2026 Maxim [maxirmx] Samsonov (www.sw.consulting)
-All rights reserved.
+Copyright (C) 2026 Maxim [maxirmx] Samsonov (www.sw.consulting)  
+All rights reserved.  
 This file is a part of LogiScanner application.
 
 ## Support
 
-For issues, questions, or contributions, please contact the development team at www.sw.consulting
-
----
-
-**Version**: 0.2.1  
-**Last Updated**: February 2026
+For issues, questions, or contributions, contact the development team at www.sw.consulting.
