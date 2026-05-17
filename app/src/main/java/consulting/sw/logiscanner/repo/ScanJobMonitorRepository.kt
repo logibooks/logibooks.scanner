@@ -11,17 +11,21 @@ import com.microsoft.signalr.HubConnectionState
 import consulting.sw.logiscanner.net.NetworkModule
 import consulting.sw.logiscanner.net.ScanJobMonitorObserveRequest
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Single
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 data class ScanJobMonitorScope(
     val area: Int,
@@ -47,7 +51,9 @@ class ScanJobMonitorRepository(
     private var connectionClosedHandler: ((Throwable?) -> Unit)? = null
     private var scanJobsChangedHandler: (() -> Unit)? = null
     private var scanJobsConnectionClosedHandler: ((Throwable?) -> Unit)? = null
+    @Volatile
     private var stopping = false
+    @Volatile
     private var scanJobsStopping = false
     private val closeStarted = AtomicBoolean(false)
 
@@ -78,7 +84,7 @@ class ScanJobMonitorRepository(
             }
 
             if (connection.connectionState != HubConnectionState.CONNECTED) {
-                connection.start().blockingAwait()
+                connection.start().awaitHubStart()
             } else {
                 // Clear any prior subscription before starting a new one on the same connection
                 runCatching {
@@ -129,7 +135,7 @@ class ScanJobMonitorRepository(
             }
 
             if (connection.connectionState != HubConnectionState.CONNECTED) {
-                connection.start().blockingAwait()
+                connection.start().awaitHubStart()
             }
 
             connection.invoke("ObserveScanJobs").blockingAwait()
@@ -282,7 +288,21 @@ class ScanJobMonitorRepository(
 }
 
 private const val TAG = "ScanJobMonitorRepo"
+private const val HUB_START_TIMEOUT_SECONDS = 10L
 private const val HUB_STOP_TIMEOUT_SECONDS = 5L
+
+private suspend fun Completable.awaitHubStart() {
+    suspendCancellableCoroutine { continuation ->
+        val disposable = timeout(HUB_START_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .subscribe(
+                { continuation.resume(Unit) },
+                { exception -> continuation.resumeWithException(exception) }
+            )
+        continuation.invokeOnCancellation {
+            disposable.dispose()
+        }
+    }
+}
 
 internal fun buildScanJobMonitorHubUrl(baseUrl: String): String {
     val trimmed = baseUrl.trimEnd('/')
