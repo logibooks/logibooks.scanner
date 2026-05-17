@@ -921,12 +921,16 @@ private fun MonitorBoxesList(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            Column(
+            LazyColumn(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                boxes.forEach { box ->
+                itemsIndexed(
+                    items = boxes,
+                    key = { index, box -> monitorBoxItemKey(box, index) }
+                ) { _, box ->
                     MonitorBoxRow(box = box, onOpenBox = onOpenBox)
                 }
             }
@@ -1355,6 +1359,15 @@ private fun parcelExpansionKey(parcel: ScanJobMonitorParcel, index: Int): String
         ?: parcel.postingNumber?.takeIf { it.isNotBlank() }?.let { "posting:$it" }
         ?: parcel.barcode?.takeIf { it.isNotBlank() }?.let { "barcode:$it" }
         ?: "index:$index"
+}
+
+private fun monitorBoxItemKey(box: ScanJobMonitorBox, index: Int): String {
+    return when {
+        box.boxId != null -> "box:${box.boxId}"
+        box.bucketIndex != null -> "bucket:${box.area}:${box.bucketIndex}"
+        box.boxCode.isNotBlank() -> "code:${box.area}:${box.boxCode}:$index"
+        else -> "index:$index"
+    }
 }
 
 @Composable
