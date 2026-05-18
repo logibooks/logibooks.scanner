@@ -13,26 +13,36 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
-import java.util.Locale
-import kotlinx.coroutines.delay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.RotateLeft
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -54,15 +64,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -72,18 +82,19 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
+import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
-import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
-import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
+import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
-import consulting.sw.logiscanner.ui.MainViewModel
-import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.HidScanInput
+import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.MonitorLatestScanNumberKind
+import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanDate
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanTime
 import consulting.sw.logiscanner.ui.formatMonitorParcelProgress
@@ -96,19 +107,8 @@ import consulting.sw.logiscanner.ui.monitorLatestScanDisplay
 import consulting.sw.logiscanner.ui.monitorParcelAttributeSpecs
 import consulting.sw.logiscanner.ui.parcelPrimaryText
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
-import consulting.sw.logiscanner.repo.ScanJobMonitorScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
-import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.LinkOff
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.RotateLeft
-import androidx.compose.foundation.isSystemInDarkTheme
+import kotlinx.coroutines.delay
+import java.util.Locale
 
 // Focus request retry settings for LoginScreen
 private const val MAX_FOCUS_REQUEST_ATTEMPTS = 3
@@ -286,7 +286,6 @@ private fun LoginScreen(
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
     val view = LocalView.current
 
     LaunchedEffect(Unit) {
@@ -300,7 +299,7 @@ private fun LoginScreen(
                 val imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
                 imm?.showSoftInput(view, 0)
                 return@LaunchedEffect
-            } catch (e: IllegalStateException) {
+            } catch (_: IllegalStateException) {
                 if (attempt == MAX_FOCUS_REQUEST_ATTEMPTS - 1) {
                     // Give up after the last attempt; avoid crashing the app.
                     return@LaunchedEffect
@@ -1424,7 +1423,7 @@ private fun MonitorLatestScanResult(
     val displayDate = formatMonitorLatestScanDate(display.scanTime)
     val stickerCode = display.code?.takeIf { it.isNotBlank() }
     val numberAttribute = display.numberKind?.let { numberKind ->
-        val resources = LocalContext.current.resources
+        val resources = LocalResources.current
         val value = display.itemNumbers.joinToString(", ")
         when (numberKind) {
             MonitorLatestScanNumberKind.BOX -> Pair(
