@@ -75,12 +75,15 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
@@ -980,19 +983,35 @@ private fun MonitorBoxRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
-                formatMonitorParcelProgress(
-                    box.totalParcels,
-                    box.parcelsWithStickerScanned,
-                    box.parcelsWithStickerNotScanned,
-                    box.restrictedParcels
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            MonitorBoxParcelProgressText(box)
         }
         StatusPill(statusText, statusBackground, statusContent)
     }
+}
+
+@Composable
+private fun MonitorBoxParcelProgressText(box: ScanJobMonitorBox) {
+    val restrictedColor = MaterialTheme.colorScheme.error
+    val text = buildAnnotatedString {
+        append("${box.totalParcels} / ")
+        append("${box.parcelsWithStickerScanned} / ")
+        append("${box.parcelsWithStickerNotScanned} / ")
+        if (box.restrictedParcels > 0) {
+            withStyle(SpanStyle(color = restrictedColor, fontWeight = FontWeight.Bold)) {
+                append(box.restrictedParcels.toString())
+            }
+        } else {
+            append(box.restrictedParcels.toString())
+        }
+    }
+
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
 }
 
 @Composable
