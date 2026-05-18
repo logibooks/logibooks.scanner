@@ -374,6 +374,19 @@ class ScanJobMonitorUiTest {
         assertEquals(projection, specs.last().checkStatusProjection)
     }
 
+    @Test
+    fun monitorParcelAttributeSpecs_usesWbrBarcodeLabelWithoutPostingNumber() {
+        val parcel = ScanJobMonitorParcel(
+            shk = "SHK-1",
+            barcode = "BAR-1"
+        )
+
+        val specs = monitorParcelAttributeSpecs(parcel)
+
+        assertTrue(specs.any { it.labelResId == R.string.monitor_parcel_wbr_barcode && it.value == "BAR-1" })
+        assertFalse(specs.any { it.labelResId == R.string.monitor_parcel_barcode && it.value == "BAR-1" })
+    }
+
     private fun latestScan(
         scanCodeId: Int = 0,
         code: String = "",

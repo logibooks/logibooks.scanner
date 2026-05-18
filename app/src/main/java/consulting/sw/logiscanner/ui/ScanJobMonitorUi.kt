@@ -261,7 +261,12 @@ fun monitorParcelAttributeSpecs(parcel: ScanJobMonitorParcel): List<MonitorParce
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_posting_number, it)
     }
     parcel.barcode?.takeIf { it.isNotBlank() }?.let {
-        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_barcode, it)
+        val barcodeLabel = if (parcel.postingNumber.isNullOrBlank()) {
+            R.string.monitor_parcel_wbr_barcode
+        } else {
+            R.string.monitor_parcel_barcode
+        }
+        specs += MonitorParcelAttributeSpec(barcodeLabel, it)
     }
     parcel.weightKg?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_weight_kg, it.toString())
