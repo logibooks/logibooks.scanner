@@ -98,6 +98,33 @@ class ScanJobMonitorUiTest {
     }
 
     @Test
+    fun isRestrictedMonitorParcel_detectsRestrictionProjection() {
+        assertTrue(
+            isRestrictedMonitorParcel(
+                ScanJobMonitorParcel(
+                    checkStatusProjection = ParcelCheckStatusProjection(
+                        kind = ParcelCheckStatusProjectionKinds.RESTRICTION,
+                        title = "Запрет",
+                        restrictionReason = "Стоп-слово"
+                    )
+                )
+            )
+        )
+        assertFalse(
+            isRestrictedMonitorParcel(
+                ScanJobMonitorParcel(
+                    checkStatusProjection = ParcelCheckStatusProjection(
+                        kind = ParcelCheckStatusProjectionKinds.CHECKED,
+                        title = "Проверено",
+                        restrictionReason = null
+                    )
+                )
+            )
+        )
+        assertFalse(isRestrictedMonitorParcel(ScanJobMonitorParcel()))
+    }
+
+    @Test
     fun formatMonitorTime_formatsIsoOffsetDateTime() {
         val value = "2026-05-15T21:30:45+03:00"
         val expected = OffsetDateTime.parse(value)

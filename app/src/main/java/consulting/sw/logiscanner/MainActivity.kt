@@ -89,6 +89,7 @@ import consulting.sw.logiscanner.ui.formatMonitorLatestScanTime
 import consulting.sw.logiscanner.ui.formatMonitorParcelProgress
 import consulting.sw.logiscanner.ui.formatMonitorProgress
 import consulting.sw.logiscanner.ui.formatMonitorTime
+import consulting.sw.logiscanner.ui.isRestrictedMonitorParcel
 import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
 import consulting.sw.logiscanner.ui.monitorBoxDisplayName
 import consulting.sw.logiscanner.ui.monitorLatestScanDisplay
@@ -1176,6 +1177,11 @@ private fun MonitorParcelRow(
             Text(
                 parcelPrimaryText(parcel),
                 style = MaterialTheme.typography.bodyMedium,
+                color = if (isRestrictedMonitorParcel(parcel)) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
