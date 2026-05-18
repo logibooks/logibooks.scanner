@@ -100,8 +100,6 @@ import consulting.sw.logiscanner.ui.MonitorLatestScanNumberKind
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanDate
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanTime
-import consulting.sw.logiscanner.ui.formatMonitorParcelProgress
-import consulting.sw.logiscanner.ui.formatMonitorProgress
 import consulting.sw.logiscanner.ui.formatMonitorTime
 import consulting.sw.logiscanner.ui.isRestrictedMonitorParcel
 import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
@@ -866,22 +864,16 @@ private fun ScanJobMonitorPanel(
             }
 
             if (snapshot != null && selectedScope.area == ScanJobMonitorAreas.BOXES) {
-                MonitorAttribute(
-                    label = stringResource(R.string.monitor_boxes_progress),
-                    value = formatMonitorProgress(
-                        snapshot.totalBoxes,
-                        snapshot.boxesWithStickerScanned,
-                        snapshot.boxesWithStickerNotScanned
-                    )
+                MonitorBoxesStatistics(
+                    total = snapshot.totalBoxes,
+                    scanned = snapshot.boxesWithStickerScanned,
+                    notScanned = snapshot.boxesWithStickerNotScanned
                 )
-                MonitorAttribute(
-                    label = stringResource(R.string.monitor_parcels_progress),
-                    value = formatMonitorParcelProgress(
-                        snapshot.totalParcels,
-                        snapshot.parcelsWithStickerScanned,
-                        snapshot.parcelsWithStickerNotScanned,
-                        snapshot.restrictedParcels
-                    )
+                MonitorParcelsStatistics(
+                    total = snapshot.totalParcels,
+                    scanned = snapshot.parcelsWithStickerScanned,
+                    notScanned = snapshot.parcelsWithStickerNotScanned,
+                    restricted = snapshot.restrictedParcels
                 )
                 MonitorAttribute(
                     label = stringResource(R.string.monitor_not_in_register),
@@ -1090,14 +1082,11 @@ private fun MonitorBoxDetail(
                 )
             }
         }
-        MonitorAttribute(
-            label = stringResource(R.string.monitor_parcels_progress),
-            value = formatMonitorParcelProgress(
-                box.totalParcels,
-                box.parcelsWithStickerScanned,
-                box.parcelsWithStickerNotScanned,
-                box.restrictedParcels
-            )
+        MonitorParcelsStatistics(
+            total = box.totalParcels,
+            scanned = box.parcelsWithStickerScanned,
+            notScanned = box.parcelsWithStickerNotScanned,
+            restricted = box.restrictedParcels
         )
         box.boxScannedSticker?.takeIf { it.isNotBlank() }?.let { scannedSticker ->
             MonitorAttribute(
@@ -1355,6 +1344,46 @@ private fun checkStatusStyle(kind: Int?): CheckStatusStyle {
             MaterialTheme.colorScheme.surfaceVariant,
             MaterialTheme.colorScheme.onSurfaceVariant,
             MaterialTheme.colorScheme.outline
+        )
+    }
+}
+
+@Composable
+private fun MonitorBoxesStatistics(total: Int, scanned: Int, notScanned: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        MonitorAttribute(
+            label = stringResource(R.string.monitor_boxes_total),
+            value = total.toString()
+        )
+        MonitorAttribute(
+            label = stringResource(R.string.monitor_stat_scanned),
+            value = scanned.toString()
+        )
+        MonitorAttribute(
+            label = stringResource(R.string.monitor_stat_not_scanned),
+            value = notScanned.toString()
+        )
+    }
+}
+
+@Composable
+private fun MonitorParcelsStatistics(total: Int, scanned: Int, notScanned: Int, restricted: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        MonitorAttribute(
+            label = stringResource(R.string.monitor_parcels_total),
+            value = total.toString()
+        )
+        MonitorAttribute(
+            label = stringResource(R.string.monitor_stat_scanned),
+            value = scanned.toString()
+        )
+        MonitorAttribute(
+            label = stringResource(R.string.monitor_stat_not_scanned),
+            value = notScanned.toString()
+        )
+        MonitorAttribute(
+            label = stringResource(R.string.monitor_restricted),
+            value = restricted.toString()
         )
     }
 }

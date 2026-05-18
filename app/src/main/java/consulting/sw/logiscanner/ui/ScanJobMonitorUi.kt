@@ -85,14 +85,6 @@ fun sameMonitorScope(left: ScanJobMonitorScope, right: ScanJobMonitorScope): Boo
         && (left.bucketIndex ?: 0) == (right.bucketIndex ?: 0)
 }
 
-fun formatMonitorProgress(total: Int, scanned: Int, notScanned: Int): String {
-    return "$total / $scanned / $notScanned"
-}
-
-fun formatMonitorParcelProgress(total: Int, scanned: Int, notScanned: Int, restricted: Int): String {
-    return "$total / $scanned / $notScanned / $restricted"
-}
-
 fun formatMonitorTime(value: String?): String {
     if (value.isNullOrBlank()) return ""
     return try {
