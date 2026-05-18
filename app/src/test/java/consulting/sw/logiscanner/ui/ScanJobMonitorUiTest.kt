@@ -124,6 +124,11 @@ class ScanJobMonitorUiTest {
     }
 
     @Test
+    fun formatMonitorParcelProgress_includesRestrictedCount() {
+        assertEquals("5 / 3 / 2 / 1", formatMonitorParcelProgress(5, 3, 2, 1))
+    }
+
+    @Test
     fun formatMonitorLatestScanTime_formatsIsoOffsetDateTime() {
         val value = "2026-05-15T21:30:45+03:00"
         val expected = OffsetDateTime.parse(value)

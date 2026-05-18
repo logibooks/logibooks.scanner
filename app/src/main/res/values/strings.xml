@@ -43,7 +43,7 @@ This file is a part of LogiScanner application
     <string name="monitor_auto_follow_enable">Auto-follow is off. Tap to turn on</string>
     <string name="monitor_loading">Loading monitor…</string>
     <string name="monitor_boxes_progress">Boxes total / scanned / not scanned</string>
-    <string name="monitor_parcels_progress">Parcels total / scanned / not scanned</string>
+    <string name="monitor_parcels_progress">Parcels total / scanned / not scanned / excluded</string>
     <string name="monitor_not_in_register">Not in register</string>
     <string name="monitor_latest_scan_title">Last scan %1$s %2$s</string>
     <string name="monitor_latest_scan_title_no_time">Last scan</string>

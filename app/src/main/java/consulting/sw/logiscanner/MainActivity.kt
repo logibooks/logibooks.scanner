@@ -86,6 +86,7 @@ import consulting.sw.logiscanner.ui.HidScanInput
 import consulting.sw.logiscanner.ui.MonitorLatestScanNumberKind
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanDate
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanTime
+import consulting.sw.logiscanner.ui.formatMonitorParcelProgress
 import consulting.sw.logiscanner.ui.formatMonitorProgress
 import consulting.sw.logiscanner.ui.formatMonitorTime
 import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
@@ -872,10 +873,11 @@ private fun ScanJobMonitorPanel(
                 )
                 MonitorAttribute(
                     label = stringResource(R.string.monitor_parcels_progress),
-                    value = formatMonitorProgress(
+                    value = formatMonitorParcelProgress(
                         snapshot.totalParcels,
                         snapshot.parcelsWithStickerScanned,
-                        snapshot.parcelsWithStickerNotScanned
+                        snapshot.parcelsWithStickerNotScanned,
+                        snapshot.restrictedParcels
                     )
                 )
                 MonitorAttribute(
@@ -979,10 +981,11 @@ private fun MonitorBoxRow(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                formatMonitorProgress(
+                formatMonitorParcelProgress(
                     box.totalParcels,
                     box.parcelsWithStickerScanned,
-                    box.parcelsWithStickerNotScanned
+                    box.parcelsWithStickerNotScanned,
+                    box.restrictedParcels
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1070,10 +1073,11 @@ private fun MonitorBoxDetail(
         }
         MonitorAttribute(
             label = stringResource(R.string.monitor_parcels_progress),
-            value = formatMonitorProgress(
+            value = formatMonitorParcelProgress(
                 box.totalParcels,
                 box.parcelsWithStickerScanned,
-                box.parcelsWithStickerNotScanned
+                box.parcelsWithStickerNotScanned,
+                box.restrictedParcels
             )
         )
         box.boxScannedSticker?.takeIf { it.isNotBlank() }?.let { scannedSticker ->

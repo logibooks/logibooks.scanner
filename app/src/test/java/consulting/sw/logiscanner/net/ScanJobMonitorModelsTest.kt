@@ -45,6 +45,7 @@ class ScanJobMonitorModelsTest {
               "totalParcels": 3,
               "parcelsWithStickerScanned": 2,
               "parcelsWithStickerNotScanned": 1,
+              "restrictedParcels": 1,
               "scannedItemsNotInRegister": 1,
               "boxes": [
                 {
@@ -57,7 +58,8 @@ class ScanJobMonitorModelsTest {
                   "boxScannedTime": "2026-05-15T21:31:00+03:00",
                   "totalParcels": 3,
                   "parcelsWithStickerScanned": 2,
-                  "parcelsWithStickerNotScanned": 1
+                  "parcelsWithStickerNotScanned": 1,
+                  "restrictedParcels": 1
                 }
               ],
               "box": {
@@ -68,6 +70,7 @@ class ScanJobMonitorModelsTest {
                 "totalParcels": 1,
                 "parcelsWithStickerScanned": 1,
                 "parcelsWithStickerNotScanned": 0,
+                "restrictedParcels": 1,
                 "parcels": [
                   {
                     "isInRegister": true,
@@ -104,8 +107,11 @@ class ScanJobMonitorModelsTest {
         assertEquals(1, snapshot.latestScan?.boxCount)
         assertEquals(ScannedItemSources.BOX_STICKER, snapshot.latestScan?.scanSource)
         assertEquals(listOf("BOX-1"), snapshot.latestScan?.itemNumbers)
+        assertEquals(1, snapshot.restrictedParcels)
         assertEquals(1, snapshot.boxes.size)
         assertTrue(snapshot.boxes.first().boxStickerScanned)
+        assertEquals(1, snapshot.boxes.first().restrictedParcels)
+        assertEquals(1, snapshot.box?.restrictedParcels)
         assertEquals(1, snapshot.box?.parcels?.size)
         assertTrue(snapshot.box!!.parcels!!.first().isInRegister)
         assertEquals(ParcelCheckStatusProjectionKinds.RESTRICTION, snapshot.box!!.parcels!!.first().checkStatusProjection?.kind)

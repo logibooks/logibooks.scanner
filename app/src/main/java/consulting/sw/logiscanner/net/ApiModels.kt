@@ -127,6 +127,7 @@ data class ScanJobMonitorBox(
     var totalParcels: Int = 0,
     var parcelsWithStickerScanned: Int = 0,
     var parcelsWithStickerNotScanned: Int = 0,
+    var restrictedParcels: Int = 0,
     var parcels: List<ScanJobMonitorParcel>? = null
 )
 
@@ -151,6 +152,7 @@ data class ScanJobMonitorSnapshot(
     var totalParcels: Int = 0,
     var parcelsWithStickerScanned: Int = 0,
     var parcelsWithStickerNotScanned: Int = 0,
+    var restrictedParcels: Int = 0,
     var scannedItemsNotInRegister: Int = 0,
     var boxes: List<ScanJobMonitorBox> = emptyList(),
     var box: ScanJobMonitorBox? = null
