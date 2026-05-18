@@ -7,6 +7,7 @@ package consulting.sw.logiscanner.ui
 import android.content.Context
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
+import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
@@ -291,6 +292,10 @@ fun parcelPrimaryText(parcel: ScanJobMonitorParcel): String {
         parcel.stickerCode,
         parcel.barcode
     ) ?: "-"
+}
+
+fun isRestrictedMonitorParcel(parcel: ScanJobMonitorParcel): Boolean {
+    return parcel.checkStatusProjection?.kind == ParcelCheckStatusProjectionKinds.RESTRICTION
 }
 
 fun parcelSecondaryText(parcel: ScanJobMonitorParcel): String {
