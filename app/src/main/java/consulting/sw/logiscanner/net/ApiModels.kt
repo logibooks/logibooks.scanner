@@ -54,6 +54,7 @@ object ScannedItemSources {
 object ParcelCheckStatusProjectionKinds {
     const val NOT_CHECKED = 10
     const val RESTRICTION = 20
+    const val DEFECT = 25
     const val CHECKED = 30
 }
 

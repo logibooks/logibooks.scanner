@@ -120,4 +120,23 @@ class ScanJobMonitorModelsTest {
         assertEquals("Запрет", snapshot.box!!.parcels!!.first().checkStatusProjection?.title)
         assertEquals("Стоп-слово", snapshot.box!!.parcels!!.first().checkStatusProjection?.restrictionReason)
     }
+
+    @Test
+    fun parcelCheckStatusProjection_parsesDefectKind() {
+        val json = """
+            {
+              "kind": 25,
+              "title": "Брак",
+              "restrictionReason": "Брак"
+            }
+        """.trimIndent()
+
+        val adapter = Moshi.Builder().build().adapter(ParcelCheckStatusProjection::class.java)
+        val projection = adapter.fromJson(json)
+
+        assertNotNull(projection)
+        assertEquals(ParcelCheckStatusProjectionKinds.DEFECT, projection!!.kind)
+        assertEquals("Брак", projection.title)
+        assertEquals("Брак", projection.restrictionReason)
+    }
 }
