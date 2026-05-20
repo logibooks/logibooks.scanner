@@ -110,6 +110,17 @@ class ScanJobMonitorUiTest {
                 )
             )
         )
+        assertTrue(
+            isRestrictedMonitorParcel(
+                ScanJobMonitorParcel(
+                    checkStatusProjection = ParcelCheckStatusProjection(
+                        kind = ParcelCheckStatusProjectionKinds.DEFECT,
+                        title = "Брак",
+                        restrictionReason = "Брак"
+                    )
+                )
+            )
+        )
         assertFalse(
             isRestrictedMonitorParcel(
                 ScanJobMonitorParcel(

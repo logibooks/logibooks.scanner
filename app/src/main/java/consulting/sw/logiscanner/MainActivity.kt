@@ -101,6 +101,7 @@ import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanDate
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanTime
 import consulting.sw.logiscanner.ui.formatMonitorTime
+import consulting.sw.logiscanner.ui.isIssueCheckStatusProjectionKind
 import consulting.sw.logiscanner.ui.isRestrictedMonitorParcel
 import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
 import consulting.sw.logiscanner.ui.monitorBoxDisplayName
@@ -1269,9 +1270,7 @@ private fun MonitorParcelCheckStatusAttribute(projection: ParcelCheckStatusProje
                 modifier = Modifier.weight(0.58f)
             )
         }
-        if (projection.kind == ParcelCheckStatusProjectionKinds.RESTRICTION &&
-            !projection.restrictionReason.isNullOrBlank()
-        ) {
+        if (isIssueCheckStatusProjectionKind(projection.kind) && !projection.restrictionReason.isNullOrBlank()) {
             MonitorAttribute(
                 stringResource(R.string.monitor_parcel_restriction_reason),
                 projection.restrictionReason.orEmpty()
@@ -1322,7 +1321,8 @@ private fun checkStatusStyle(kind: Int?): CheckStatusStyle {
             CheckStatusBlueText,
             CheckStatusBlueBorder
         )
-        ParcelCheckStatusProjectionKinds.RESTRICTION -> if (darkTheme) CheckStatusStyle(
+        ParcelCheckStatusProjectionKinds.RESTRICTION,
+        ParcelCheckStatusProjectionKinds.DEFECT -> if (darkTheme) CheckStatusStyle(
             CheckStatusDarkRedBackground,
             CheckStatusDarkRedText,
             CheckStatusDarkRedBorder

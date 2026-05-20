@@ -292,7 +292,15 @@ fun parcelPrimaryText(parcel: ScanJobMonitorParcel): String {
 }
 
 fun isRestrictedMonitorParcel(parcel: ScanJobMonitorParcel): Boolean {
-    return parcel.checkStatusProjection?.kind == ParcelCheckStatusProjectionKinds.RESTRICTION
+    return isIssueCheckStatusProjectionKind(parcel.checkStatusProjection?.kind)
+}
+
+fun isIssueCheckStatusProjectionKind(kind: Int?): Boolean {
+    return when (kind) {
+        ParcelCheckStatusProjectionKinds.RESTRICTION,
+        ParcelCheckStatusProjectionKinds.DEFECT -> true
+        else -> false
+    }
 }
 
 fun parcelSecondaryText(parcel: ScanJobMonitorParcel): String {
