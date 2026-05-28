@@ -44,6 +44,12 @@ object ScanJobMonitorAreas {
     const val NOT_IN_REGISTER = 3
 }
 
+object ScanJobMonitorTargetKinds {
+    const val NONE = 0
+    const val BOX = 1
+    const val PARCEL = 2
+}
+
 object ScannedItemSources {
     const val UNKNOWN = 0
     const val PARCEL_STICKER = 10
@@ -66,6 +72,18 @@ data class ScanJobMonitorObserveRequest(
     var area: Int = ScanJobMonitorAreas.BOXES,
     var boxId: Int? = null,
     var bucketIndex: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ScanJobMonitorTarget(
+    var kind: Int = ScanJobMonitorTargetKinds.NONE,
+    var area: Int? = null,
+    var boxId: Int? = null,
+    var bucketIndex: Int? = null,
+    var parcelId: Int? = null,
+    var number: String = "",
+    var boxCode: String? = null,
+    var parcelNumber: String? = null
 )
 
 @JsonClass(generateAdapter = true)

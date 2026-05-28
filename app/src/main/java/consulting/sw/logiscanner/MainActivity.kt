@@ -30,13 +30,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Link
@@ -79,6 +82,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -229,12 +233,17 @@ class MainActivity : ComponentActivity() {
                                 monitorDetailLoading = state.monitorDetailLoading,
                                 monitorError = state.monitorError,
                                 monitorAutoFollow = state.monitorAutoFollow,
+                                monitorJumpNumber = state.monitorJumpNumber,
+                                monitorJumpLoading = state.monitorJumpLoading,
+                                monitorHighlightedParcelId = state.monitorHighlightedParcelId,
                                 error = state.error,
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
                                 onOpenMonitorRegister = vm::openMonitorRegister,
                                 onOpenMonitorBox = vm::openMonitorBox,
                                 onToggleMonitorAutoFollow = vm::toggleMonitorAutoFollow,
+                                onMonitorJumpNumberChange = vm::setMonitorJumpNumber,
+                                onJumpToMonitorNumber = vm::jumpToMonitorNumber,
                                 onBackToJobs = { 
                                     focusManager.clearFocus()
                                     vm.selectScanJob(null) 
@@ -614,12 +623,17 @@ private fun ScanScreen(
     monitorDetailLoading: Boolean,
     monitorError: String?,
     monitorAutoFollow: Boolean,
+    monitorJumpNumber: String,
+    monitorJumpLoading: Boolean,
+    monitorHighlightedParcelId: Int?,
     error: String?,
     onStartScanning: () -> Unit,
     onStopScanning: () -> Unit,
     onOpenMonitorRegister: () -> Unit,
     onOpenMonitorBox: (ScanJobMonitorBox) -> Unit,
     onToggleMonitorAutoFollow: () -> Unit,
+    onMonitorJumpNumberChange: (String) -> Unit,
+    onJumpToMonitorNumber: () -> Unit,
     onBackToJobs: () -> Unit,
     onLogout: () -> Unit,
     onScanned: (String) -> Unit
@@ -752,9 +766,14 @@ private fun ScanScreen(
                 detailLoading = monitorDetailLoading,
                 error = monitorError,
                 autoFollow = monitorAutoFollow,
+                jumpNumber = monitorJumpNumber,
+                jumpLoading = monitorJumpLoading,
+                highlightedParcelId = monitorHighlightedParcelId,
                 onOpenRegister = onOpenMonitorRegister,
                 onOpenBox = onOpenMonitorBox,
-                onToggleAutoFollow = onToggleMonitorAutoFollow
+                onToggleAutoFollow = onToggleMonitorAutoFollow,
+                onJumpNumberChange = onMonitorJumpNumberChange,
+                onJumpToNumber = onJumpToMonitorNumber
             )
         }
 
@@ -793,9 +812,14 @@ private fun ScanJobMonitorPanel(
     detailLoading: Boolean,
     error: String?,
     autoFollow: Boolean,
+    jumpNumber: String,
+    jumpLoading: Boolean,
+    highlightedParcelId: Int?,
     onOpenRegister: () -> Unit,
     onOpenBox: (ScanJobMonitorBox) -> Unit,
-    onToggleAutoFollow: () -> Unit
+    onToggleAutoFollow: () -> Unit,
+    onJumpNumberChange: (String) -> Unit,
+    onJumpToNumber: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -836,6 +860,54 @@ private fun ScanJobMonitorPanel(
                             .height(18.dp)
                     )
                 }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = jumpNumber,
+                    onValueChange = onJumpNumberChange,
+                    label = { Text(stringResource(R.string.monitor_jump_label)) },
+                    singleLine = true,
+                    enabled = !jumpLoading,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Search
+                    ),
+                    keyboardActions = KeyboardActions(onSearch = { onJumpToNumber() }),
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = onJumpToNumber,
+                    enabled = !jumpLoading && jumpNumber.isNotBlank(),
+                    modifier = Modifier
+                        .width(44.dp)
+                        .height(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DoneAll,
+                        contentDescription = stringResource(R.string.monitor_jump_action),
+                        tint = if (!jumpLoading && jumpNumber.isNotBlank()) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier
+                            .width(20.dp)
+                            .height(20.dp)
+                    )
+                }
+            }
+            if (jumpLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
 
             MonitorLatestScanResult(
@@ -893,6 +965,7 @@ private fun ScanJobMonitorPanel(
                     MonitorBoxDetail(
                         snapshot = detailSnapshot,
                         loading = detailLoading,
+                        highlightedParcelId = highlightedParcelId,
                         onOpenRegister = onOpenRegister
                     )
                 }
@@ -1011,6 +1084,7 @@ private fun MonitorBoxParcelProgressText(box: ScanJobMonitorBox) {
 private fun MonitorBoxDetail(
     snapshot: ScanJobMonitorSnapshot?,
     loading: Boolean,
+    highlightedParcelId: Int?,
     onOpenRegister: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1114,8 +1188,15 @@ private fun MonitorBoxDetail(
             fontWeight = FontWeight.SemiBold
         )
         val parcels = box.parcels.orEmpty()
+        val listState = rememberLazyListState()
         var expandedParcelKey by rememberSaveable(box.boxId, box.bucketIndex, box.boxCode) {
             mutableStateOf<String?>(null)
+        }
+        LaunchedEffect(highlightedParcelId, parcels) {
+            val targetIndex = parcels.indexOfFirst { parcel -> parcel.parcelId == highlightedParcelId }
+            if (targetIndex >= 0) {
+                listState.animateScrollToItem(targetIndex)
+            }
         }
         if (parcels.isEmpty()) {
             Text(
@@ -1125,6 +1206,7 @@ private fun MonitorBoxDetail(
             )
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 260.dp),
@@ -1138,6 +1220,7 @@ private fun MonitorBoxDetail(
                     MonitorParcelRow(
                         parcel = parcel,
                         expanded = expandedParcelKey == parcelKey,
+                        highlighted = parcel.parcelId == highlightedParcelId,
                         onToggleExpanded = {
                             expandedParcelKey = if (expandedParcelKey == parcelKey) null else parcelKey
                         }
@@ -1152,6 +1235,7 @@ private fun MonitorBoxDetail(
 private fun MonitorParcelRow(
     parcel: ScanJobMonitorParcel,
     expanded: Boolean,
+    highlighted: Boolean,
     onToggleExpanded: () -> Unit
 ) {
     val statusText = when {
@@ -1170,10 +1254,23 @@ private fun MonitorParcelRow(
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
+    val rowShape = RoundedCornerShape(6.dp)
+    val rowBackground = if (highlighted) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    val rowModifier = if (highlighted) {
+        Modifier.border(1.dp, MaterialTheme.colorScheme.primary, rowShape)
+    } else {
+        Modifier
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
+            .background(rowBackground, rowShape)
+            .then(rowModifier)
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
