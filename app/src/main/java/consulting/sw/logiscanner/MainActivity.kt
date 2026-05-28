@@ -18,20 +18,21 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -43,7 +44,6 @@ import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -94,6 +94,7 @@ import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
+import consulting.sw.logiscanner.net.ScanJobMonitorLatestScan
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
@@ -141,6 +142,8 @@ private val CheckStatusDarkBlueBorder = Color(0xFF42A5F5)
 private val CheckStatusDarkGreenBackground = Color(0x3066BB6A)
 private val CheckStatusDarkGreenText = Color(0xFFA5D6A7)
 private val CheckStatusDarkGreenBorder = Color(0xFF66BB6A)
+private val AutoFollowOnIconColor = Color(0xFF4CAF50)
+private val AutoFollowOffIconColor = Color(0xFFFF9800)
 
 
 class MainActivity : ComponentActivity() {
@@ -848,16 +851,16 @@ private fun ScanJobMonitorPanel(
                         .height(36.dp)
                 ) {
                     Icon(
-                        imageVector = if (autoFollow) Icons.Filled.Link else Icons.Filled.LinkOff,
+                        imageVector = Icons.Filled.Link,
                         contentDescription = if (autoFollow) {
                             stringResource(R.string.monitor_auto_follow_disable)
                         } else {
                             stringResource(R.string.monitor_auto_follow_enable)
                         },
                         tint = if (autoFollow) {
-                            MaterialTheme.colorScheme.primary
+                            AutoFollowOnIconColor
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            AutoFollowOffIconColor
                         },
                         modifier = Modifier
                             .width(18.dp)
@@ -871,18 +874,12 @@ private fun ScanJobMonitorPanel(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
+                BasicTextField(
                     value = jumpNumber,
                     onValueChange = onJumpNumberChange,
-                    label = {
-                        Text(
-                            stringResource(R.string.monitor_jump_label),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    textStyle = MaterialTheme.typography.bodySmall,
+                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
                     singleLine = true,
                     enabled = !jumpLoading,
                     keyboardOptions = KeyboardOptions(
@@ -892,7 +889,34 @@ private fun ScanJobMonitorPanel(
                     keyboardActions = KeyboardActions(onSearch = { onJumpToNumber() }),
                     modifier = Modifier
                         .weight(1f)
-                        .onFocusChanged { onJumpFieldFocusChanged(it.isFocused) }
+                        .height(36.dp)
+                        .onFocusChanged { onJumpFieldFocusChanged(it.isFocused) },
+                    decorationBox = { innerTextField ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (jumpNumber.isBlank()) {
+                                    Text(
+                                        stringResource(R.string.monitor_jump_label),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        }
+                    }
                 )
                 IconButton(
                     onClick = onJumpToNumber,
@@ -977,6 +1001,7 @@ private fun ScanJobMonitorPanel(
                 } else {
                     MonitorBoxDetail(
                         snapshot = detailSnapshot,
+                        latestScan = snapshot.latestScan,
                         loading = detailLoading,
                         highlightedParcelId = highlightedParcelId,
                         onOpenRegister = onOpenRegister
@@ -1005,16 +1030,11 @@ private fun MonitorBoxesList(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 320.dp),
+            Column(
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                itemsIndexed(
-                    items = boxes,
-                    key = { index, box -> monitorBoxItemKey(box, index) }
-                ) { _, box ->
+                boxes.forEach { box ->
                     MonitorBoxRow(box = box, onOpenBox = onOpenBox)
                 }
             }
@@ -1096,6 +1116,7 @@ private fun MonitorBoxParcelProgressText(box: ScanJobMonitorBox) {
 @Composable
 private fun MonitorBoxDetail(
     snapshot: ScanJobMonitorSnapshot?,
+    latestScan: ScanJobMonitorLatestScan?,
     loading: Boolean,
     highlightedParcelId: Int?,
     onOpenRegister: () -> Unit
@@ -1201,15 +1222,15 @@ private fun MonitorBoxDetail(
             fontWeight = FontWeight.SemiBold
         )
         val parcels = box.parcels.orEmpty()
-        val listState = rememberLazyListState()
         var expandedParcelKey by rememberSaveable(box.boxId, box.bucketIndex, box.boxCode) {
             mutableStateOf<String?>(null)
         }
-        LaunchedEffect(highlightedParcelId, parcels) {
-            val targetIndex = parcels.indexOfFirst { parcel -> parcel.parcelId == highlightedParcelId }
+        LaunchedEffect(highlightedParcelId, latestScan?.scanCodeId, parcels) {
+            val targetIndex = parcels.indexOfFirst { parcel ->
+                isHighlightedMonitorParcel(parcel, highlightedParcelId, latestScan)
+            }
             if (targetIndex >= 0) {
                 expandedParcelKey = parcelExpansionKey(parcels[targetIndex], targetIndex)
-                listState.animateScrollToItem(targetIndex)
             }
         }
         if (parcels.isEmpty()) {
@@ -1219,22 +1240,17 @@ private fun MonitorBoxDetail(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 260.dp),
+            Column(
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                itemsIndexed(
-                    items = parcels,
-                    key = { index, parcel -> parcelExpansionKey(parcel, index) }
-                ) { index, parcel ->
+                parcels.forEachIndexed { index, parcel ->
                     val parcelKey = parcelExpansionKey(parcel, index)
+                    val highlighted = isHighlightedMonitorParcel(parcel, highlightedParcelId, latestScan)
                     MonitorParcelRow(
                         parcel = parcel,
                         expanded = expandedParcelKey == parcelKey,
-                        highlighted = parcel.parcelId == highlightedParcelId,
+                        highlighted = highlighted,
                         onToggleExpanded = {
                             expandedParcelKey = if (expandedParcelKey == parcelKey) null else parcelKey
                         }
@@ -1279,10 +1295,19 @@ private fun MonitorParcelRow(
     } else {
         Modifier
     }
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+
+    LaunchedEffect(highlighted, expanded) {
+        if (highlighted && expanded) {
+            delay(250)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester)
             .background(rowBackground, rowShape)
             .then(rowModifier)
             .padding(10.dp),
@@ -1339,12 +1364,46 @@ private fun MonitorParcelRow(
                     parcel.productName.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Visible
                 )
             }
             MonitorParcelAttributes(parcel)
         }
+    }
+}
+
+private fun isHighlightedMonitorParcel(
+    parcel: ScanJobMonitorParcel,
+    highlightedParcelId: Int?,
+    latestScan: ScanJobMonitorLatestScan?
+): Boolean {
+    if (highlightedParcelId != null && parcel.parcelId == highlightedParcelId) {
+        return true
+    }
+
+    val latestNumbers = buildList {
+        latestScan?.code?.takeIf { it.isNotBlank() }?.let(::add)
+        latestScan?.itemNumbers.orEmpty().filterTo(this) { it.isNotBlank() }
+    }.map { it.trim() }
+
+    if (latestNumbers.isEmpty()) {
+        return false
+    }
+
+    val parcelNumbers = listOfNotNull(
+        parcel.parcelNumber,
+        parcel.shk,
+        parcel.sticker,
+        parcel.wbSticker,
+        parcel.sellerSticker,
+        parcel.stickerCode,
+        parcel.postingNumber,
+        parcel.barcode,
+        parcel.scannedSticker
+    ).map { it.trim() }.filter { it.isNotBlank() }
+
+    return parcelNumbers.any { parcelNumber ->
+        latestNumbers.any { latestNumber -> parcelNumber.equals(latestNumber, ignoreCase = true) }
     }
 }
 
@@ -1527,15 +1586,6 @@ private fun parcelExpansionKey(parcel: ScanJobMonitorParcel, index: Int): String
         ?: parcel.postingNumber?.takeIf { it.isNotBlank() }?.let { "posting:$it" }
         ?: parcel.barcode?.takeIf { it.isNotBlank() }?.let { "barcode:$it" }
         ?: "index:$index"
-}
-
-private fun monitorBoxItemKey(box: ScanJobMonitorBox, index: Int): String {
-    return when {
-        box.boxId != null -> "box:${box.boxId}"
-        box.bucketIndex != null -> "bucket:${box.area}:${box.bucketIndex}"
-        box.boxCode.isNotBlank() -> "code:${box.area}:${box.boxCode}:$index"
-        else -> "index:$index"
-    }
 }
 
 @Composable
