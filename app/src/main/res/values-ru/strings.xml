@@ -15,6 +15,7 @@ This file is a part of LogiScanner application
     <string name="logging_in">Вход…</string>
     <string name="show_password">Показать пароль</string>
     <string name="hide_password">Скрыть пароль</string>
+    <string name="external_scanner_checkbox">Использовать внешний сканер</string>
     <string name="version_label">Версия %s</string>
 
     <string name="select_scan_job">Выберите задание</string>
@@ -129,7 +130,8 @@ This file is a part of LogiScanner application
     <string name="scan_job_status_completed">завершено</string>
     <string name="scan_job_status_unknown">в неизвестном статусе</string>
     
-    <string name="scan_hint">Используйте кнопку аппаратного сканирования или Bluetooth сканер</string>
+    <string name="scan_hint_hardware_only">Используйте кнопку аппаратного сканирования</string>
+    <string name="scan_hint_external_enabled">Используйте кнопку аппаратного сканирования или Bluetooth сканер</string>
     
     <!-- Login error messages -->
     <string name="login_error_invalid_credentials">Неправильный адрес электронной почты или пароль</string>
