@@ -377,7 +377,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val boxId = target.boxId
                         if (boxId == null) {
                             _state.update {
-                                it.copy(monitorError = getApplication<Application>().getString(R.string.monitor_jump_not_found, number))
+                                it.copy(monitorError = getApplication<Application>().getString(R.string.monitor_jump_not_found))
                             }
                         } else {
                             loadMonitorDetail(
@@ -391,7 +391,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val scope = monitorScopeForTarget(target.area, target.boxId, target.bucketIndex)
                         if (parcelId == null || scope == null) {
                             _state.update {
-                                it.copy(monitorError = getApplication<Application>().getString(R.string.monitor_jump_not_found, number))
+                                it.copy(monitorError = getApplication<Application>().getString(R.string.monitor_jump_not_found))
                             }
                         } else {
                             loadMonitorDetail(scope, highlightedParcelId = parcelId)
@@ -400,7 +400,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     else -> {
                         _state.update {
                             it.copy(
-                                monitorError = getApplication<Application>().getString(R.string.monitor_jump_not_found, number),
+                                monitorError = getApplication<Application>().getString(R.string.monitor_jump_not_found),
                                 monitorHighlightedParcelId = null
                             )
                         }
