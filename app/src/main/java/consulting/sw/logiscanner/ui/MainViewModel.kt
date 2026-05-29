@@ -535,12 +535,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         monitorLatestScanCodeId = latestScanId
 
         val nextScope = latestScanScope(snapshot) ?: return
-        if (!sameMonitorScope(nextScope, state.value.monitorSelectedScope)) {
-            if (nextScope.area == ScanJobMonitorAreas.BOXES) {
+        if (nextScope.area == ScanJobMonitorAreas.BOXES) {
+            if (!sameMonitorScope(nextScope, state.value.monitorSelectedScope)) {
                 openMonitorRegister()
-            } else {
-                loadMonitorDetail(nextScope, highlightedParcelId = null)
             }
+            return
+        }
+
+        if (!sameMonitorScope(nextScope, state.value.monitorSelectedScope)) {
+            loadMonitorDetail(nextScope, highlightedParcelId = null)
         }
     }
 
