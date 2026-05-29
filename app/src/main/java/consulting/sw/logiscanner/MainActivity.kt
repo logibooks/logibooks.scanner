@@ -1041,7 +1041,10 @@ private fun MonitorBoxesList(
                     .heightIn(max = 320.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(boxes) { box ->
+                items(
+                    items = boxes,
+                    key = { box -> "${box.boxId}_${box.bucketIndex}_${box.boxCode}" }
+                ) { box ->
                     MonitorBoxRow(box = box, onOpenBox = onOpenBox)
                 }
             }
