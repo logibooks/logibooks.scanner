@@ -642,9 +642,11 @@ private fun ScanScreen(
     // Always enabled on scan screen to capture HID input and prevent it from
     // being processed by other UI elements. Actual scan processing is gated
     // by isScanning state in the ViewModel.
+    var isJumpFieldFocused by remember { mutableStateOf(false) }
     HidScanInput(
         enabled = true,
-        onScan = onScanned
+        onScan = onScanned,
+        suspendFocusRecovery = isJumpFieldFocused
     )
 
     LazyColumn(
@@ -773,7 +775,8 @@ private fun ScanScreen(
                 onOpenBox = onOpenMonitorBox,
                 onToggleAutoFollow = onToggleMonitorAutoFollow,
                 onJumpNumberChange = onMonitorJumpNumberChange,
-                onJumpToNumber = onJumpToMonitorNumber
+                onJumpToNumber = onJumpToMonitorNumber,
+                onJumpFieldFocusChanged = { isJumpFieldFocused = it }
             )
         }
 
@@ -819,7 +822,8 @@ private fun ScanJobMonitorPanel(
     onOpenBox: (ScanJobMonitorBox) -> Unit,
     onToggleAutoFollow: () -> Unit,
     onJumpNumberChange: (String) -> Unit,
-    onJumpToNumber: () -> Unit
+    onJumpToNumber: () -> Unit,
+    onJumpFieldFocusChanged: (Boolean) -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -878,7 +882,9 @@ private fun ScanJobMonitorPanel(
                         imeAction = ImeAction.Search
                     ),
                     keyboardActions = KeyboardActions(onSearch = { onJumpToNumber() }),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .onFocusChanged { onJumpFieldFocusChanged(it.isFocused) }
                 )
                 IconButton(
                     onClick = onJumpToNumber,
