@@ -39,8 +39,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
@@ -874,7 +874,15 @@ private fun ScanJobMonitorPanel(
                 OutlinedTextField(
                     value = jumpNumber,
                     onValueChange = onJumpNumberChange,
-                    label = { Text(stringResource(R.string.monitor_jump_label)) },
+                    label = {
+                        Text(
+                            stringResource(R.string.monitor_jump_label),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    textStyle = MaterialTheme.typography.bodySmall,
                     singleLine = true,
                     enabled = !jumpLoading,
                     keyboardOptions = KeyboardOptions(
@@ -894,7 +902,7 @@ private fun ScanJobMonitorPanel(
                         .height(44.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.DoneAll,
+                        imageVector = Icons.Filled.KeyboardDoubleArrowRight,
                         contentDescription = stringResource(R.string.monitor_jump_action),
                         tint = if (!jumpLoading && jumpNumber.isNotBlank()) {
                             MaterialTheme.colorScheme.primary
@@ -914,6 +922,9 @@ private fun ScanJobMonitorPanel(
                         .height(4.dp),
                     color = MaterialTheme.colorScheme.primary
                 )
+            }
+            if (error != null) {
+                Text(error, color = MaterialTheme.colorScheme.error)
             }
 
             MonitorLatestScanResult(
@@ -958,10 +969,6 @@ private fun ScanJobMonitorPanel(
                     label = stringResource(R.string.monitor_not_in_register),
                     value = snapshot.scannedItemsNotInRegister.toString()
                 )
-            }
-
-            if (error != null) {
-                Text(error, color = MaterialTheme.colorScheme.error)
             }
 
             if (snapshot != null) {
@@ -1201,6 +1208,7 @@ private fun MonitorBoxDetail(
         LaunchedEffect(highlightedParcelId, parcels) {
             val targetIndex = parcels.indexOfFirst { parcel -> parcel.parcelId == highlightedParcelId }
             if (targetIndex >= 0) {
+                expandedParcelKey = parcelExpansionKey(parcels[targetIndex], targetIndex)
                 listState.animateScrollToItem(targetIndex)
             }
         }
