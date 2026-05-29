@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -110,6 +111,8 @@ import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanDate
 import consulting.sw.logiscanner.ui.formatMonitorLatestScanTime
 import consulting.sw.logiscanner.ui.formatMonitorTime
+import consulting.sw.logiscanner.ui.hidFocusRecoverySuspended
+import consulting.sw.logiscanner.ui.hidScannerInputEnabled
 import consulting.sw.logiscanner.ui.isIssueCheckStatusProjectionKind
 import consulting.sw.logiscanner.ui.isRestrictedMonitorParcel
 import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
@@ -117,6 +120,7 @@ import consulting.sw.logiscanner.ui.monitorBoxDisplayName
 import consulting.sw.logiscanner.ui.monitorLatestScanDisplay
 import consulting.sw.logiscanner.ui.monitorParcelAttributeSpecs
 import consulting.sw.logiscanner.ui.parcelPrimaryText
+import consulting.sw.logiscanner.ui.scanHintResId
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -196,10 +200,12 @@ class MainActivity : ComponentActivity() {
                             LoginScreen(
                                 email = state.email,
                                 password = state.password,
+                                externalScannerEnabled = state.externalScannerEnabled,
                                 isBusy = state.isBusy,
                                 error = state.error,
                                 onEmailChange = vm::setEmail,
                                 onPasswordChange = vm::setPassword,
+                                onExternalScannerEnabledChange = vm::setExternalScannerEnabled,
                                 onLogin = vm::login
                             )
                         }
@@ -213,7 +219,9 @@ class MainActivity : ComponentActivity() {
                                 onSelectJob = vm::selectScanJob,
                                 onDismissMessage = vm::dismissMessage,
                                 onLogout = {
-                                    focusManager.clearFocus()
+                                    if (state.externalScannerEnabled) {
+                                        focusManager.clearFocus()
+                                    }
                                     vm.logout()
                                 },
                                 onRefresh = vm::loadScanJobs
@@ -233,6 +241,7 @@ class MainActivity : ComponentActivity() {
                                 lastItemNumbers = state.lastItemNumbers,
                                 lastExtData = state.lastExtData,
                                 lastScanTime = state.lastScanTime,
+                                externalScannerEnabled = state.externalScannerEnabled,
                                 monitorSnapshot = state.monitorSnapshot,
                                 monitorDetailSnapshot = state.monitorDetailSnapshot,
                                 monitorSelectedScope = state.monitorSelectedScope,
@@ -252,11 +261,15 @@ class MainActivity : ComponentActivity() {
                                 onMonitorJumpNumberChange = vm::setMonitorJumpNumber,
                                 onJumpToMonitorNumber = vm::jumpToMonitorNumber,
                                 onBackToJobs = { 
-                                    focusManager.clearFocus()
+                                    if (state.externalScannerEnabled) {
+                                        focusManager.clearFocus()
+                                    }
                                     vm.selectScanJob(null) 
                                 },
                                 onLogout = {
-                                    focusManager.clearFocus()
+                                    if (state.externalScannerEnabled) {
+                                        focusManager.clearFocus()
+                                    }
                                     vm.logout()
                                 },
                                 onScanned = vm::onScanned
@@ -296,10 +309,12 @@ class MainActivity : ComponentActivity() {
 private fun LoginScreen(
     email: String,
     password: String,
+    externalScannerEnabled: Boolean,
     isBusy: Boolean,
     error: String?,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
+    onExternalScannerEnabledChange: (Boolean) -> Unit,
     onLogin: () -> Unit
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
@@ -404,6 +419,28 @@ private fun LoginScreen(
                     colors = textFieldColors,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !isBusy) {
+                            onExternalScannerEnabledChange(!externalScannerEnabled)
+                        },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Checkbox(
+                        checked = externalScannerEnabled,
+                        onCheckedChange = onExternalScannerEnabledChange,
+                        enabled = !isBusy
+                    )
+                    Text(
+                        stringResource(R.string.external_scanner_checkbox),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
                 if (error != null) {
                     Text(error, color = MaterialTheme.colorScheme.error)
@@ -623,6 +660,7 @@ private fun ScanScreen(
     lastItemNumbers: List<String>,
     lastExtData: String?,
     lastScanTime: String?,
+    externalScannerEnabled: Boolean,
     monitorSnapshot: ScanJobMonitorSnapshot?,
     monitorDetailSnapshot: ScanJobMonitorSnapshot?,
     monitorSelectedScope: ScanJobMonitorScope,
@@ -645,16 +683,17 @@ private fun ScanScreen(
     onLogout: () -> Unit,
     onScanned: (String) -> Unit
 ) {
-    // HID scan input (Bluetooth keyboard wedge scanners like WD4)
-    // Always enabled on scan screen to capture HID input and prevent it from
-    // being processed by other UI elements. Actual scan processing is gated
-    // by isScanning state in the ViewModel.
     var isJumpFieldFocused by remember { mutableStateOf(false) }
-    HidScanInput(
-        enabled = true,
-        onScan = onScanned,
-        suspendFocusRecovery = isJumpFieldFocused
-    )
+    if (hidScannerInputEnabled(externalScannerEnabled)) {
+        HidScanInput(
+            enabled = true,
+            onScan = onScanned,
+            suspendFocusRecovery = hidFocusRecoverySuspended(
+                externalScannerEnabled = externalScannerEnabled,
+                textFieldFocused = isJumpFieldFocused
+            )
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -783,7 +822,11 @@ private fun ScanScreen(
                 onToggleAutoFollow = onToggleMonitorAutoFollow,
                 onJumpNumberChange = onMonitorJumpNumberChange,
                 onJumpToNumber = onJumpToMonitorNumber,
-                onJumpFieldFocusChanged = { isJumpFieldFocused = it }
+                onJumpFieldFocusChanged = {
+                    if (externalScannerEnabled) {
+                        isJumpFieldFocused = it
+                    }
+                }
             )
         }
 
@@ -795,7 +838,7 @@ private fun ScanScreen(
 
         item {
             Text(
-                stringResource(R.string.scan_hint),
+                stringResource(scanHintResId(externalScannerEnabled)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),

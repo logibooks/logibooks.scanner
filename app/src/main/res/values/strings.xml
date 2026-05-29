@@ -15,6 +15,7 @@ This file is a part of LogiScanner application
     <string name="logging_in">Logging in…</string>
     <string name="show_password">Show password</string>
     <string name="hide_password">Hide password</string>
+    <string name="external_scanner_checkbox">Use external scanner</string>
     <string name="version_label">Version %s</string>
 
     <string name="select_scan_job">Select Scan Job</string>
@@ -125,7 +126,8 @@ This file is a part of LogiScanner application
     <string name="scan_job_status_completed">completed</string>
     <string name="scan_job_status_unknown">unknown</string>
     
-    <string name="scan_hint">Use the hardware Scan key or Bluetooth ring scanner</string>
+    <string name="scan_hint_hardware_only">Use the hardware Scan key</string>
+    <string name="scan_hint_external_enabled">Use the hardware Scan key or Bluetooth scanner</string>
     
     <!-- Login error messages -->
     <string name="login_error_invalid_credentials">Invalid email address or password</string>
