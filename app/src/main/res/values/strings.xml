@@ -41,6 +41,11 @@ This file is a part of LogiScanner application
     <string name="monitor_title">Scan job monitor</string>
     <string name="monitor_auto_follow_disable">Auto-follow is on. Tap to turn off</string>
     <string name="monitor_auto_follow_enable">Auto-follow is off. Tap to turn on</string>
+    <string name="monitor_jump_label">Go to parcel or box</string>
+    <string name="monitor_jump_action">Go to</string>
+    <string name="monitor_jump_blank">Enter a parcel or box number</string>
+    <string name="monitor_jump_not_found">Parcel or box was not found</string>
+    <string name="monitor_jump_error">Unable to find parcel or box</string>
     <string name="monitor_loading">Loading monitor…</string>
     <string name="monitor_boxes_total">Boxes total</string>
     <string name="monitor_parcels_total">Parcels total</string>

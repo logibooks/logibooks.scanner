@@ -59,12 +59,15 @@ private fun isPrintableAscii(c: Char) = c.code in 0x20..0x7E
  * 
  * @param enabled Whether to activate HID input capture
  * @param onScan Callback invoked when a valid scan is detected
+ * @param suspendFocusRecovery When true, the periodic focus-recovery loop is paused so that
+ *   another field (e.g. a manual-entry text field) can hold focus without being interrupted
  * @param modifier Optional modifier for layout
  */
 @Composable
 fun HidScanInput(
     enabled: Boolean,
     onScan: (String) -> Unit,
+    suspendFocusRecovery: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     if (!enabled) return
@@ -105,9 +108,11 @@ fun HidScanInput(
         }
     }
     
-    // Periodic focus recovery - ensures HID input stays active
-    LaunchedEffect(enabled, isFocused) {
-        if (enabled && !isFocused) {
+    // Periodic focus recovery - ensures HID input stays active.
+    // Suspended when suspendFocusRecovery is true so that another field (e.g. a manual-entry
+    // text field) can hold focus without being interrupted by this recovery loop.
+    LaunchedEffect(enabled, isFocused, suspendFocusRecovery) {
+        if (enabled && !isFocused && !suspendFocusRecovery) {
             // Small delay to avoid rapid re-focus cycles
             delay(200)
             try {

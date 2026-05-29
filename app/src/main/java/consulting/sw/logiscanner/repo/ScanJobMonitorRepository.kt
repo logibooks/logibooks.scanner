@@ -11,6 +11,7 @@ import com.microsoft.signalr.HubConnectionState
 import consulting.sw.logiscanner.net.NetworkModule
 import consulting.sw.logiscanner.net.ScanJobMonitorObserveRequest
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import consulting.sw.logiscanner.net.ScanJobMonitorTarget
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Single
 import kotlinx.coroutines.CoroutineScope
@@ -64,6 +65,14 @@ class ScanJobMonitorRepository(
             area = scope.area,
             boxId = scope.boxId,
             bucketIndex = scope.bucketIndex
+        )
+    }
+
+    suspend fun resolveTarget(scanJobId: Int, number: String): ScanJobMonitorTarget {
+        return api.resolveScanJobMonitorTarget(
+            bearer = "Bearer $token",
+            id = scanJobId,
+            number = number
         )
     }
 

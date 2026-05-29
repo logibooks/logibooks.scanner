@@ -16,6 +16,7 @@ import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import consulting.sw.logiscanner.net.ScanJobMonitorTargetKinds
 import consulting.sw.logiscanner.net.ScanResultItem
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorRepository
@@ -65,6 +66,9 @@ data class MainState(
     val monitorDetailLoading: Boolean = false,
     val monitorError: String? = null,
     val monitorAutoFollow: Boolean = true,
+    val monitorJumpNumber: String = "",
+    val monitorJumpLoading: Boolean = false,
+    val monitorHighlightedParcelId: Int? = null,
     val isScanning: Boolean = false,
     val lastCode: String? = null,
     val lastParcelCount: Int? = null,
@@ -306,6 +310,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     monitorLoading = if (job == null) false else it.monitorLoading,
                     monitorDetailLoading = if (job == null) false else it.monitorDetailLoading,
                     monitorError = if (job == null) null else it.monitorError,
+                    monitorJumpNumber = if (jobChanged) "" else it.monitorJumpNumber,
+                    monitorJumpLoading = false,
+                    monitorHighlightedParcelId = null,
                     lastCode = if (jobChanged) null else it.lastCode,
                     lastParcelCount = if (jobChanged) null else it.lastParcelCount,
                     lastBoxCount = if (jobChanged) null else it.lastBoxCount,
@@ -332,18 +339,96 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 monitorSelectedScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOXES),
                 monitorDetailSnapshot = null,
                 monitorDetailLoading = false,
-                monitorError = null
+                monitorError = null,
+                monitorHighlightedParcelId = null
             )
         }
     }
 
     fun openMonitorBox(box: ScanJobMonitorBox) {
         val scope = monitorScopeForBox(box) ?: return
-        loadMonitorDetail(scope)
+        loadMonitorDetail(scope, highlightedParcelId = null)
     }
 
     fun toggleMonitorAutoFollow() {
         _state.update { it.copy(monitorAutoFollow = !it.monitorAutoFollow) }
+    }
+
+    fun setMonitorJumpNumber(value: String) {
+        _state.update { it.copy(monitorJumpNumber = value, monitorError = null) }
+    }
+
+    fun jumpToMonitorNumber() {
+        val jobId = state.value.selectedScanJob?.id ?: return
+        val number = state.value.monitorJumpNumber.trim()
+        if (number.isBlank()) {
+            _state.update {
+                it.copy(monitorError = getApplication<Application>().getString(R.string.monitor_jump_blank))
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update { it.copy(monitorJumpLoading = true, monitorError = null) }
+            try {
+                val target = scanJobMonitorRepo.resolveTarget(jobId, number)
+                when (target.kind) {
+                    ScanJobMonitorTargetKinds.BOX -> {
+                        val boxId = target.boxId
+                        if (boxId == null) {
+                            _state.update {
+                                it.copy(monitorError = getApplication<Application>().getString(R.string.monitor_jump_not_found))
+                            }
+                        } else {
+                            loadMonitorDetail(
+                                ScanJobMonitorScope(ScanJobMonitorAreas.BOX, boxId = boxId),
+                                highlightedParcelId = null
+                            )
+                        }
+                    }
+                    ScanJobMonitorTargetKinds.PARCEL -> {
+                        val parcelId = target.parcelId
+                        val scope = monitorScopeForTarget(target.area, target.boxId, target.bucketIndex)
+                        if (parcelId == null || scope == null) {
+                            _state.update {
+                                it.copy(monitorError = getApplication<Application>().getString(R.string.monitor_jump_not_found))
+                            }
+                        } else {
+                            loadMonitorDetail(scope, highlightedParcelId = parcelId)
+                        }
+                    }
+                    else -> {
+                        _state.update {
+                            it.copy(
+                                monitorError = getApplication<Application>().getString(R.string.monitor_jump_not_found),
+                                monitorHighlightedParcelId = null
+                            )
+                        }
+                    }
+                }
+            } catch (ex: Exception) {
+                if (ex is CancellationException) {
+                    throw ex
+                }
+                Log.e(javaClass.simpleName, "Failed to resolve scan job monitor target", ex)
+                _state.update {
+                    it.copy(monitorError = getApplication<Application>().getString(R.string.monitor_jump_error))
+                }
+            } finally {
+                _state.update { it.copy(monitorJumpLoading = false) }
+            }
+        }
+    }
+
+    private fun monitorScopeForTarget(area: Int?, boxId: Int?, bucketIndex: Int?): ScanJobMonitorScope? {
+        return when (area) {
+            ScanJobMonitorAreas.BOX -> boxId?.let { ScanJobMonitorScope(ScanJobMonitorAreas.BOX, boxId = it) }
+            ScanJobMonitorAreas.UNASSIGNED -> ScanJobMonitorScope(
+                ScanJobMonitorAreas.UNASSIGNED,
+                bucketIndex = bucketIndex ?: 0
+            )
+            else -> null
+        }
     }
 
     private fun startScanJobMonitor(scanJobId: Int) {
@@ -361,7 +446,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     monitorSnapshot = null,
                     monitorDetailSnapshot = null,
                     monitorSelectedScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOXES),
-                    monitorError = null
+                    monitorError = null,
+                    monitorJumpLoading = false,
+                    monitorHighlightedParcelId = null
                 )
             }
 
@@ -452,12 +539,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (nextScope.area == ScanJobMonitorAreas.BOXES) {
                 openMonitorRegister()
             } else {
-                loadMonitorDetail(nextScope)
+                loadMonitorDetail(nextScope, highlightedParcelId = null)
             }
         }
     }
 
-    private fun loadMonitorDetail(scope: ScanJobMonitorScope) {
+    private fun loadMonitorDetail(scope: ScanJobMonitorScope, highlightedParcelId: Int? = null) {
         val jobId = state.value.selectedScanJob?.id ?: return
         val version = monitorScopeVersion
 
@@ -472,7 +559,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 it.copy(
                     monitorSelectedScope = scope,
                     monitorDetailLoading = true,
-                    monitorError = null
+                    monitorError = null,
+                    monitorHighlightedParcelId = highlightedParcelId
                 )
             }
 
@@ -483,7 +571,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         it.copy(
                             monitorDetailSnapshot = snapshot,
                             monitorDetailLoading = false,
-                            monitorError = null
+                            monitorError = null,
+                            monitorHighlightedParcelId = highlightedParcelId
                         )
                     }
                 }
@@ -519,7 +608,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 monitorSelectedScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOXES),
                 monitorLoading = false,
                 monitorDetailLoading = false,
-                monitorError = null
+                monitorError = null,
+                monitorJumpLoading = false,
+                monitorHighlightedParcelId = null
             )
         }
     }
@@ -551,6 +642,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 monitorLoading = false,
                 monitorDetailLoading = false,
                 monitorError = null,
+                monitorJumpNumber = "",
+                monitorJumpLoading = false,
+                monitorHighlightedParcelId = null,
                 isScanning = false,
                 lastCode = null,
                 lastParcelCount = null,

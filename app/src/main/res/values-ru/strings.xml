@@ -41,6 +41,11 @@ This file is a part of LogiScanner application
     <string name="monitor_title">Монитор сканирования</string>
     <string name="monitor_auto_follow_disable">Автослежение включено. Нажмите, чтобы выключить</string>
     <string name="monitor_auto_follow_enable">Автослежение выключено. Нажмите, чтобы включить</string>
+    <string name="monitor_jump_label">Перейти к посылке или коробке</string>
+    <string name="monitor_jump_action">Перейти</string>
+    <string name="monitor_jump_blank">Введите номер посылки или коробки</string>
+    <string name="monitor_jump_not_found">Посылка или коробка не найдена</string>
+    <string name="monitor_jump_error">Ошибка при поиске посылки или коробки</string>
     <string name="monitor_loading">Загрузка монитора…</string>
     <string name="monitor_boxes_total">Коробки всего</string>
     <string name="monitor_parcels_total">Посылки всего</string>

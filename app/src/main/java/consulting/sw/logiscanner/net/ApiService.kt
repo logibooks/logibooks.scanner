@@ -35,6 +35,13 @@ interface ApiService {
         @Query("bucketIndex") bucketIndex: Int? = null
     ): ScanJobMonitorSnapshot
 
+    @GET("api/ScanJobs/{id}/monitor/resolve")
+    suspend fun resolveScanJobMonitorTarget(
+        @Header("Authorization") bearer: String,
+        @Path("id") id: Int,
+        @Query("number") number: String
+    ): ScanJobMonitorTarget
+
     @POST("api/ScanJobs/scan")
     suspend fun scan(
         @Header("Authorization") bearer: String,

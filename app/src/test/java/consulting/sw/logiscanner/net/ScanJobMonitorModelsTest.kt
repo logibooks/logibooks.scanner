@@ -139,4 +139,31 @@ class ScanJobMonitorModelsTest {
         assertEquals("Брак", projection.title)
         assertEquals("Брак", projection.restrictionReason)
     }
+
+    @Test
+    fun scanJobMonitorTarget_parsesParcelTarget() {
+        val json = """
+            {
+              "kind": 2,
+              "area": 2,
+              "boxId": null,
+              "bucketIndex": 1,
+              "parcelId": 501,
+              "number": "PU-501",
+              "boxCode": "Без коробки 2",
+              "parcelNumber": "PU-501"
+            }
+        """.trimIndent()
+
+        val adapter = Moshi.Builder().build().adapter(ScanJobMonitorTarget::class.java)
+        val target = adapter.fromJson(json)
+
+        assertNotNull(target)
+        assertEquals(ScanJobMonitorTargetKinds.PARCEL, target!!.kind)
+        assertEquals(ScanJobMonitorAreas.UNASSIGNED, target.area)
+        assertEquals(1, target.bucketIndex)
+        assertEquals(501, target.parcelId)
+        assertEquals("Без коробки 2", target.boxCode)
+        assertEquals("PU-501", target.parcelNumber)
+    }
 }
