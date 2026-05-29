@@ -355,7 +355,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setMonitorJumpNumber(value: String) {
-        _state.update { it.copy(monitorJumpNumber = value) }
+        _state.update { it.copy(monitorJumpNumber = value, monitorError = null) }
     }
 
     fun jumpToMonitorNumber() {
