@@ -542,7 +542,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        if (!sameMonitorScope(nextScope, state.value.monitorSelectedScope) || snapshot.latestScan?.parcelCount != 0) {
+        if (!sameMonitorScope(nextScope, state.value.monitorSelectedScope)) {
             loadMonitorDetail(nextScope, highlightedParcelId = null)
         }
     }

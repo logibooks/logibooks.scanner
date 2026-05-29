@@ -25,10 +25,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -72,6 +75,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
@@ -880,6 +884,7 @@ private fun ScanJobMonitorPanel(
                     textStyle = MaterialTheme.typography.bodySmall.copy(
                         color = MaterialTheme.colorScheme.onSurface
                     ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     singleLine = true,
                     enabled = !jumpLoading,
                     keyboardOptions = KeyboardOptions(
@@ -1030,11 +1035,13 @@ private fun MonitorBoxesList(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                boxes.forEach { box ->
+                items(boxes) { box ->
                     MonitorBoxRow(box = box, onOpenBox = onOpenBox)
                 }
             }
@@ -1225,12 +1232,14 @@ private fun MonitorBoxDetail(
         var expandedParcelKey by rememberSaveable(box.boxId, box.bucketIndex, box.boxCode) {
             mutableStateOf<String?>(null)
         }
+        val listState = rememberLazyListState()
         LaunchedEffect(highlightedParcelId, latestScan?.scanCodeId, parcels) {
             val targetIndex = parcels.indexOfFirst { parcel ->
                 isHighlightedMonitorParcel(parcel, highlightedParcelId, latestScan)
             }
             if (targetIndex >= 0) {
                 expandedParcelKey = parcelExpansionKey(parcels[targetIndex], targetIndex)
+                listState.animateScrollToItem(targetIndex)
             }
         }
         if (parcels.isEmpty()) {
@@ -1240,11 +1249,17 @@ private fun MonitorBoxDetail(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                parcels.forEachIndexed { index, parcel ->
+                itemsIndexed(
+                    items = parcels,
+                    key = { index, parcel -> parcelExpansionKey(parcel, index) }
+                ) { index, parcel ->
                     val parcelKey = parcelExpansionKey(parcel, index)
                     val highlighted = isHighlightedMonitorParcel(parcel, highlightedParcelId, latestScan)
                     MonitorParcelRow(
