@@ -49,18 +49,60 @@ jobs:
     - name: Decode keystore
       run: echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.keystore
 
-    - name: Build with Gradle
+    - name: Build, test, and generate coverage
       env:
         SIGNING_STORE_FILE: release.keystore
         SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
         SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      run: ./gradlew build
+      run: ./gradlew build jacocoDebugUnitTestReport
 
-    - name: Run tests
-      env:
-        SIGNING_STORE_FILE: release.keystore
-        SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-        SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      run: ./gradlew test
+    - name: Publish coverage summary
+      if: always()
+      run: |
+        python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+        from pathlib import Path
+        import xml.etree.ElementTree as ET
+
+        report = Path("app/build/reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml")
+
+        print("## Coverage")
+        print()
+
+        if not report.exists():
+            print("JaCoCo coverage report was not generated.")
+            raise SystemExit(0)
+
+        root = ET.parse(report).getroot()
+        metrics = [
+            ("Instructions", "INSTRUCTION"),
+            ("Branches", "BRANCH"),
+            ("Lines", "LINE"),
+            ("Methods", "METHOD"),
+            ("Classes", "CLASS"),
+        ]
+
+        print("| Metric | Covered | Missed | Coverage |")
+        print("| --- | ---: | ---: | ---: |")
+
+        for label, counter_type in metrics:
+            counter = root.find(f"./counter[@type='{counter_type}']")
+            if counter is None:
+                continue
+
+            covered = int(counter.attrib["covered"])
+            missed = int(counter.attrib["missed"])
+            total = covered + missed
+            coverage = covered / total * 100 if total else 0
+            print(f"| {label} | {covered} | {missed} | {coverage:.2f}% |")
+        PY
+
+    - name: Upload coverage report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: jacoco-debug-unit-test-report
+        path: |
+          app/build/reports/jacoco/jacocoDebugUnitTestReport
+          app/build/reports/tests/testDebugUnitTest
+        if-no-files-found: warn
