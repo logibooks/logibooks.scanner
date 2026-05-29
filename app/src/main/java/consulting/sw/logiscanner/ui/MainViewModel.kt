@@ -23,6 +23,7 @@ import consulting.sw.logiscanner.repo.ScanJobMonitorRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import consulting.sw.logiscanner.repo.ScanJobRepository
 import consulting.sw.logiscanner.repo.ScanRepository
+import consulting.sw.logiscanner.store.SettingsStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -52,6 +53,7 @@ fun determineScanResultColor(result: ScanResultItem): ScanResultColor {
 data class MainState(
     val email: String = "",
     val password: String = "",
+    val externalScannerEnabled: Boolean = false,
     val isLoggedIn: Boolean = false,
     val isBusy: Boolean = false,
     val displayName: String? = null,
@@ -83,6 +85,7 @@ data class MainState(
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val settingsStore = SettingsStore(application)
     private val _state = MutableStateFlow(MainState())
     val state: StateFlow<MainState> = _state.asStateFlow()
 
@@ -105,6 +108,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
+            settingsStore.externalScannerEnabled().collect { enabled ->
+                _state.update { it.copy(externalScannerEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
             loginRepo = LoginRepository(getApplication())
             loginRepo.state.collect { loginInfo ->
                 _state.update {
@@ -112,7 +121,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
-        
+
         // Initialize TTS with Russian locale and male voice
         tts = TextToSpeech(application) { status ->
             if (status == TextToSpeech.SUCCESS) {
@@ -153,6 +162,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setEmail(value: String) = _state.update { it.copy(email = value) }
     fun setPassword(value: String) = _state.update { it.copy(password = value) }
+    fun setExternalScannerEnabled(value: Boolean) {
+        _state.update { it.copy(externalScannerEnabled = value) }
+        viewModelScope.launch {
+            settingsStore.setExternalScannerEnabled(value)
+        }
+    }
 
     fun login() {
         viewModelScope.launch {
@@ -802,7 +817,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             loginRepo.logout()
             colorResetJob?.cancel()
             _state.update { 
-                MainState(email = it.email, password = "") 
+                MainState(
+                    email = it.email,
+                    password = "",
+                    externalScannerEnabled = it.externalScannerEnabled
+                )
             }
         }
     }
