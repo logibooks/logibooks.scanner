@@ -40,6 +40,7 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v5
       with:
+        cache-read-only: false
         # Reduces cache key length to avoid GitHub's 512-char limit (HTTP 400 errors)
         # Limited cache includes help generate shorter keys
         cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
