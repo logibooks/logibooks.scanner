@@ -28,17 +28,6 @@ class ScanJobMonitorModelsTest {
               "warehouseId": 3,
               "generatedAt": "2026-05-15T21:30:45+03:00",
               "area": 0,
-              "latestScan": {
-                "scanCodeId": 900,
-                "code": "BOX-1",
-                "scanTime": "2026-05-15T21:31:00+03:00",
-                "parcelCount": 3,
-                "boxCount": 1,
-                "scanSource": 20,
-                "itemNumbers": ["BOX-1"],
-                "area": 1,
-                "boxId": 7
-              },
               "totalBoxes": 2,
               "boxesWithStickerScanned": 1,
               "boxesWithStickerNotScanned": 1,
@@ -103,11 +92,6 @@ class ScanJobMonitorModelsTest {
         assertEquals(42, snapshot!!.scanJobId)
         assertEquals(SCAN_JOB_STATUS_IN_PROGRESS, snapshot.status)
         assertEquals(ScanJobMonitorAreas.BOXES, snapshot.area)
-        assertEquals(900, snapshot.latestScan?.scanCodeId)
-        assertEquals(3, snapshot.latestScan?.parcelCount)
-        assertEquals(1, snapshot.latestScan?.boxCount)
-        assertEquals(ScannedItemSources.BOX_STICKER, snapshot.latestScan?.scanSource)
-        assertEquals(listOf("BOX-1"), snapshot.latestScan?.itemNumbers)
         assertEquals(1, snapshot.restrictedParcels)
         assertEquals(1, snapshot.boxes.size)
         assertTrue(snapshot.boxes.first().boxStickerScanned)
@@ -119,6 +103,40 @@ class ScanJobMonitorModelsTest {
         assertEquals(ParcelCheckStatusProjectionKinds.RESTRICTION, snapshot.box!!.parcels!!.first().checkStatusProjection?.kind)
         assertEquals("Запрет", snapshot.box!!.parcels!!.first().checkStatusProjection?.title)
         assertEquals("Стоп-слово", snapshot.box!!.parcels!!.first().checkStatusProjection?.restrictionReason)
+    }
+
+    @Test
+    fun scanResultItem_parsesFollowTarget() {
+        val json = """
+            {
+              "count": 1,
+              "parcelCount": 1,
+              "boxCount": 0,
+              "scanSource": 10,
+              "itemNumbers": ["P-1"],
+              "extData": "ok",
+              "hasIssues": false,
+              "scanCodeId": 900,
+              "scanTime": "2026-05-15T21:31:00+03:00",
+              "followTarget": {
+                "area": 1,
+                "boxId": 7,
+                "bucketIndex": null,
+                "parcelId": 99
+              }
+            }
+        """.trimIndent()
+
+        val adapter = Moshi.Builder().build().adapter(ScanResultItem::class.java)
+        val result = adapter.fromJson(json)
+
+        assertNotNull(result)
+        assertEquals(900, result!!.scanCodeId)
+        assertEquals("2026-05-15T21:31:00+03:00", result.scanTime)
+        assertEquals(ScanJobMonitorAreas.BOX, result.followTarget.area)
+        assertEquals(7, result.followTarget.boxId)
+        assertEquals(99, result.followTarget.parcelId)
+        assertEquals(ScannedItemSources.PARCEL_STICKER, result.scanSource)
     }
 
     @Test

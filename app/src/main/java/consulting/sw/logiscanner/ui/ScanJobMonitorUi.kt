@@ -11,7 +11,6 @@ import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
-import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import java.time.OffsetDateTime
@@ -21,8 +20,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 private val monitorDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy")
-private val monitorLatestScanTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val monitorLatestScanDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM")
+private val localScanResultTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val localScanResultDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM")
 
 fun isUnassignedMonitorBox(box: ScanJobMonitorBox?): Boolean {
     return box?.area == ScanJobMonitorAreas.UNASSIGNED || (box?.boxId == null && box?.bucketIndex != null)
@@ -60,31 +59,6 @@ fun monitorScopeForBox(box: ScanJobMonitorBox): ScanJobMonitorScope? {
     }
 }
 
-fun latestScanScope(snapshot: ScanJobMonitorSnapshot): ScanJobMonitorScope? {
-    val latestScan = snapshot.latestScan ?: return null
-    return when (latestScan.area) {
-        ScanJobMonitorAreas.BOX -> {
-            val boxId = latestScan.boxId ?: return null
-            ScanJobMonitorScope(ScanJobMonitorAreas.BOX, boxId = boxId)
-        }
-        ScanJobMonitorAreas.UNASSIGNED -> {
-            ScanJobMonitorScope(
-                ScanJobMonitorAreas.UNASSIGNED,
-                bucketIndex = latestScan.bucketIndex ?: 0
-            )
-        }
-        ScanJobMonitorAreas.NOT_IN_REGISTER,
-        ScanJobMonitorAreas.BOXES -> ScanJobMonitorScope(ScanJobMonitorAreas.BOXES)
-        else -> null
-    }
-}
-
-fun sameMonitorScope(left: ScanJobMonitorScope, right: ScanJobMonitorScope): Boolean {
-    return left.area == right.area
-        && left.boxId == right.boxId
-        && (left.bucketIndex ?: 0) == (right.bucketIndex ?: 0)
-}
-
 fun formatMonitorTime(value: String?): String {
     if (value.isNullOrBlank()) return ""
     return try {
@@ -109,22 +83,12 @@ fun formatMonitorQuantity(value: Double): String {
     }
 }
 
-fun formatMonitorLatestScanTime(value: String?): String {
-    return formatMonitorDateTimePart(value, monitorLatestScanTimeFormatter)
+fun formatLocalScanResultTime(value: String?): String {
+    return formatMonitorDateTimePart(value, localScanResultTimeFormatter)
 }
 
-fun formatMonitorLatestScanDate(value: String?): String {
-    return formatMonitorDateTimePart(value, monitorLatestScanDateFormatter)
-}
-
-fun monitorLatestScanCode(snapshot: ScanJobMonitorSnapshot?, fallbackCode: String?): String {
-    val monitorCode = snapshot?.latestScan?.code?.takeIf { it.isNotBlank() }
-    return monitorCode ?: fallbackCode.orEmpty()
-}
-
-fun directScanResultCode(snapshot: ScanJobMonitorSnapshot?, lastCode: String?): String? {
-    val monitorCode = snapshot?.latestScan?.code?.takeIf { it.isNotBlank() } ?: return null
-    return lastCode?.takeIf { it.isNotBlank() && it != monitorCode }
+fun formatLocalScanResultDate(value: String?): String {
+    return formatMonitorDateTimePart(value, localScanResultDateFormatter)
 }
 
 fun scanJobStatusText(context: Context, status: Int?): String {
@@ -144,12 +108,12 @@ data class MonitorParcelAttributeSpec(
     val checkStatusProjection: ParcelCheckStatusProjection? = null
 )
 
-enum class MonitorLatestScanNumberKind {
+enum class LocalScanResultNumberKind {
     PARCEL,
     BOX
 }
 
-data class MonitorLatestScanDisplay(
+data class LocalScanResultDisplay(
     val code: String?,
     val scanTime: String?,
     val parcelCount: Int,
@@ -158,21 +122,20 @@ data class MonitorLatestScanDisplay(
     val itemNumbers: List<String>,
     val hint: String?
 ) {
-    val numberKind: MonitorLatestScanNumberKind?
+    val numberKind: LocalScanResultNumberKind?
         get() {
             if (itemNumbers.isEmpty()) {
                 return null
             }
             return when (scanSource) {
-                ScannedItemSources.PARCEL_STICKER -> MonitorLatestScanNumberKind.PARCEL
-                ScannedItemSources.BOX_STICKER -> MonitorLatestScanNumberKind.BOX
+                ScannedItemSources.PARCEL_STICKER -> LocalScanResultNumberKind.PARCEL
+                ScannedItemSources.BOX_STICKER -> LocalScanResultNumberKind.BOX
                 else -> null
             }
         }
 }
 
-fun monitorLatestScanDisplay(
-    snapshot: ScanJobMonitorSnapshot?,
+fun localScanResultDisplay(
     lastCode: String?,
     lastParcelCount: Int?,
     lastBoxCount: Int?,
@@ -180,18 +143,13 @@ fun monitorLatestScanDisplay(
     lastItemNumbers: List<String>,
     lastExtData: String?,
     lastScanTime: String?
-): MonitorLatestScanDisplay? {
-    val monitorScan = snapshot?.latestScan?.takeIf { it.code.isNotBlank() }
+): LocalScanResultDisplay? {
     val localCode = lastCode?.takeIf { it.isNotBlank() }
-    val localMatchesMonitor = monitorScan != null && localCode == monitorScan.code
-    val useLocalScanResult = monitorScan == null
-    val code = monitorScan?.code ?: localCode
-    val scanTime = monitorScan?.scanTime?.takeIf { it.isNotBlank() }
-        ?: lastScanTime?.takeIf { it.isNotBlank() }?.takeIf { useLocalScanResult }
-    val hint = lastExtData?.takeIf { it.isNotBlank() && (useLocalScanResult || localMatchesMonitor) }
+    val scanTime = lastScanTime?.takeIf { it.isNotBlank() }
+    val hint = lastExtData?.takeIf { it.isNotBlank() }
 
     if (
-        code == null
+        localCode == null
         && lastParcelCount == null
         && lastBoxCount == null
         && hint == null
@@ -200,27 +158,15 @@ fun monitorLatestScanDisplay(
         return null
     }
 
-    return if (useLocalScanResult) {
-        MonitorLatestScanDisplay(
-            code = code,
-            scanTime = scanTime,
-            parcelCount = lastParcelCount ?: 0,
-            boxCount = lastBoxCount ?: 0,
-            scanSource = lastScanSource,
-            itemNumbers = lastItemNumbers,
-            hint = hint
-        )
-    } else {
-        MonitorLatestScanDisplay(
-            code = code,
-            scanTime = scanTime,
-            parcelCount = monitorScan.parcelCount,
-            boxCount = monitorScan.boxCount,
-            scanSource = monitorScan.scanSource,
-            itemNumbers = monitorScan.itemNumbers,
-            hint = hint
-        )
-    }
+    return LocalScanResultDisplay(
+        code = localCode,
+        scanTime = scanTime,
+        parcelCount = lastParcelCount ?: 0,
+        boxCount = lastBoxCount ?: 0,
+        scanSource = lastScanSource,
+        itemNumbers = lastItemNumbers,
+        hint = hint
+    )
 }
 
 fun monitorParcelAttributeSpecs(parcel: ScanJobMonitorParcel): List<MonitorParcelAttributeSpec> {

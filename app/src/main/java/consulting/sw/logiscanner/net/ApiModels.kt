@@ -87,20 +87,6 @@ data class ScanJobMonitorTarget(
 )
 
 @JsonClass(generateAdapter = true)
-data class ScanJobMonitorLatestScan(
-    var scanCodeId: Int = 0,
-    var code: String = "",
-    var scanTime: String = "",
-    var parcelCount: Int,
-    var boxCount: Int,
-    var scanSource: Int,
-    var itemNumbers: List<String>,
-    var area: Int = ScanJobMonitorAreas.BOXES,
-    var boxId: Int? = null,
-    var bucketIndex: Int? = null
-)
-
-@JsonClass(generateAdapter = true)
 data class ParcelCheckStatusProjection(
     var kind: Int = 0,
     var title: String = "",
@@ -164,7 +150,6 @@ data class ScanJobMonitorSnapshot(
     var warehouseId: Int = 0,
     var generatedAt: String = "",
     var area: Int = ScanJobMonitorAreas.BOXES,
-    var latestScan: ScanJobMonitorLatestScan? = null,
     var totalBoxes: Int = 0,
     var boxesWithStickerScanned: Int = 0,
     var boxesWithStickerNotScanned: Int = 0,
@@ -175,6 +160,14 @@ data class ScanJobMonitorSnapshot(
     var scannedItemsNotInRegister: Int = 0,
     var boxes: List<ScanJobMonitorBox> = emptyList(),
     var box: ScanJobMonitorBox? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ScanJobMonitorFollowTarget(
+    var area: Int = -1,
+    var boxId: Int? = null,
+    var bucketIndex: Int? = null,
+    var parcelId: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -191,7 +184,10 @@ data class ScanResultItem(
     val scanSource: Int,
     val itemNumbers: List<String>,
     val extData: String?,
-    val hasIssues: Boolean = false
+    val hasIssues: Boolean = false,
+    val scanCodeId: Int = 0,
+    val scanTime: String? = null,
+    val followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget()
 )
 
 @JsonClass(generateAdapter = true)
