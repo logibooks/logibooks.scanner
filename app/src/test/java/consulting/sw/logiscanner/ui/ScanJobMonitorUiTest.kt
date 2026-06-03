@@ -256,6 +256,15 @@ class ScanJobMonitorUiTest {
     }
 
     @Test
+    fun localScanFollowAction_returnsNoneWhenTargetIsMissing() {
+        val action = localScanFollowAction(
+            autoFollowEnabled = true,
+            target = ScanJobMonitorFollowTarget()
+        )
+
+        assertEquals(LocalScanFollowAction.None, action)
+    }
+    @Test
     fun monitorParcelAttributeSpecs_excludesHiddenFieldsAndKeepsProjectedCheckStatus() {
         val projection = ParcelCheckStatusProjection(
             kind = ParcelCheckStatusProjectionKinds.RESTRICTION,
