@@ -164,7 +164,7 @@ data class ScanJobMonitorSnapshot(
 
 @JsonClass(generateAdapter = true)
 data class ScanJobMonitorFollowTarget(
-    var area: Int = ScanJobMonitorAreas.BOXES,
+    var area: Int = -1,
     var boxId: Int? = null,
     var bucketIndex: Int? = null,
     var parcelId: Int? = null
