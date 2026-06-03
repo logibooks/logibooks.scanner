@@ -54,18 +54,18 @@ This file is a part of LogiScanner application
     <string name="monitor_stat_not_scanned">Не сканировано</string>
     <string name="monitor_restricted">Запретов</string>
     <string name="monitor_not_in_register">Не в реестре</string>
-    <string name="monitor_latest_scan_title">Последнее сканирование %1$s %2$s</string>
-    <string name="monitor_latest_scan_title_no_time">Последнее сканирование</string>
-    <string name="monitor_latest_scan_parcels">Посылок: %1$d</string>
-    <string name="monitor_latest_scan_boxes">Коробок: %1$d</string>
-    <string name="monitor_latest_scan_sticker_label">Стикер</string>
-    <plurals name="monitor_latest_scan_parcel_number_label">
+    <string name="monitor_local_scan_result_title">Последнее сканирование %1$s %2$s</string>
+    <string name="monitor_local_scan_result_title_no_time">Последнее сканирование</string>
+    <string name="monitor_local_scan_result_parcels">Посылок: %1$d</string>
+    <string name="monitor_local_scan_result_boxes">Коробок: %1$d</string>
+    <string name="monitor_local_scan_result_sticker_label">Стикер</string>
+    <plurals name="monitor_local_scan_result_parcel_number_label">
         <item quantity="one" tools:ignore="ImpliedQuantity">Номер посылки</item>
         <item quantity="few">Номера посылок</item>
         <item quantity="many">Номера посылок</item>
         <item quantity="other">Номера посылок</item>
     </plurals>
-    <plurals name="monitor_latest_scan_box_number_label">
+    <plurals name="monitor_local_scan_result_box_number_label">
         <item quantity="one" tools:ignore="ImpliedQuantity">Номер коробки</item>
         <item quantity="few">Номера коробок</item>
         <item quantity="many">Номера коробок</item>

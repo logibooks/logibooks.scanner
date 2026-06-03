@@ -54,16 +54,16 @@ This file is a part of LogiScanner application
     <string name="monitor_stat_not_scanned">Not scanned</string>
     <string name="monitor_restricted">Restricted</string>
     <string name="monitor_not_in_register">Not in register</string>
-    <string name="monitor_latest_scan_title">Last scan %1$s %2$s</string>
-    <string name="monitor_latest_scan_title_no_time">Last scan</string>
-    <string name="monitor_latest_scan_parcels">Parcels: %1$d</string>
-    <string name="monitor_latest_scan_boxes">Boxes: %1$d</string>
-    <string name="monitor_latest_scan_sticker_label">Sticker</string>
-    <plurals name="monitor_latest_scan_parcel_number_label">
+    <string name="monitor_local_scan_result_title">Last scan %1$s %2$s</string>
+    <string name="monitor_local_scan_result_title_no_time">Last scan</string>
+    <string name="monitor_local_scan_result_parcels">Parcels: %1$d</string>
+    <string name="monitor_local_scan_result_boxes">Boxes: %1$d</string>
+    <string name="monitor_local_scan_result_sticker_label">Sticker</string>
+    <plurals name="monitor_local_scan_result_parcel_number_label">
         <item quantity="one">Parcel number</item>
         <item quantity="other">Parcel numbers</item>
     </plurals>
-    <plurals name="monitor_latest_scan_box_number_label">
+    <plurals name="monitor_local_scan_result_box_number_label">
         <item quantity="one">Box number</item>
         <item quantity="other">Box numbers</item>
     </plurals>

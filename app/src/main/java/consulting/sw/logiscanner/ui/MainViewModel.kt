@@ -101,7 +101,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var scanJobListRefreshJob: Job? = null
     private var scanJobListMonitorVersion = 0
     private var monitorScopeVersion = 0
-    private var monitorLatestScanCodeId: Int? = null
     
     private var tts: TextToSpeech? = null
     private var ttsReady = false
@@ -449,7 +448,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun startScanJobMonitor(scanJobId: Int) {
         monitorScopeVersion += 1
         val version = monitorScopeVersion
-        monitorLatestScanCodeId = null
         monitorJob?.cancel()
         monitorDetailJob?.cancel()
 
@@ -472,7 +470,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 val registerScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOXES)
                 val snapshot = scanJobMonitorRepo.loadSnapshot(scanJobId, registerScope)
-                applyMonitorSnapshot(snapshot, version, followLatest = true)
+                applyMonitorSnapshot(snapshot, version)
 
                 if (snapshot.status == SCAN_JOB_STATUS_IN_PROGRESS) {
                     scanJobMonitorRepo.observe(
@@ -480,7 +478,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         scope = registerScope,
                         onSnapshot = { nextSnapshot ->
                             viewModelScope.launch {
-                                applyMonitorSnapshot(nextSnapshot, version, followLatest = true)
+                                applyMonitorSnapshot(nextSnapshot, version)
                             }
                         },
                         onClosed = { closedScanJobId, status ->
@@ -525,8 +523,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun applyMonitorSnapshot(
         snapshot: ScanJobMonitorSnapshot,
-        version: Int,
-        followLatest: Boolean
+        version: Int
     ) {
         if (version != monitorScopeVersion || snapshot.scanJobId != state.value.selectedScanJob?.id) {
             return
@@ -537,28 +534,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 monitorSnapshot = snapshot,
                 monitorError = null
             )
-        }
-
-        if (!followLatest || !state.value.monitorAutoFollow) {
-            return
-        }
-
-        val latestScanId = snapshot.latestScan?.scanCodeId ?: return
-        if (latestScanId == monitorLatestScanCodeId) {
-            return
-        }
-        monitorLatestScanCodeId = latestScanId
-
-        val nextScope = latestScanScope(snapshot) ?: return
-        if (nextScope.area == ScanJobMonitorAreas.BOXES) {
-            if (!sameMonitorScope(nextScope, state.value.monitorSelectedScope)) {
-                openMonitorRegister()
-            }
-            return
-        }
-
-        if (!sameMonitorScope(nextScope, state.value.monitorSelectedScope)) {
-            loadMonitorDetail(nextScope, highlightedParcelId = null)
         }
     }
 
@@ -613,7 +588,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun stopScanJobMonitor() {
         monitorScopeVersion += 1
-        monitorLatestScanCodeId = null
         monitorJob?.cancel()
         monitorDetailJob?.cancel()
         if (::scanJobMonitorRepo.isInitialized) {
@@ -648,7 +622,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             scanJobStatusText(getApplication(), status)
         )
         monitorScopeVersion += 1
-        monitorLatestScanCodeId = null
         monitorDetailJob?.cancel()
         _state.update {
             it.copy(
@@ -740,10 +713,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastScanSource = result.scanSource,
                         lastItemNumbers = result.itemNumbers,
                         lastExtData = result.extData,
-                        lastScanTime = OffsetDateTime.now().toString(),
+                        lastScanTime = result.scanTime?.takeIf { scanTime -> scanTime.isNotBlank() }
+                            ?: OffsetDateTime.now().toString(),
                         scanResultColor = determineScanResultColor(result)
                     ) 
                 }
+
+                followLocalScanResult(result)
                 
                 // Speak extData in parallel with color splash
                 if (!result.extData.isNullOrEmpty() && ttsReady) {
@@ -823,6 +799,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     externalScannerEnabled = it.externalScannerEnabled
                 )
             }
+        }
+    }
+
+    private fun followLocalScanResult(result: ScanResultItem) {
+        when (val action = localScanFollowAction(state.value.monitorAutoFollow, result.followTarget)) {
+            LocalScanFollowAction.None -> Unit
+            LocalScanFollowAction.OpenRegister -> openMonitorRegister()
+            is LocalScanFollowAction.OpenDetail -> loadMonitorDetail(
+                action.scope,
+                highlightedParcelId = action.highlightedParcelId
+            )
         }
     }
 }
