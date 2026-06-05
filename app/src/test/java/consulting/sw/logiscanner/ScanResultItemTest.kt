@@ -73,9 +73,9 @@ class ScanResultItemTest {
         assertEquals(listOf("BOX-1"), item.itemNumbers)
     }
 
-@Test
-fun scanResultItem_withExtId_returnsBulkyItemNumber() {
-    val item = scanResultItem(count = 1, extData = null, extId = "15")
+    @Test
+    fun scanResultItem_withExtId_returnsBulkyItemNumber() {
+        val item = scanResultItem(count = 1, extData = null, extId = "15")
 
         assertEquals("15", item.extId)
     }
