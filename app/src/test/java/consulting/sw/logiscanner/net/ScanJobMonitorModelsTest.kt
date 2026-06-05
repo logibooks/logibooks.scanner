@@ -69,6 +69,7 @@ class ScanJobMonitorModelsTest {
                     "scannedTime": "2026-05-15T21:31:01+03:00",
                     "parcelId": 99,
                     "parcelNumber": "P-1",
+                    "extId": "15",
                     "barcode": "WBR-BAR-1",
                     "zone": 10,
                     "zoneName": "Green",
@@ -99,6 +100,7 @@ class ScanJobMonitorModelsTest {
         assertEquals(1, snapshot.box?.restrictedParcels)
         assertEquals(1, snapshot.box?.parcels?.size)
         assertTrue(snapshot.box!!.parcels!!.first().isInRegister)
+        assertEquals("15", snapshot.box!!.parcels!!.first().extId)
         assertEquals("WBR-BAR-1", snapshot.box!!.parcels!!.first().barcode)
         assertEquals(ParcelCheckStatusProjectionKinds.RESTRICTION, snapshot.box!!.parcels!!.first().checkStatusProjection?.kind)
         assertEquals("Запрет", snapshot.box!!.parcels!!.first().checkStatusProjection?.title)
@@ -115,6 +117,7 @@ class ScanJobMonitorModelsTest {
               "scanSource": 10,
               "itemNumbers": ["P-1"],
               "extData": "ok",
+              "extId": "15",
               "hasIssues": false,
               "scanCodeId": 900,
               "scanTime": "2026-05-15T21:31:00+03:00",
@@ -132,11 +135,29 @@ class ScanJobMonitorModelsTest {
 
         assertNotNull(result)
         assertEquals(900, result!!.scanCodeId)
+        assertEquals("15", result.extId)
         assertEquals("2026-05-15T21:31:00+03:00", result.scanTime)
         assertEquals(ScanJobMonitorAreas.BOX, result.followTarget.area)
         assertEquals(7, result.followTarget.boxId)
         assertEquals(99, result.followTarget.parcelId)
         assertEquals(ScannedItemSources.PARCEL_STICKER, result.scanSource)
+    }
+
+    @Test
+    fun scanRequest_serializesBulkyItemsMode() {
+        val adapter = Moshi.Builder().build().adapter(ScanRequest::class.java)
+
+        val json = adapter.toJson(
+            ScanRequest(
+                id = 7,
+                code = "SHK-1",
+                bulkyItemsMode = BulkyItemsModes.NOTIFY
+            )
+        )
+
+        assertTrue(json.contains("\"id\":7"))
+        assertTrue(json.contains("\"code\":\"SHK-1\""))
+        assertTrue(json.contains("\"bulkyItemsMode\":2"))
     }
 
     @Test

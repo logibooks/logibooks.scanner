@@ -5,6 +5,9 @@
 package consulting.sw.logiscanner.ui
 
 import consulting.sw.logiscanner.R
+import consulting.sw.logiscanner.net.BulkyItemsModes
+import consulting.sw.logiscanner.net.RegisterTypes
+import consulting.sw.logiscanner.net.ScanJob
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -15,6 +18,11 @@ class ScannerOptionsTest {
     @Test
     fun mainStateDefaultsExternalScannerDisabled() {
         assertFalse(MainState().externalScannerEnabled)
+    }
+
+    @Test
+    fun mainStateDefaultsBulkyItemsModeOff() {
+        assertEquals(BulkyItemsModes.OFF, MainState().bulkyItemsMode)
     }
 
     @Test
@@ -64,6 +72,44 @@ class ScannerOptionsTest {
                 externalScannerEnabled = true,
                 textFieldFocused = true
             )
+        )
+    }
+
+    @Test
+    fun bulkyItemsModeIsEnabledOnlyForWbrScanJobs() {
+        assertTrue(bulkyItemsModeEnabled(scanJob(registerType = RegisterTypes.WBR)))
+        assertFalse(bulkyItemsModeEnabled(scanJob(registerType = 1)))
+        assertFalse(bulkyItemsModeEnabled(null))
+    }
+
+    @Test
+    fun normalizeBulkyItemsModeRejectsNonWbrAndInvalidValues() {
+        val wbrJob = scanJob(registerType = RegisterTypes.WBR)
+
+        assertEquals(BulkyItemsModes.SILENT, normalizeBulkyItemsMode(wbrJob, BulkyItemsModes.SILENT))
+        assertEquals(BulkyItemsModes.NOTIFY, normalizeBulkyItemsMode(wbrJob, BulkyItemsModes.NOTIFY))
+        assertEquals(BulkyItemsModes.OFF, normalizeBulkyItemsMode(wbrJob, 99))
+        assertEquals(BulkyItemsModes.OFF, normalizeBulkyItemsMode(scanJob(registerType = 1), BulkyItemsModes.NOTIFY))
+    }
+
+    @Test
+    fun nextBulkyItemsModeCyclesOnlyForWbr() {
+        val wbrJob = scanJob(registerType = RegisterTypes.WBR)
+
+        assertEquals(BulkyItemsModes.SILENT, nextBulkyItemsMode(wbrJob, BulkyItemsModes.OFF))
+        assertEquals(BulkyItemsModes.NOTIFY, nextBulkyItemsMode(wbrJob, BulkyItemsModes.SILENT))
+        assertEquals(BulkyItemsModes.OFF, nextBulkyItemsMode(wbrJob, BulkyItemsModes.NOTIFY))
+        assertEquals(BulkyItemsModes.OFF, nextBulkyItemsMode(scanJob(registerType = 1), BulkyItemsModes.SILENT))
+    }
+
+    private fun scanJob(registerType: Int): ScanJob {
+        return ScanJob(
+            id = 1,
+            name = "Job",
+            description = null,
+            status = "InProgress",
+            type = "Scan",
+            registerType = registerType
         )
     }
 }

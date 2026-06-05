@@ -139,6 +139,7 @@ class ScanJobMonitorUiTest {
             lastScanSource = ScannedItemSources.PARCEL_STICKER,
             lastItemNumbers = listOf("PARCEL-1"),
             lastExtData = null,
+            lastExtId = null,
             lastScanTime = null
         )
 
@@ -157,6 +158,7 @@ class ScanJobMonitorUiTest {
             lastScanSource = ScannedItemSources.BOX_STICKER,
             lastItemNumbers = listOf("BOX-1"),
             lastExtData = null,
+            lastExtId = null,
             lastScanTime = null
         )
 
@@ -175,11 +177,28 @@ class ScanJobMonitorUiTest {
             lastScanSource = ScannedItemSources.NOT_IN_REGISTER,
             lastItemNumbers = emptyList(),
             lastExtData = null,
+            lastExtId = null,
             lastScanTime = null
         )
 
         assertNull(display?.numberKind)
         assertEquals(emptyList<String>(), display?.itemNumbers)
+    }
+
+    @Test
+    fun localScanResultDisplay_includesExtIdWhenPresent() {
+        val display = localScanResultDisplay(
+            lastCode = null,
+            lastParcelCount = null,
+            lastBoxCount = null,
+            lastScanSource = null,
+            lastItemNumbers = emptyList(),
+            lastExtData = null,
+            lastExtId = "15",
+            lastScanTime = null
+        )
+
+        assertEquals("15", display?.extId)
     }
 
     @Test
@@ -278,6 +297,7 @@ class ScanJobMonitorUiTest {
             scannedUserName = "User",
             scannedTime = "2026-05-15T21:30:45+03:00",
             parcelId = 123,
+            extId = "15",
             shk = "SHK-1",
             sticker = "ST-1",
             wbSticker = "WB-1",
@@ -301,6 +321,7 @@ class ScanJobMonitorUiTest {
                 R.string.monitor_parcel_scanned_sticker,
                 R.string.monitor_parcel_scanned_user,
                 R.string.monitor_parcel_scanned_time,
+                R.string.monitor_parcel_ext_id,
                 R.string.monitor_parcel_shk,
                 R.string.monitor_parcel_sticker,
                 R.string.monitor_parcel_wb_sticker,
@@ -319,6 +340,7 @@ class ScanJobMonitorUiTest {
         assertFalse(specs.any { it.value == "123" })
         assertFalse(specs.any { it.value == "4" })
         assertFalse(specs.any { it.value == "9" })
+        assertTrue(specs.any { it.labelResId == R.string.monitor_parcel_ext_id && it.value == "15" })
         assertTrue(specs.any { it.labelResId == R.string.monitor_parcel_quantity && it.value == "2" })
         assertEquals(projection, specs.last().checkStatusProjection)
     }

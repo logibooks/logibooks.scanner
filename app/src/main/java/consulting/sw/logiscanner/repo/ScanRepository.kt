@@ -5,6 +5,7 @@
 package consulting.sw.logiscanner.repo
 
 import consulting.sw.logiscanner.net.NetworkModule
+import consulting.sw.logiscanner.net.BulkyItemsModes
 import consulting.sw.logiscanner.net.ScanRequest
 import consulting.sw.logiscanner.net.ScanResultItem
 
@@ -12,7 +13,12 @@ class ScanRepository(baseUrl: String, private val token: String, onUnauthorized:
 
     private val api = NetworkModule.createApi(baseUrl, onUnauthorized)
 
-    suspend fun scan(scanJobId: Int, code: String): ScanResultItem {
-        return api.scan("Bearer $token", ScanRequest(scanJobId, code))
+    /** Sends one scan request with the selected bulky item mode. */
+    suspend fun scan(
+        scanJobId: Int,
+        code: String,
+        bulkyItemsMode: Int = BulkyItemsModes.OFF
+    ): ScanResultItem {
+        return api.scan("Bearer $token", ScanRequest(scanJobId, code, bulkyItemsMode))
     }
 }

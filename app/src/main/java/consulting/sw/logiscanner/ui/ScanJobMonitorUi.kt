@@ -120,7 +120,9 @@ data class LocalScanResultDisplay(
     val boxCount: Int,
     val scanSource: Int?,
     val itemNumbers: List<String>,
-    val hint: String?
+    val hint: String?,
+    /** WBR bulky item number shown for the latest BI-mode parcel scan. */
+    val extId: String?
 ) {
     val numberKind: LocalScanResultNumberKind?
         get() {
@@ -142,17 +144,20 @@ fun localScanResultDisplay(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lastExtId: String?,
     lastScanTime: String?
 ): LocalScanResultDisplay? {
     val localCode = lastCode?.takeIf { it.isNotBlank() }
     val scanTime = lastScanTime?.takeIf { it.isNotBlank() }
     val hint = lastExtData?.takeIf { it.isNotBlank() }
+    val extId = lastExtId?.takeIf { it.isNotBlank() }
 
     if (
         localCode == null
         && lastParcelCount == null
         && lastBoxCount == null
         && hint == null
+        && extId == null
         && scanTime == null
     ) {
         return null
@@ -165,7 +170,8 @@ fun localScanResultDisplay(
         boxCount = lastBoxCount ?: 0,
         scanSource = lastScanSource,
         itemNumbers = lastItemNumbers,
-        hint = hint
+        hint = hint,
+        extId = extId
     )
 }
 
@@ -179,6 +185,9 @@ fun monitorParcelAttributeSpecs(parcel: ScanJobMonitorParcel): List<MonitorParce
     }
     parcel.scannedTime?.takeIf { it.isNotBlank() }?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_scanned_time, formatMonitorTime(it))
+    }
+    parcel.extId?.takeIf { it.isNotBlank() }?.let {
+        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_ext_id, it)
     }
     parcel.shk?.takeIf { it.isNotBlank() }?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_shk, it)

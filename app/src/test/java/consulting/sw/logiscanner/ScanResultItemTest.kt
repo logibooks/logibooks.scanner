@@ -19,6 +19,7 @@ class ScanResultItemTest {
         val item = scanResultItem(count = 5, extData = null)
         assertEquals(5, item.count)
         assertNull(item.extData)
+        assertNull(item.extId)
         assertFalse(item.hasIssues)
     }
     
@@ -72,6 +73,13 @@ class ScanResultItemTest {
         assertEquals(listOf("BOX-1"), item.itemNumbers)
     }
 
+    @Test
+    fun scanResultItem_withExtId_returnsBulkyItemNumber() {
+        val item = scanResultItem(count = 1, extData = null, extId = "15")
+
+        assertEquals("15", item.extId)
+    }
+
     private fun scanResultItem(
         count: Int,
         parcelCount: Int = count,
@@ -79,6 +87,7 @@ class ScanResultItemTest {
         scanSource: Int = ScannedItemSources.PARCEL_STICKER,
         itemNumbers: List<String> = emptyList(),
         extData: String?,
+        extId: String? = null,
         hasIssues: Boolean = false
     ): ScanResultItem {
         return ScanResultItem(
@@ -88,6 +97,7 @@ class ScanResultItemTest {
             scanSource = scanSource,
             itemNumbers = itemNumbers,
             extData = extData,
+            extId = extId,
             hasIssues = hasIssues
         )
     }
