@@ -106,7 +106,6 @@ jobs:
     - name: Comment coverage on PR
       if: always() && github.event_name == 'pull_request'
       uses: actions/github-script@v9
-      continue-on-error: true
       with:
         script: |
           const fs = require('fs');
