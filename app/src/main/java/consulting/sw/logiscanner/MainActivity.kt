@@ -155,7 +155,8 @@ private val CheckStatusDarkGreenBorder = Color(0xFF66BB6A)
 private val AutoFollowOnIconColor = Color(0xFF4CAF50)
 private val AutoFollowOffIconColor = Color(0xFFFF9800)
 private val BulkyItemsSilentIconColor = AutoFollowOnIconColor
-private val BulkyItemsNotifyIconColor = Color(0xFF2196F3)
+private val BulkyItemsNotifyIconColor = AutoFollowOnIconColor
+private val BulkyItemsNotifyBorderColor = BulkyItemsNotifyIconColor
 
 
 class MainActivity : ComponentActivity() {
@@ -917,6 +918,17 @@ private fun ScanJobMonitorPanel(
                         modifier = Modifier
                             .width(36.dp)
                             .height(36.dp)
+                            .then(
+                                if (bulkyItemsMode == BulkyItemsModes.NOTIFY) {
+                                    Modifier.border(
+                                        width = 1.dp,
+                                        color = BulkyItemsNotifyBorderColor,
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                } else {
+                                    Modifier
+                                }
+                            )
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Inventory2,

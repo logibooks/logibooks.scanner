@@ -43,7 +43,7 @@ This file is a part of LogiScanner application
     <string name="bulky_items_mode_enable">BI mode is off. Tap to enable silent mode</string>
     <string name="bulky_items_mode_silent_disable">BI mode is silent. Tap to enable notification mode</string>
     <string name="bulky_items_mode_notify_disable">BI mode is notifying. Tap to turn off</string>
-    <string name="bulky_items_number_speech">BI number %1$s</string>
+    <string name="bulky_items_number_speech">BI number: %1$s</string>
     <string name="monitor_auto_follow_disable">Auto-follow is on. Tap to turn off</string>
     <string name="monitor_auto_follow_enable">Auto-follow is off. Tap to turn on</string>
     <string name="monitor_jump_label">Go to parcel or box</string>
