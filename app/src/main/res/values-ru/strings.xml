@@ -40,6 +40,10 @@ This file is a part of LogiScanner application
     <string name="count_result">Найдено посылок: %d</string>
 
     <string name="monitor_title">Монитор сканирования</string>
+    <string name="bulky_items_mode_enable">Режим КГТ выключен. Нажмите, чтобы включить тихий режим</string>
+    <string name="bulky_items_mode_silent_disable">Режим КГТ включен тихо. Нажмите, чтобы включить озвучивание</string>
+    <string name="bulky_items_mode_notify_disable">Режим КГТ с озвучиванием. Нажмите, чтобы выключить</string>
+    <string name="bulky_items_number_speech">Номер КГТ %1$s</string>
     <string name="monitor_auto_follow_disable">Автослежение включено. Нажмите, чтобы выключить</string>
     <string name="monitor_auto_follow_enable">Автослежение выключено. Нажмите, чтобы включить</string>
     <string name="monitor_jump_label">Перейти к посылке или коробке</string>
@@ -92,6 +96,7 @@ This file is a part of LogiScanner application
     <string name="monitor_parcel_scanned_sticker">Сканированный стикер</string>
     <string name="monitor_parcel_scanned_user">Сканировал</string>
     <string name="monitor_parcel_scanned_time">Время</string>
+    <string name="monitor_parcel_ext_id">Номер КГТ</string>
     <string name="monitor_parcel_shk">ШК</string>
     <string name="monitor_parcel_sticker">Стикер</string>
     <string name="monitor_parcel_wb_sticker">WB стикер</string>

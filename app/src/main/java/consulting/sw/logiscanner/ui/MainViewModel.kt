@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import consulting.sw.logiscanner.BuildConfig
 import consulting.sw.logiscanner.R
+import consulting.sw.logiscanner.net.BulkyItemsModes
 import consulting.sw.logiscanner.net.SCAN_JOB_STATUS_IN_PROGRESS
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
@@ -68,6 +69,7 @@ data class MainState(
     val monitorDetailLoading: Boolean = false,
     val monitorError: String? = null,
     val monitorAutoFollow: Boolean = true,
+    val bulkyItemsMode: Int = BulkyItemsModes.OFF,
     val monitorJumpNumber: String = "",
     val monitorJumpLoading: Boolean = false,
     val monitorHighlightedParcelId: Int? = null,
@@ -78,6 +80,7 @@ data class MainState(
     val lastScanSource: Int? = null,
     val lastItemNumbers: List<String> = emptyList(),
     val lastExtData: String? = null,
+    val lastExtId: String? = null,
     val lastScanTime: String? = null,
     val scanResultColor: ScanResultColor = ScanResultColor.NONE,
     val error: String? = null
@@ -302,6 +305,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectScanJob(job: ScanJob?) {
         viewModelScope.launch {
             val jobChanged = state.value.selectedScanJob?.id != job?.id
+            val nextBulkyItemsMode = if (bulkyItemsModeEnabled(job)) {
+                state.value.bulkyItemsMode
+            } else {
+                BulkyItemsModes.OFF
+            }
             if (job == null) {
                 stopScanJobMonitor()
             }
@@ -324,6 +332,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     monitorLoading = if (job == null) false else it.monitorLoading,
                     monitorDetailLoading = if (job == null) false else it.monitorDetailLoading,
                     monitorError = if (job == null) null else it.monitorError,
+                    bulkyItemsMode = nextBulkyItemsMode,
                     monitorJumpNumber = if (jobChanged) "" else it.monitorJumpNumber,
                     monitorJumpLoading = false,
                     monitorHighlightedParcelId = null,
@@ -333,6 +342,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastScanSource = if (jobChanged) null else it.lastScanSource,
                     lastItemNumbers = if (jobChanged) emptyList() else it.lastItemNumbers,
                     lastExtData = if (jobChanged) null else it.lastExtData,
+                    lastExtId = if (jobChanged) null else it.lastExtId,
                     lastScanTime = if (jobChanged) null else it.lastScanTime,
                     error = null, 
                     isScanning = false
@@ -366,6 +376,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleMonitorAutoFollow() {
         _state.update { it.copy(monitorAutoFollow = !it.monitorAutoFollow) }
+    }
+
+    fun toggleBulkyItemsMode() {
+        _state.update {
+            it.copy(bulkyItemsMode = nextBulkyItemsMode(it.selectedScanJob, it.bulkyItemsMode))
+        }
     }
 
     fun setMonitorJumpNumber(value: String) {
@@ -636,6 +652,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 monitorJumpNumber = "",
                 monitorJumpLoading = false,
                 monitorHighlightedParcelId = null,
+                bulkyItemsMode = BulkyItemsModes.OFF,
                 isScanning = false,
                 lastCode = null,
                 lastParcelCount = null,
@@ -643,6 +660,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 lastScanSource = null,
                 lastItemNumbers = emptyList(),
                 lastExtData = null,
+                lastExtId = null,
                 lastScanTime = null,
                 scanResultColor = ScanResultColor.NONE,
                 error = message
@@ -704,7 +722,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _state.update { it.copy(isBusy = true, error = null, scanResultColor = ScanResultColor.NONE) }
             try {
-                val result = scanRepo.scan(job.id, code)
+                val bulkyItemsMode = normalizeBulkyItemsMode(job, state.value.bulkyItemsMode)
+                val result = scanRepo.scan(job.id, code, bulkyItemsMode)
                 _state.update { 
                     it.copy(
                         lastCode = code, 
@@ -713,6 +732,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastScanSource = result.scanSource,
                         lastItemNumbers = result.itemNumbers,
                         lastExtData = result.extData,
+                        lastExtId = result.extId,
                         lastScanTime = result.scanTime?.takeIf { scanTime -> scanTime.isNotBlank() }
                             ?: OffsetDateTime.now().toString(),
                         scanResultColor = determineScanResultColor(result)
@@ -721,9 +741,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 followLocalScanResult(result)
                 
-                // Speak extData in parallel with color splash
-                if (!result.extData.isNullOrEmpty() && ttsReady) {
-                    tts?.speak(result.extData, TextToSpeech.QUEUE_FLUSH, null, "scan_result_${System.currentTimeMillis()}")
+                val extIdSpeechText = if (bulkyItemsModeNotifies(bulkyItemsMode) && !result.extId.isNullOrBlank()) {
+                    getApplication<Application>().getString(R.string.bulky_items_number_speech, result.extId)
+                } else {
+                    null
+                }
+                val speechText = listOfNotNull(
+                    extIdSpeechText,
+                    result.extData?.takeIf { it.isNotBlank() }
+                ).joinToString(". ")
+                if (!speechText.isNullOrEmpty() && ttsReady) {
+                    tts?.speak(speechText, TextToSpeech.QUEUE_FLUSH, null, "scan_result_${System.currentTimeMillis()}")
                 }
                 
                 // Reset color after a short delay
@@ -742,6 +770,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         it.copy(
                             selectedScanJob = null,
                             selectedScanJobTypeDisplay = null,
+                            bulkyItemsMode = BulkyItemsModes.OFF,
                             isScanning = false,
                             lastCode = null,
                             lastParcelCount = null,
@@ -749,6 +778,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
                             lastExtData = null,
+                            lastExtId = null,
                             lastScanTime = null,
                             error = getApplication<Application>().getString(R.string.scan_error_job_invalid),
                             scanResultColor = ScanResultColor.NONE
@@ -764,6 +794,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
                             lastExtData = null,
+                            lastExtId = null,
                             lastScanTime = OffsetDateTime.now().toString(),
                             error = getApplication<Application>().getString(R.string.scan_error_server),
                             scanResultColor = ScanResultColor.SERVER_ERROR

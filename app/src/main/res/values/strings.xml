@@ -40,6 +40,10 @@ This file is a part of LogiScanner application
     <string name="count_result">Parcels found: %d</string>
 
     <string name="monitor_title">Scan job monitor</string>
+    <string name="bulky_items_mode_enable">BI mode is off. Tap to enable silent mode</string>
+    <string name="bulky_items_mode_silent_disable">BI mode is silent. Tap to enable notification mode</string>
+    <string name="bulky_items_mode_notify_disable">BI mode is notifying. Tap to turn off</string>
+    <string name="bulky_items_number_speech">BI number %1$s</string>
     <string name="monitor_auto_follow_disable">Auto-follow is on. Tap to turn off</string>
     <string name="monitor_auto_follow_enable">Auto-follow is off. Tap to turn on</string>
     <string name="monitor_jump_label">Go to parcel or box</string>
@@ -88,6 +92,7 @@ This file is a part of LogiScanner application
     <string name="monitor_parcel_scanned_sticker">Scanned sticker</string>
     <string name="monitor_parcel_scanned_user">Scanned by</string>
     <string name="monitor_parcel_scanned_time">Time</string>
+    <string name="monitor_parcel_ext_id">BI number</string>
     <string name="monitor_parcel_shk">SHK</string>
     <string name="monitor_parcel_sticker">Sticker</string>
     <string name="monitor_parcel_wb_sticker">WB sticker</string>
