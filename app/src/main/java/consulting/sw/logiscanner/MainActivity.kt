@@ -43,6 +43,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
@@ -96,6 +97,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
+import consulting.sw.logiscanner.net.BulkyItemsModes
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
@@ -115,6 +117,7 @@ import consulting.sw.logiscanner.ui.hidScannerInputEnabled
 import consulting.sw.logiscanner.ui.isIssueCheckStatusProjectionKind
 import consulting.sw.logiscanner.ui.isRestrictedMonitorParcel
 import consulting.sw.logiscanner.ui.isUnassignedMonitorBox
+import consulting.sw.logiscanner.ui.bulkyItemsModeEnabled
 import consulting.sw.logiscanner.ui.localScanResultDisplay
 import consulting.sw.logiscanner.ui.monitorBoxDisplayName
 import consulting.sw.logiscanner.ui.monitorParcelAttributeSpecs
@@ -151,6 +154,9 @@ private val CheckStatusDarkGreenText = Color(0xFFA5D6A7)
 private val CheckStatusDarkGreenBorder = Color(0xFF66BB6A)
 private val AutoFollowOnIconColor = Color(0xFF4CAF50)
 private val AutoFollowOffIconColor = Color(0xFFFF9800)
+private val BulkyItemsSilentIconColor = AutoFollowOnIconColor
+private val BulkyItemsNotifyIconColor = AutoFollowOnIconColor
+private val BulkyItemsNotifyBorderColor = BulkyItemsNotifyIconColor
 
 
 class MainActivity : ComponentActivity() {
@@ -239,6 +245,7 @@ class MainActivity : ComponentActivity() {
                                 lastScanSource = state.lastScanSource,
                                 lastItemNumbers = state.lastItemNumbers,
                                 lastExtData = state.lastExtData,
+                                lastExtId = state.lastExtId,
                                 lastScanTime = state.lastScanTime,
                                 externalScannerEnabled = state.externalScannerEnabled,
                                 monitorSnapshot = state.monitorSnapshot,
@@ -248,6 +255,8 @@ class MainActivity : ComponentActivity() {
                                 monitorDetailLoading = state.monitorDetailLoading,
                                 monitorError = state.monitorError,
                                 monitorAutoFollow = state.monitorAutoFollow,
+                                bulkyItemsMode = state.bulkyItemsMode,
+                                bulkyItemsModeEnabled = bulkyItemsModeEnabled(state.selectedScanJob),
                                 monitorJumpNumber = state.monitorJumpNumber,
                                 monitorJumpLoading = state.monitorJumpLoading,
                                 monitorHighlightedParcelId = state.monitorHighlightedParcelId,
@@ -257,6 +266,7 @@ class MainActivity : ComponentActivity() {
                                 onOpenMonitorRegister = vm::openMonitorRegister,
                                 onOpenMonitorBox = vm::openMonitorBox,
                                 onToggleMonitorAutoFollow = vm::toggleMonitorAutoFollow,
+                                onToggleBulkyItemsMode = vm::toggleBulkyItemsMode,
                                 onMonitorJumpNumberChange = vm::setMonitorJumpNumber,
                                 onJumpToMonitorNumber = vm::jumpToMonitorNumber,
                                 onBackToJobs = { 
@@ -658,6 +668,7 @@ private fun ScanScreen(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lastExtId: String?,
     lastScanTime: String?,
     externalScannerEnabled: Boolean,
     monitorSnapshot: ScanJobMonitorSnapshot?,
@@ -667,6 +678,8 @@ private fun ScanScreen(
     monitorDetailLoading: Boolean,
     monitorError: String?,
     monitorAutoFollow: Boolean,
+    bulkyItemsMode: Int,
+    bulkyItemsModeEnabled: Boolean,
     monitorJumpNumber: String,
     monitorJumpLoading: Boolean,
     monitorHighlightedParcelId: Int?,
@@ -676,6 +689,7 @@ private fun ScanScreen(
     onOpenMonitorRegister: () -> Unit,
     onOpenMonitorBox: (ScanJobMonitorBox) -> Unit,
     onToggleMonitorAutoFollow: () -> Unit,
+    onToggleBulkyItemsMode: () -> Unit,
     onMonitorJumpNumberChange: (String) -> Unit,
     onJumpToMonitorNumber: () -> Unit,
     onBackToJobs: () -> Unit,
@@ -808,17 +822,21 @@ private fun ScanScreen(
                 lastScanSource = lastScanSource,
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
+                lastExtId = lastExtId,
                 lastScanTime = lastScanTime,
                 loading = monitorLoading,
                 detailLoading = monitorDetailLoading,
                 error = monitorError,
                 autoFollow = monitorAutoFollow,
+                bulkyItemsMode = bulkyItemsMode,
+                bulkyItemsModeEnabled = bulkyItemsModeEnabled,
                 jumpNumber = monitorJumpNumber,
                 jumpLoading = monitorJumpLoading,
                 highlightedParcelId = monitorHighlightedParcelId,
                 onOpenRegister = onOpenMonitorRegister,
                 onOpenBox = onOpenMonitorBox,
                 onToggleAutoFollow = onToggleMonitorAutoFollow,
+                onToggleBulkyItemsMode = onToggleBulkyItemsMode,
                 onJumpNumberChange = onMonitorJumpNumberChange,
                 onJumpToNumber = onJumpToMonitorNumber,
                 onJumpFieldFocusChanged = {
@@ -859,17 +877,21 @@ private fun ScanJobMonitorPanel(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lastExtId: String?,
     lastScanTime: String?,
     loading: Boolean,
     detailLoading: Boolean,
     error: String?,
     autoFollow: Boolean,
+    bulkyItemsMode: Int,
+    bulkyItemsModeEnabled: Boolean,
     jumpNumber: String,
     jumpLoading: Boolean,
     highlightedParcelId: Int?,
     onOpenRegister: () -> Unit,
     onOpenBox: (ScanJobMonitorBox) -> Unit,
     onToggleAutoFollow: () -> Unit,
+    onToggleBulkyItemsMode: () -> Unit,
     onJumpNumberChange: (String) -> Unit,
     onJumpToNumber: () -> Unit,
     onJumpFieldFocusChanged: (Boolean) -> Unit = {}
@@ -890,6 +912,42 @@ private fun ScanJobMonitorPanel(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
+                if (bulkyItemsModeEnabled) {
+                    IconButton(
+                        onClick = onToggleBulkyItemsMode,
+                        modifier = Modifier
+                            .width(36.dp)
+                            .height(36.dp)
+                            .then(
+                                if (bulkyItemsMode == BulkyItemsModes.NOTIFY) {
+                                    Modifier.border(
+                                        width = 1.dp,
+                                        color = BulkyItemsNotifyBorderColor,
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                } else {
+                                    Modifier
+                                }
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Inventory2,
+                            contentDescription = when (bulkyItemsMode) {
+                                BulkyItemsModes.SILENT -> stringResource(R.string.bulky_items_mode_silent_disable)
+                                BulkyItemsModes.NOTIFY -> stringResource(R.string.bulky_items_mode_notify_disable)
+                                else -> stringResource(R.string.bulky_items_mode_enable)
+                            },
+                            tint = when (bulkyItemsMode) {
+                                BulkyItemsModes.SILENT -> BulkyItemsSilentIconColor
+                                BulkyItemsModes.NOTIFY -> BulkyItemsNotifyIconColor
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier
+                                .width(18.dp)
+                                .height(18.dp)
+                        )
+                    }
+                }
                 IconButton(
                     onClick = onToggleAutoFollow,
                     modifier = Modifier
@@ -1005,6 +1063,7 @@ private fun ScanJobMonitorPanel(
                 lastScanSource = lastScanSource,
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
+                lastExtId = lastExtId,
                 lastScanTime = lastScanTime
             )
 
@@ -1644,6 +1703,7 @@ private fun LocalScanResult(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lastExtId: String?,
     lastScanTime: String?
 ) {
     val display = localScanResultDisplay(
@@ -1653,6 +1713,7 @@ private fun LocalScanResult(
         lastScanSource = lastScanSource,
         lastItemNumbers = lastItemNumbers,
         lastExtData = lastExtData,
+        lastExtId = lastExtId,
         lastScanTime = lastScanTime
     ) ?: return
     val displayTime = formatLocalScanResultTime(display.scanTime)
@@ -1721,6 +1782,12 @@ private fun LocalScanResult(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+        display.extId?.takeIf { it.isNotBlank() }?.let { extId ->
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_parcel_ext_id),
+                value = extId
             )
         }
         stickerCode?.let { code ->

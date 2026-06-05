@@ -5,6 +5,9 @@
 package consulting.sw.logiscanner.ui
 
 import consulting.sw.logiscanner.R
+import consulting.sw.logiscanner.net.BulkyItemsModes
+import consulting.sw.logiscanner.net.RegisterTypes
+import consulting.sw.logiscanner.net.ScanJob
 
 fun scanHintResId(externalScannerEnabled: Boolean): Int {
     return if (externalScannerEnabled) {
@@ -20,3 +23,33 @@ fun hidFocusRecoverySuspended(
     externalScannerEnabled: Boolean,
     textFieldFocused: Boolean
 ): Boolean = externalScannerEnabled && textFieldFocused
+
+/** Returns true when the selected scan job may use BI mode. */
+fun bulkyItemsModeEnabled(job: ScanJob?): Boolean {
+    return job?.registerType == RegisterTypes.WBR
+}
+
+/** Forces BI mode to Off for non-WBR jobs and invalid values. */
+fun normalizeBulkyItemsMode(job: ScanJob?, mode: Int): Int {
+    return if (bulkyItemsModeEnabled(job) && mode in BulkyItemsModes.OFF..BulkyItemsModes.NOTIFY) {
+        mode
+    } else {
+        BulkyItemsModes.OFF
+    }
+}
+
+/** Cycles BI mode through Off, Silent, and Notify for WBR scan jobs. */
+fun nextBulkyItemsMode(job: ScanJob?, currentMode: Int): Int {
+    if (!bulkyItemsModeEnabled(job)) {
+        return BulkyItemsModes.OFF
+    }
+
+    return when (normalizeBulkyItemsMode(job, currentMode)) {
+        BulkyItemsModes.OFF -> BulkyItemsModes.SILENT
+        BulkyItemsModes.SILENT -> BulkyItemsModes.NOTIFY
+        else -> BulkyItemsModes.OFF
+    }
+}
+
+/** Returns true when BI mode should announce the returned ExtId. */
+fun bulkyItemsModeNotifies(mode: Int): Boolean = mode == BulkyItemsModes.NOTIFY

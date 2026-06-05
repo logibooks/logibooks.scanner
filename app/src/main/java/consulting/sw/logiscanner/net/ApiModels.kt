@@ -34,8 +34,21 @@ data class ScanJob(
     val name: String,
     val description: String?,
     val status: String,
-    val type: String
+    val type: String,
+    val registerType: Int = 0
 )
+
+/** Register type ids used by scanner-only feature gates. */
+object RegisterTypes {
+    const val WBR = 2
+}
+
+/** Bulky item mode values sent with scan requests. */
+object BulkyItemsModes {
+    const val OFF = 0
+    const val SILENT = 1
+    const val NOTIFY = 2
+}
 
 object ScanJobMonitorAreas {
     const val BOXES = 0
@@ -102,6 +115,8 @@ data class ScanJobMonitorParcel(
     var scannedTime: String? = null,
     var parcelId: Int? = null,
     var parcelNumber: String = "",
+    /** WBR bulky item number displayed as "Номер КГТ". */
+    var extId: String? = null,
     var shk: String? = null,
     var sticker: String? = null,
     var wbSticker: String? = null,
@@ -173,7 +188,9 @@ data class ScanJobMonitorFollowTarget(
 @JsonClass(generateAdapter = true)
 data class ScanRequest(
     val id: Int,
-    val code: String
+    val code: String,
+    /** Scanner-selected bulky item mode; backend accepts non-off only for WBR. */
+    val bulkyItemsMode: Int = BulkyItemsModes.OFF
 )
 
 @JsonClass(generateAdapter = true)
@@ -184,6 +201,8 @@ data class ScanResultItem(
     val scanSource: Int,
     val itemNumbers: List<String>,
     val extData: String?,
+    /** WBR bulky item number returned after a BI-mode parcel scan. */
+    val extId: String? = null,
     val hasIssues: Boolean = false,
     val scanCodeId: Int = 0,
     val scanTime: String? = null,
