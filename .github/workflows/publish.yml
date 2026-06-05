@@ -57,14 +57,16 @@ jobs:
 
       run: ./gradlew assembleRelease
 
-    - name: Get APK path
+    - name: Prepare release APK
       id: apk
       shell: bash
       run: |
         APK_PATH="$(ls -1 app/build/outputs/apk/release/*.apk | head -n 1)"
         test -f "$APK_PATH"
-        echo "path=$APK_PATH" >> $GITHUB_OUTPUT
-        echo "name=$(basename "$APK_PATH")" >> $GITHUB_OUTPUT
+        SAFE_REF_NAME="${GITHUB_REF_NAME//\//-}"
+        RELEASE_APK="$RUNNER_TEMP/app-${SAFE_REF_NAME}.apk"
+        cp "$APK_PATH" "$RELEASE_APK"
+        printf 'path=%s\n' "$RELEASE_APK" >> "$GITHUB_OUTPUT"
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v3
