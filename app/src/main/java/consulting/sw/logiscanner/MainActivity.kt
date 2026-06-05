@@ -154,7 +154,7 @@ private val CheckStatusDarkGreenText = Color(0xFFA5D6A7)
 private val CheckStatusDarkGreenBorder = Color(0xFF66BB6A)
 private val AutoFollowOnIconColor = Color(0xFF4CAF50)
 private val AutoFollowOffIconColor = Color(0xFFFF9800)
-private val BulkyItemsSilentIconColor = Color(0xFF4CAF50)
+private val BulkyItemsSilentIconColor = AutoFollowOnIconColor
 private val BulkyItemsNotifyIconColor = Color(0xFF2196F3)
 
 
