@@ -63,9 +63,10 @@ jobs:
       run: |
         APK_PATH="$(ls -1 app/build/outputs/apk/release/*.apk | head -n 1)"
         test -f "$APK_PATH"
-        RELEASE_APK="$RUNNER_TEMP/app-${GITHUB_REF_NAME}.apk"
+        SAFE_REF_NAME="${GITHUB_REF_NAME//\//-}"
+        RELEASE_APK="$RUNNER_TEMP/app-${SAFE_REF_NAME}.apk"
         cp "$APK_PATH" "$RELEASE_APK"
-        echo "path=$RELEASE_APK" >> $GITHUB_OUTPUT
+        printf 'path=%s\n' "$RELEASE_APK" >> "$GITHUB_OUTPUT"
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v3
