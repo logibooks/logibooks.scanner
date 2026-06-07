@@ -81,6 +81,19 @@ class ScanJobMonitorUiTest {
     }
 
     @Test
+    fun isRestrictedMonitorParcel_duplicate2ProjectedAsCheckedIsNotRestricted() {
+        val parcel = ScanJobMonitorParcel(
+            checkStatusProjection = ParcelCheckStatusProjection(
+                kind = ParcelCheckStatusProjectionKinds.CHECKED,
+                title = "Проверено",
+                restrictionReason = null
+            )
+        )
+
+        assertFalse(isRestrictedMonitorParcel(parcel))
+    }
+
+    @Test
     fun formatMonitorTime_formatsIsoOffsetDateTime() {
         val value = "2026-05-15T21:30:45+03:00"
         val expected = OffsetDateTime.parse(value)

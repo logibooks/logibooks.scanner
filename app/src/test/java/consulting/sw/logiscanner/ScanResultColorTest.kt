@@ -53,6 +53,15 @@ class ScanResultColorTest {
 
         assertEquals(ScanResultColor.OK, color)
     }
+
+    @Test
+    fun scanResultColor_duplicate2BackendHasIssuesFalse_returnsOk() {
+        val item = scanResultItem(count = 1, hasIssues = false)
+
+        val color = determineScanResultColor(item)
+
+        assertEquals(ScanResultColor.OK, color)
+    }
     
     @Test
     fun scanResultColor_determineColor_hasIssuesOverridesCount() {
