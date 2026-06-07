@@ -80,18 +80,6 @@ class ScanJobMonitorUiTest {
         assertFalse(isRestrictedMonitorParcel(ScanJobMonitorParcel()))
     }
 
-    @Test
-    fun isRestrictedMonitorParcel_duplicate2ProjectedAsCheckedIsNotRestricted() {
-        val parcel = ScanJobMonitorParcel(
-            checkStatusProjection = ParcelCheckStatusProjection(
-                kind = ParcelCheckStatusProjectionKinds.CHECKED,
-                title = "Проверено",
-                restrictionReason = null
-            )
-        )
-
-        assertFalse(isRestrictedMonitorParcel(parcel))
-    }
 
     @Test
     fun formatMonitorTime_formatsIsoOffsetDateTime() {
