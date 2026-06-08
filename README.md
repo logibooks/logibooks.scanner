@@ -116,7 +116,7 @@ CI runs `./gradlew build` and `./gradlew test` on GitHub Actions.
 
 The backend base URL is compiled into `BuildConfig.SERVER_URL` by build type in [app/build.gradle.kts](app/build.gradle.kts):
 
-- Debug: `http://192.168.11.140:8080/`
+- Debug: `http://192.168.11.140:8080/api/`
 - Release: `https://lb.gtc.express/api/`
 
 The URL must include a trailing slash.
@@ -133,11 +133,11 @@ appVersionName=0.4.0
 
 The app uses these REST endpoints relative to `SERVER_URL`:
 
-- `POST api/Auth/login` for authentication
-- `GET api/ScanJobs/ops` for scan job operation metadata
-- `GET api/ScanJobs/in-progress` for available scan jobs
-- `GET api/ScanJobs/{id}/monitor` for monitor snapshots
-- `POST api/ScanJobs/scan` for scanned barcode submission
+- `POST Auth/login` for authentication
+- `GET ScanJobs/ops` for scan job operation metadata
+- `GET ScanJobs/in-progress` for available scan jobs
+- `GET ScanJobs/{id}/monitor` for monitor snapshots
+- `POST ScanJobs/scan` for scanned barcode submission
 
 Authenticated REST requests send the JWT token as a Bearer token.
 
