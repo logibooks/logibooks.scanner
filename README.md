@@ -117,7 +117,7 @@ CI runs `./gradlew build` and `./gradlew test` on GitHub Actions.
 The backend base URL is compiled into `BuildConfig.SERVER_URL` by build type in [app/build.gradle.kts](app/build.gradle.kts):
 
 - Debug: `http://192.168.11.140:8080/`
-- Release: `https://logibooks.sw.consulting:8085/`
+- Release: `https://lb.gtc.express/api/`
 
 The URL must include a trailing slash.
 

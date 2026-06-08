@@ -49,7 +49,7 @@ android {
         }
         release {
             // NOTE: SERVER_URL must include trailing slash
-            buildConfigField("String", "SERVER_URL", "\"https://logibooks.sw.consulting:8085/\"")
+            buildConfigField("String", "SERVER_URL", "\"https://lb.gtc.express/api/\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
