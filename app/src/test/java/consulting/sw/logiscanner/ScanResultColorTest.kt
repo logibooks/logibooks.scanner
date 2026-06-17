@@ -53,6 +53,7 @@ class ScanResultColorTest {
 
         assertEquals(ScanResultColor.OK, color)
     }
+
     
     @Test
     fun scanResultColor_determineColor_hasIssuesOverridesCount() {

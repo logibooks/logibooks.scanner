@@ -80,6 +80,7 @@ class ScanJobMonitorUiTest {
         assertFalse(isRestrictedMonitorParcel(ScanJobMonitorParcel()))
     }
 
+
     @Test
     fun formatMonitorTime_formatsIsoOffsetDateTime() {
         val value = "2026-05-15T21:30:45+03:00"
