@@ -26,6 +26,8 @@ class ScanJobMonitorModelsTest {
               "registerType": 1,
               "dealNumber": "D-1",
               "warehouseId": 3,
+              "realWeightKg": 5.0,
+              "totalWeightKgToRelease": 10.0,
               "generatedAt": "2026-05-15T21:30:45+03:00",
               "area": 0,
               "totalBoxes": 2,
@@ -75,6 +77,7 @@ class ScanJobMonitorModelsTest {
                     "zoneName": "Green",
                     "statusId": 5,
                     "statusTitle": "Ready",
+                    "weightCorrectionEligible": true,
                     "checkStatusProjection": {
                       "kind": 20,
                       "title": "Запрет",
@@ -93,6 +96,8 @@ class ScanJobMonitorModelsTest {
         assertEquals(42, snapshot!!.scanJobId)
         assertEquals(SCAN_JOB_STATUS_IN_PROGRESS, snapshot.status)
         assertEquals(ScanJobMonitorAreas.BOXES, snapshot.area)
+        assertEquals(5.0, snapshot.realWeightKg!!, 0.0)
+        assertEquals(10.0, snapshot.totalWeightKgToRelease, 0.0)
         assertEquals(1, snapshot.restrictedParcels)
         assertEquals(1, snapshot.boxes.size)
         assertTrue(snapshot.boxes.first().boxStickerScanned)
@@ -100,6 +105,7 @@ class ScanJobMonitorModelsTest {
         assertEquals(1, snapshot.box?.restrictedParcels)
         assertEquals(1, snapshot.box?.parcels?.size)
         assertTrue(snapshot.box!!.parcels!!.first().isInRegister)
+        assertTrue(snapshot.box!!.parcels!!.first().weightCorrectionEligible)
         assertEquals("15", snapshot.box!!.parcels!!.first().extId)
         assertEquals("WBR-BAR-1", snapshot.box!!.parcels!!.first().barcode)
         assertEquals(ParcelCheckStatusProjectionKinds.RESTRICTION, snapshot.box!!.parcels!!.first().checkStatusProjection?.kind)
