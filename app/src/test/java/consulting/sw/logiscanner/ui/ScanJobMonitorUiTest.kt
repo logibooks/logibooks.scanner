@@ -9,6 +9,7 @@ import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorFollowTarget
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
+import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.net.ScannedItemSources
@@ -342,8 +343,42 @@ class ScanJobMonitorUiTest {
         assertFalse(specs.any { it.value == "4" })
         assertFalse(specs.any { it.value == "9" })
         assertTrue(specs.any { it.labelResId == R.string.monitor_parcel_ext_id && it.value == "15" })
+        assertTrue(specs.any { it.labelResId == R.string.monitor_parcel_weight_kg && it.value == "1.200" })
         assertTrue(specs.any { it.labelResId == R.string.monitor_parcel_quantity && it.value == "2" })
         assertEquals(projection, specs.last().checkStatusProjection)
+    }
+
+    @Test
+    fun monitorParcelAttributeSpecs_appliesCorrectedWeightForRegisteredParcels() {
+        val correction = monitorWeightCorrection(
+            ScanJobMonitorSnapshot(realWeightKg = 5.0, totalWeightKgToRelease = 10.0)
+        )
+
+        val spec = monitorParcelAttributeSpecs(
+            ScanJobMonitorParcel(isInRegister = true, weightCorrectionEligible = true, weightKg = 2.4),
+            correction
+        ).single()
+
+        assertEquals(R.string.monitor_parcel_weight_kg, spec.labelResId)
+        assertEquals("2.400", spec.value)
+        assertEquals("1.200", spec.correctedValue)
+    }
+
+    @Test
+    fun monitorParcelAttributeSpecs_keepsPlainWeightWhenCorrectionUnavailableOrNotEligible() {
+        assertNull(monitorWeightCorrection(ScanJobMonitorSnapshot(realWeightKg = null, totalWeightKgToRelease = 10.0)))
+        assertNull(monitorWeightCorrection(ScanJobMonitorSnapshot(realWeightKg = 5.0, totalWeightKgToRelease = 0.0)))
+
+        val correction = monitorWeightCorrection(
+            ScanJobMonitorSnapshot(realWeightKg = 5.0, totalWeightKgToRelease = 10.0)
+        )
+        val spec = monitorParcelAttributeSpecs(
+            ScanJobMonitorParcel(isInRegister = true, weightCorrectionEligible = false, weightKg = 2.4),
+            correction
+        ).single()
+
+        assertEquals("2.400", spec.value)
+        assertNull(spec.correctedValue)
     }
 
     @Test
