@@ -40,6 +40,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.filled.Close
@@ -108,6 +109,7 @@ import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.HidScanInput
 import consulting.sw.logiscanner.ui.LocalScanResultNumberKind
 import consulting.sw.logiscanner.ui.MainViewModel
+import consulting.sw.logiscanner.ui.MonitorWeightCorrection
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.formatLocalScanResultDate
 import consulting.sw.logiscanner.ui.formatLocalScanResultTime
@@ -121,6 +123,7 @@ import consulting.sw.logiscanner.ui.bulkyItemsModeEnabled
 import consulting.sw.logiscanner.ui.localScanResultDisplay
 import consulting.sw.logiscanner.ui.monitorBoxDisplayName
 import consulting.sw.logiscanner.ui.monitorParcelAttributeSpecs
+import consulting.sw.logiscanner.ui.monitorWeightCorrection
 import consulting.sw.logiscanner.ui.parcelPrimaryText
 import consulting.sw.logiscanner.ui.scanHintResId
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
@@ -1330,6 +1333,7 @@ private fun MonitorBoxDetail(
             fontWeight = FontWeight.SemiBold
         )
         val parcels = box.parcels.orEmpty()
+        val weightCorrection = monitorWeightCorrection(snapshot)
         var expandedParcelKey by rememberSaveable(box.boxId, box.bucketIndex, box.boxCode) {
             mutableStateOf<String?>(null)
         }
@@ -1365,6 +1369,7 @@ private fun MonitorBoxDetail(
                     val highlighted = isHighlightedMonitorParcel(parcel, highlightedParcelId)
                     MonitorParcelRow(
                         parcel = parcel,
+                        weightCorrection = weightCorrection,
                         expanded = expandedParcelKey == parcelKey,
                         highlighted = highlighted,
                         onToggleExpanded = {
@@ -1380,6 +1385,7 @@ private fun MonitorBoxDetail(
 @Composable
 private fun MonitorParcelRow(
     parcel: ScanJobMonitorParcel,
+    weightCorrection: MonitorWeightCorrection?,
     expanded: Boolean,
     highlighted: Boolean,
     onToggleExpanded: () -> Unit
@@ -1483,7 +1489,7 @@ private fun MonitorParcelRow(
                     overflow = TextOverflow.Visible
                 )
             }
-            MonitorParcelAttributes(parcel)
+            MonitorParcelAttributes(parcel, weightCorrection)
         }
     }
 }
@@ -1496,14 +1502,69 @@ private fun isHighlightedMonitorParcel(
 }
 
 @Composable
-private fun MonitorParcelAttributes(parcel: ScanJobMonitorParcel) {
+private fun MonitorParcelAttributes(
+    parcel: ScanJobMonitorParcel,
+    weightCorrection: MonitorWeightCorrection?
+) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        monitorParcelAttributeSpecs(parcel).forEach { attribute ->
+        monitorParcelAttributeSpecs(parcel, weightCorrection).forEach { attribute ->
+            val value = attribute.value
+            val correctedValue = attribute.correctedValue
             if (attribute.checkStatusProjection != null) {
                 MonitorParcelCheckStatusAttribute(attribute.checkStatusProjection)
-            } else if (!attribute.value.isNullOrBlank()) {
-                MonitorAttribute(stringResource(attribute.labelResId), attribute.value)
+            } else if (!value.isNullOrBlank() && !correctedValue.isNullOrBlank()) {
+                MonitorCorrectedWeightAttribute(
+                    label = stringResource(attribute.labelResId),
+                    value = value,
+                    correctedValue = correctedValue
+                )
+            } else if (!value.isNullOrBlank()) {
+                MonitorAttribute(stringResource(attribute.labelResId), value)
             }
+        }
+    }
+}
+
+@Composable
+private fun MonitorCorrectedWeightAttribute(
+    label: String,
+    value: String,
+    correctedValue: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.42f)
+        )
+        Row(
+            modifier = Modifier.weight(0.58f),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                value,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .width(14.dp)
+                    .height(14.dp)
+            )
+            Text(
+                correctedValue,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

@@ -54,7 +54,6 @@ class ScanResultColorTest {
         assertEquals(ScanResultColor.OK, color)
     }
 
-    
     @Test
     fun scanResultColor_determineColor_hasIssuesOverridesCount() {
         val item = scanResultItem(count = 0, hasIssues = true)

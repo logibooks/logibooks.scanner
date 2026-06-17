@@ -11,8 +11,10 @@ import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
+import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
+import java.util.Locale
 import java.time.OffsetDateTime
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -105,8 +107,32 @@ fun scanJobStatusText(context: Context, status: Int?): String {
 data class MonitorParcelAttributeSpec(
     val labelResId: Int,
     val value: String? = null,
+    val correctedValue: String? = null,
     val checkStatusProjection: ParcelCheckStatusProjection? = null
 )
+
+data class MonitorWeightCorrection(
+    val coefficient: Double
+)
+
+fun monitorWeightCorrection(snapshot: ScanJobMonitorSnapshot?): MonitorWeightCorrection? {
+    val realWeightKg = snapshot?.realWeightKg
+    val totalWeightKgToRelease = snapshot?.totalWeightKgToRelease ?: 0.0
+    if (realWeightKg == null || realWeightKg <= 0.0 || totalWeightKgToRelease <= 0.0) {
+        return null
+    }
+
+    return MonitorWeightCorrection(realWeightKg / totalWeightKgToRelease)
+}
+
+fun formatMonitorWeight(value: Double): String {
+    return String.format(Locale.US, "%.3f", value)
+}
+
+fun correctedMonitorWeight(weight: Double?, correction: MonitorWeightCorrection?): Double? {
+    if (weight == null || correction == null) return null
+    return weight * correction.coefficient
+}
 
 enum class LocalScanResultNumberKind {
     PARCEL,
@@ -175,7 +201,10 @@ fun localScanResultDisplay(
     )
 }
 
-fun monitorParcelAttributeSpecs(parcel: ScanJobMonitorParcel): List<MonitorParcelAttributeSpec> {
+fun monitorParcelAttributeSpecs(
+    parcel: ScanJobMonitorParcel,
+    weightCorrection: MonitorWeightCorrection? = null
+): List<MonitorParcelAttributeSpec> {
     val specs = mutableListOf<MonitorParcelAttributeSpec>()
     parcel.scannedSticker?.takeIf { it.isNotBlank() }?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_scanned_sticker, it)
@@ -216,7 +245,14 @@ fun monitorParcelAttributeSpecs(parcel: ScanJobMonitorParcel): List<MonitorParce
         specs += MonitorParcelAttributeSpec(barcodeLabel, it)
     }
     parcel.weightKg?.let {
-        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_weight_kg, it.toString())
+        specs += MonitorParcelAttributeSpec(
+            R.string.monitor_parcel_weight_kg,
+            formatMonitorWeight(it),
+            correctedMonitorWeight(
+                it,
+                if (parcel.weightCorrectionEligible) weightCorrection else null
+            )?.let(::formatMonitorWeight)
+        )
     }
     parcel.quantity?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_quantity, formatMonitorQuantity(it))
