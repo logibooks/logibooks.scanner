@@ -25,7 +25,7 @@ class BluetoothPrinterClient(
 
     @SuppressLint("MissingPermission")
     override suspend fun listBondedPrinters(): List<BluetoothPrinterDevice> = withContext(Dispatchers.IO) {
-        ensureBluetoothPermission()
+        ensureBluetoothConnectPermission()
         adapter().bondedDevices
             .orEmpty()
             .map { device ->
@@ -41,7 +41,8 @@ class BluetoothPrinterClient(
     override suspend fun print(address: String, payload: ByteArray) {
         withContext(Dispatchers.IO) {
             mutex.withLock {
-                ensureBluetoothPermission()
+                ensureBluetoothConnectPermission()
+                ensureBluetoothScanPermission()
                 val bluetoothAdapter = adapter()
                 val device = bluetoothAdapter.bondedDevices
                     .orEmpty()
@@ -70,10 +71,19 @@ class BluetoothPrinterClient(
         }
     }
 
-    private fun ensureBluetoothPermission() {
+    private fun ensureBluetoothConnectPermission() {
         if (
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
             && context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+        ) {
+            throw PrinterPermissionMissingException()
+        }
+    }
+
+    private fun ensureBluetoothScanPermission() {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            && context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
         ) {
             throw PrinterPermissionMissingException()
         }

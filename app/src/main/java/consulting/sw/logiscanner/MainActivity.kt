@@ -203,22 +203,22 @@ class MainActivity : ComponentActivity() {
             val focusManager = LocalFocusManager.current
             var pendingPrinterAction by remember { mutableStateOf<(() -> Unit)?>(null) }
             val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.RequestPermission()
-            ) { granted ->
+                ActivityResultContracts.RequestMultiplePermissions()
+            ) {
                 val action = pendingPrinterAction
                 pendingPrinterAction = null
-                if (granted) {
+                if (hasBluetoothPrinterPermissions(context)) {
                     action?.invoke()
                 } else {
                     vm.setPrinterPermissionDenied()
                 }
             }
             val runPrinterAction: (() -> Unit) -> Unit = { action ->
-                if (hasBluetoothConnectPermission(context)) {
+                if (hasBluetoothPrinterPermissions(context)) {
                     action()
                 } else {
                     pendingPrinterAction = action
-                    bluetoothPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+                    bluetoothPermissionLauncher.launch(requiredBluetoothPrinterPermissions())
                 }
             }
 
@@ -377,12 +377,22 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private fun hasBluetoothConnectPermission(context: Context): Boolean {
+private fun hasBluetoothPrinterPermissions(context: Context): Boolean {
     return Build.VERSION.SDK_INT < Build.VERSION_CODES.S
-        || ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.BLUETOOTH_CONNECT
-        ) == PackageManager.PERMISSION_GRANTED
+        || requiredBluetoothPrinterPermissions().all { permission ->
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        }
+}
+
+private fun requiredBluetoothPrinterPermissions(): Array<String> {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_SCAN
+        )
+    } else {
+        emptyArray()
+    }
 }
 
 @Composable
