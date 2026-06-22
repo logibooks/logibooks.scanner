@@ -8,8 +8,11 @@ import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
 import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScanJob
+import consulting.sw.logiscanner.net.ScanResultItem
+import consulting.sw.logiscanner.net.ScannedItemSources
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -23,6 +26,16 @@ class ScannerOptionsTest {
     @Test
     fun mainStateDefaultsBulkyItemsModeOff() {
         assertEquals(BulkyItemsModes.OFF, MainState().bulkyItemsMode)
+    }
+
+    @Test
+    fun mainStateDefaultsPrinterAutoPrintDisabled() {
+        assertFalse(MainState().printerAutoPrintEnabled)
+    }
+
+    @Test
+    fun mainStateDefaultsPrinterAddressEmpty() {
+        assertNull(MainState().printerBluetoothAddress)
     }
 
     @Test
@@ -102,6 +115,40 @@ class ScannerOptionsTest {
         assertEquals(BulkyItemsModes.OFF, nextBulkyItemsMode(scanJob(registerType = 1), BulkyItemsModes.SILENT))
     }
 
+    @Test
+    fun kgtLabelCodeTrimsAndRejectsBlankValues() {
+        assertEquals("15", kgtLabelCode(" 15 "))
+        assertNull(kgtLabelCode(" "))
+        assertNull(kgtLabelCode(null))
+    }
+
+    @Test
+    fun canManualPrintKgtLabelRequiresCode() {
+        assertTrue(canManualPrintKgtLabel("15"))
+        assertFalse(canManualPrintKgtLabel(" "))
+    }
+
+    @Test
+    fun shouldAutoPrintKgtLabelRequiresEnabledWbrModeAndGeneratedCode() {
+        val wbrJob = scanJob(registerType = RegisterTypes.WBR)
+        val result = scanResultItem(extId = "15")
+
+        assertTrue(
+            shouldAutoPrintKgtLabel(
+                autoPrintEnabled = true,
+                job = wbrJob,
+                bulkyItemsMode = BulkyItemsModes.SILENT,
+                result = result
+            )
+        )
+        assertFalse(shouldAutoPrintKgtLabel(false, wbrJob, BulkyItemsModes.SILENT, result))
+        assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.OFF, result))
+        assertFalse(shouldAutoPrintKgtLabel(true, scanJob(registerType = 1), BulkyItemsModes.SILENT, result))
+        assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = null)))
+        assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = "15", count = 0)))
+        assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = "15", hasIssues = true)))
+    }
+
     private fun scanJob(registerType: Int): ScanJob {
         return ScanJob(
             id = 1,
@@ -110,6 +157,23 @@ class ScannerOptionsTest {
             status = "InProgress",
             type = "Scan",
             registerType = registerType
+        )
+    }
+
+    private fun scanResultItem(
+        extId: String?,
+        count: Int = 1,
+        hasIssues: Boolean = false
+    ): ScanResultItem {
+        return ScanResultItem(
+            count = count,
+            parcelCount = count,
+            boxCount = 0,
+            scanSource = ScannedItemSources.PARCEL_STICKER,
+            itemNumbers = emptyList(),
+            extData = null,
+            extId = extId,
+            hasIssues = hasIssues
         )
     }
 }

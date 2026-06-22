@@ -4,13 +4,17 @@
 
 package consulting.sw.logiscanner
 
+import android.Manifest
 import android.content.Context
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -45,16 +49,21 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -96,9 +105,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.net.BulkyItemsModes
+import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
@@ -111,6 +122,7 @@ import consulting.sw.logiscanner.ui.LocalScanResultNumberKind
 import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.MonitorWeightCorrection
 import consulting.sw.logiscanner.ui.ScanResultColor
+import consulting.sw.logiscanner.ui.canManualPrintKgtLabel
 import consulting.sw.logiscanner.ui.formatLocalScanResultDate
 import consulting.sw.logiscanner.ui.formatLocalScanResultTime
 import consulting.sw.logiscanner.ui.formatMonitorTime
@@ -187,7 +199,28 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val state by vm.state.collectAsState()
+            val context = LocalContext.current
             val focusManager = LocalFocusManager.current
+            var pendingPrinterAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+            val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestMultiplePermissions()
+            ) {
+                val action = pendingPrinterAction
+                pendingPrinterAction = null
+                if (hasBluetoothPrinterPermissions(context)) {
+                    action?.invoke()
+                } else {
+                    vm.setPrinterPermissionDenied()
+                }
+            }
+            val runPrinterAction: (() -> Unit) -> Unit = { action ->
+                if (hasBluetoothPrinterPermissions(context)) {
+                    action()
+                } else {
+                    pendingPrinterAction = action
+                    bluetoothPermissionLauncher.launch(requiredBluetoothPrinterPermissions())
+                }
+            }
 
             LogiScannerTheme {
                 // Apply background color based on scan result
@@ -260,6 +293,12 @@ class MainActivity : ComponentActivity() {
                                 monitorAutoFollow = state.monitorAutoFollow,
                                 bulkyItemsMode = state.bulkyItemsMode,
                                 bulkyItemsModeEnabled = bulkyItemsModeEnabled(state.selectedScanJob),
+                                printerAutoPrintEnabled = state.printerAutoPrintEnabled,
+                                printerBluetoothAddress = state.printerBluetoothAddress,
+                                bondedPrinters = state.bondedPrinters,
+                                printerLoading = state.printerLoading,
+                                printerMessage = state.printerMessage,
+                                printerError = state.printerError,
                                 monitorJumpNumber = state.monitorJumpNumber,
                                 monitorJumpLoading = state.monitorJumpLoading,
                                 monitorHighlightedParcelId = state.monitorHighlightedParcelId,
@@ -270,6 +309,27 @@ class MainActivity : ComponentActivity() {
                                 onOpenMonitorBox = vm::openMonitorBox,
                                 onToggleMonitorAutoFollow = vm::toggleMonitorAutoFollow,
                                 onToggleBulkyItemsMode = vm::toggleBulkyItemsMode,
+                                onPrinterAutoPrintEnabledChange = { enabled ->
+                                    if (enabled) {
+                                        runPrinterAction {
+                                            vm.setPrinterAutoPrintEnabled(true)
+                                            vm.refreshPrinters()
+                                        }
+                                    } else {
+                                        vm.setPrinterAutoPrintEnabled(false)
+                                    }
+                                },
+                                onPrinterSelected = vm::setPrinterBluetoothAddress,
+                                onRefreshPrinters = {
+                                    runPrinterAction {
+                                        vm.refreshPrinters()
+                                    }
+                                },
+                                onPrintKgtLabel = { code ->
+                                    runPrinterAction {
+                                        vm.printKgtLabel(code)
+                                    }
+                                },
                                 onMonitorJumpNumberChange = vm::setMonitorJumpNumber,
                                 onJumpToMonitorNumber = vm::jumpToMonitorNumber,
                                 onBackToJobs = { 
@@ -314,6 +374,24 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+}
+
+private fun hasBluetoothPrinterPermissions(context: Context): Boolean {
+    return Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+        || requiredBluetoothPrinterPermissions().all { permission ->
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        }
+}
+
+private fun requiredBluetoothPrinterPermissions(): Array<String> {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_SCAN
+        )
+    } else {
+        emptyArray()
     }
 }
 
@@ -683,6 +761,12 @@ private fun ScanScreen(
     monitorAutoFollow: Boolean,
     bulkyItemsMode: Int,
     bulkyItemsModeEnabled: Boolean,
+    printerAutoPrintEnabled: Boolean,
+    printerBluetoothAddress: String?,
+    bondedPrinters: List<BluetoothPrinterDevice>,
+    printerLoading: Boolean,
+    printerMessage: String?,
+    printerError: String?,
     monitorJumpNumber: String,
     monitorJumpLoading: Boolean,
     monitorHighlightedParcelId: Int?,
@@ -693,6 +777,10 @@ private fun ScanScreen(
     onOpenMonitorBox: (ScanJobMonitorBox) -> Unit,
     onToggleMonitorAutoFollow: () -> Unit,
     onToggleBulkyItemsMode: () -> Unit,
+    onPrinterAutoPrintEnabledChange: (Boolean) -> Unit,
+    onPrinterSelected: (String?) -> Unit,
+    onRefreshPrinters: () -> Unit,
+    onPrintKgtLabel: (String) -> Unit,
     onMonitorJumpNumberChange: (String) -> Unit,
     onJumpToMonitorNumber: () -> Unit,
     onBackToJobs: () -> Unit,
@@ -802,6 +890,20 @@ private fun ScanScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
+                    if (bulkyItemsModeEnabled) {
+                        PrinterSettingsPanel(
+                            printers = bondedPrinters,
+                            selectedAddress = printerBluetoothAddress,
+                            autoPrintEnabled = printerAutoPrintEnabled,
+                            loading = printerLoading,
+                            message = printerMessage,
+                            error = printerError,
+                            onAutoPrintEnabledChange = onPrinterAutoPrintEnabledChange,
+                            onPrinterSelected = onPrinterSelected,
+                            onRefreshPrinters = onRefreshPrinters
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
@@ -833,6 +935,7 @@ private fun ScanScreen(
                 autoFollow = monitorAutoFollow,
                 bulkyItemsMode = bulkyItemsMode,
                 bulkyItemsModeEnabled = bulkyItemsModeEnabled,
+                onPrintKgtLabel = onPrintKgtLabel,
                 jumpNumber = monitorJumpNumber,
                 jumpLoading = monitorJumpLoading,
                 highlightedParcelId = monitorHighlightedParcelId,
@@ -870,6 +973,156 @@ private fun ScanScreen(
 }
 
 @Composable
+private fun PrinterSettingsPanel(
+    printers: List<BluetoothPrinterDevice>,
+    selectedAddress: String?,
+    autoPrintEnabled: Boolean,
+    loading: Boolean,
+    message: String?,
+    error: String?,
+    onAutoPrintEnabledChange: (Boolean) -> Unit,
+    onPrinterSelected: (String?) -> Unit,
+    onRefreshPrinters: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = selectedPrinterDisplayName(printers, selectedAddress)
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                Button(
+                    onClick = {
+                        onRefreshPrinters()
+                        expanded = true
+                    },
+                    enabled = !loading,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        selectedLabel,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .width(18.dp)
+                            .height(18.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    if (printers.isEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.printer_no_paired)) },
+                            enabled = false,
+                            onClick = {}
+                        )
+                    } else {
+                        printers.forEach { printer ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        printer.displayName,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                onClick = {
+                                    onPrinterSelected(printer.address)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            IconButton(
+                onClick = onRefreshPrinters,
+                enabled = !loading,
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = stringResource(R.string.printer_refresh),
+                    modifier = Modifier
+                        .width(18.dp)
+                        .height(18.dp)
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = !loading) {
+                    onAutoPrintEnabledChange(!autoPrintEnabled)
+                },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Checkbox(
+                checked = autoPrintEnabled,
+                onCheckedChange = onAutoPrintEnabledChange,
+                enabled = !loading
+            )
+            Text(
+                stringResource(R.string.printer_auto_print_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        if (loading) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        error?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        message?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun selectedPrinterDisplayName(
+    printers: List<BluetoothPrinterDevice>,
+    selectedAddress: String?
+): String {
+    val selectedPrinter = printers.firstOrNull { it.address == selectedAddress }
+    return when {
+        selectedPrinter != null -> selectedPrinter.displayName
+        selectedAddress.isNullOrBlank() -> stringResource(R.string.printer_select)
+        else -> stringResource(R.string.printer_selected_address, selectedAddress)
+    }
+}
+
+@Composable
 private fun ScanJobMonitorPanel(
     snapshot: ScanJobMonitorSnapshot?,
     detailSnapshot: ScanJobMonitorSnapshot?,
@@ -888,6 +1141,7 @@ private fun ScanJobMonitorPanel(
     autoFollow: Boolean,
     bulkyItemsMode: Int,
     bulkyItemsModeEnabled: Boolean,
+    onPrintKgtLabel: (String) -> Unit,
     jumpNumber: String,
     jumpLoading: Boolean,
     highlightedParcelId: Int?,
@@ -1067,7 +1321,8 @@ private fun ScanJobMonitorPanel(
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
                 lastExtId = lastExtId,
-                lastScanTime = lastScanTime
+                lastScanTime = lastScanTime,
+                onPrintKgtLabel = onPrintKgtLabel
             )
 
             if (loading && snapshot == null) {
@@ -1111,6 +1366,7 @@ private fun ScanJobMonitorPanel(
                         snapshot = detailSnapshot,
                         loading = detailLoading,
                         highlightedParcelId = highlightedParcelId,
+                        onPrintKgtLabel = onPrintKgtLabel,
                         onOpenRegister = onOpenRegister
                     )
                 }
@@ -1230,6 +1486,7 @@ private fun MonitorBoxDetail(
     snapshot: ScanJobMonitorSnapshot?,
     loading: Boolean,
     highlightedParcelId: Int?,
+    onPrintKgtLabel: (String) -> Unit,
     onOpenRegister: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1372,6 +1629,7 @@ private fun MonitorBoxDetail(
                         weightCorrection = weightCorrection,
                         expanded = expandedParcelKey == parcelKey,
                         highlighted = highlighted,
+                        onPrintKgtLabel = onPrintKgtLabel,
                         onToggleExpanded = {
                             expandedParcelKey = if (expandedParcelKey == parcelKey) null else parcelKey
                         }
@@ -1388,6 +1646,7 @@ private fun MonitorParcelRow(
     weightCorrection: MonitorWeightCorrection?,
     expanded: Boolean,
     highlighted: Boolean,
+    onPrintKgtLabel: (String) -> Unit,
     onToggleExpanded: () -> Unit
 ) {
     val statusText = when {
@@ -1489,7 +1748,7 @@ private fun MonitorParcelRow(
                     overflow = TextOverflow.Visible
                 )
             }
-            MonitorParcelAttributes(parcel, weightCorrection)
+            MonitorParcelAttributes(parcel, weightCorrection, onPrintKgtLabel)
         }
     }
 }
@@ -1504,7 +1763,8 @@ private fun isHighlightedMonitorParcel(
 @Composable
 private fun MonitorParcelAttributes(
     parcel: ScanJobMonitorParcel,
-    weightCorrection: MonitorWeightCorrection?
+    weightCorrection: MonitorWeightCorrection?,
+    onPrintKgtLabel: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         monitorParcelAttributeSpecs(parcel, weightCorrection).forEach { attribute ->
@@ -1517,6 +1777,12 @@ private fun MonitorParcelAttributes(
                     label = stringResource(attribute.labelResId),
                     value = value,
                     correctedValue = correctedValue
+                )
+            } else if (attribute.labelResId == R.string.monitor_parcel_ext_id && canManualPrintKgtLabel(value)) {
+                KgtPrintAttribute(
+                    label = stringResource(attribute.labelResId),
+                    value = value.orEmpty(),
+                    onPrintKgtLabel = onPrintKgtLabel
                 )
             } else if (!value.isNullOrBlank()) {
                 MonitorAttribute(stringResource(attribute.labelResId), value)
@@ -1729,6 +1995,54 @@ private fun MonitorAttribute(label: String, value: String) {
     }
 }
 
+@Composable
+private fun KgtPrintAttribute(
+    label: String,
+    value: String,
+    onPrintKgtLabel: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.42f)
+        )
+        Row(
+            modifier = Modifier.weight(0.58f),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                value,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = { onPrintKgtLabel(value) },
+                modifier = Modifier
+                    .width(32.dp)
+                    .height(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Print,
+                    contentDescription = stringResource(R.string.printer_print_label),
+                    modifier = Modifier
+                        .width(18.dp)
+                        .height(18.dp)
+                )
+            }
+        }
+    }
+}
+
 private fun parcelExpansionKey(parcel: ScanJobMonitorParcel, index: Int): String {
     return parcel.parcelId?.let { "id:$it" }
         ?: parcel.parcelNumber.takeIf { it.isNotBlank() }?.let { "parcel:$it" }
@@ -1765,7 +2079,8 @@ private fun LocalScanResult(
     lastItemNumbers: List<String>,
     lastExtData: String?,
     lastExtId: String?,
-    lastScanTime: String?
+    lastScanTime: String?,
+    onPrintKgtLabel: (String) -> Unit
 ) {
     val display = localScanResultDisplay(
         lastCode = lastCode,
@@ -1846,9 +2161,10 @@ private fun LocalScanResult(
             )
         }
         display.extId?.takeIf { it.isNotBlank() }?.let { extId ->
-            MonitorAttribute(
+            KgtPrintAttribute(
                 label = stringResource(R.string.monitor_parcel_ext_id),
-                value = extId
+                value = extId,
+                onPrintKgtLabel = onPrintKgtLabel
             )
         }
         stickerCode?.let { code ->

@@ -8,6 +8,7 @@ import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
 import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScanJob
+import consulting.sw.logiscanner.net.ScanResultItem
 
 fun scanHintResId(externalScannerEnabled: Boolean): Int {
     return if (externalScannerEnabled) {
@@ -53,3 +54,20 @@ fun nextBulkyItemsMode(job: ScanJob?, currentMode: Int): Int {
 
 /** Returns true when BI mode should announce the returned ExtId. */
 fun bulkyItemsModeNotifies(mode: Int): Boolean = mode == BulkyItemsModes.NOTIFY
+
+fun kgtLabelCode(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
+
+fun canManualPrintKgtLabel(value: String?): Boolean = kgtLabelCode(value) != null
+
+fun shouldAutoPrintKgtLabel(
+    autoPrintEnabled: Boolean,
+    job: ScanJob?,
+    bulkyItemsMode: Int,
+    result: ScanResultItem
+): Boolean {
+    return autoPrintEnabled
+        && normalizeBulkyItemsMode(job, bulkyItemsMode) != BulkyItemsModes.OFF
+        && result.count > 0
+        && !result.hasIssues
+        && kgtLabelCode(result.extId) != null
+}

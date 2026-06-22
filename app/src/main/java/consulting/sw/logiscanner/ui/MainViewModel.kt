@@ -19,6 +19,12 @@ import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScanJobMonitorTargetKinds
 import consulting.sw.logiscanner.net.ScanResultItem
+import consulting.sw.logiscanner.printer.BluetoothPrinterClient
+import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
+import consulting.sw.logiscanner.printer.KgtLabelPrintResult
+import consulting.sw.logiscanner.printer.KgtLabelPrintService
+import consulting.sw.logiscanner.printer.PrinterPermissionMissingException
+import consulting.sw.logiscanner.printer.TscLabelRenderer
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
@@ -70,6 +76,12 @@ data class MainState(
     val monitorError: String? = null,
     val monitorAutoFollow: Boolean = true,
     val bulkyItemsMode: Int = BulkyItemsModes.OFF,
+    val printerAutoPrintEnabled: Boolean = false,
+    val printerBluetoothAddress: String? = null,
+    val bondedPrinters: List<BluetoothPrinterDevice> = emptyList(),
+    val printerLoading: Boolean = false,
+    val printerMessage: String? = null,
+    val printerError: String? = null,
     val monitorJumpNumber: String = "",
     val monitorJumpLoading: Boolean = false,
     val monitorHighlightedParcelId: Int? = null,
@@ -89,6 +101,10 @@ data class MainState(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settingsStore = SettingsStore(application)
+    private val labelPrintService = KgtLabelPrintService(
+        renderer = TscLabelRenderer(),
+        client = BluetoothPrinterClient(application)
+    )
     private val _state = MutableStateFlow(MainState())
     val state: StateFlow<MainState> = _state.asStateFlow()
 
@@ -112,6 +128,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             settingsStore.externalScannerEnabled().collect { enabled ->
                 _state.update { it.copy(externalScannerEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            settingsStore.printerAutoPrintEnabled().collect { enabled ->
+                _state.update { it.copy(printerAutoPrintEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            settingsStore.printerBluetoothAddress().collect { address ->
+                _state.update { it.copy(printerBluetoothAddress = address) }
             }
         }
 
@@ -168,6 +196,76 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(externalScannerEnabled = value) }
         viewModelScope.launch {
             settingsStore.setExternalScannerEnabled(value)
+        }
+    }
+
+    fun setPrinterAutoPrintEnabled(value: Boolean) {
+        _state.update { it.copy(printerAutoPrintEnabled = value, printerError = null, printerMessage = null) }
+        viewModelScope.launch {
+            settingsStore.setPrinterAutoPrintEnabled(value)
+        }
+    }
+
+    fun setPrinterBluetoothAddress(value: String?) {
+        _state.update { it.copy(printerBluetoothAddress = value, printerError = null, printerMessage = null) }
+        viewModelScope.launch {
+            settingsStore.setPrinterBluetoothAddress(value)
+        }
+    }
+
+    fun refreshPrinters() {
+        viewModelScope.launch {
+            _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
+            try {
+                val printers = labelPrintService.listBondedPrinters()
+                val missingPrinterMessage = selectedPrinterMissingMessage(
+                    printers,
+                    state.value.printerBluetoothAddress
+                )
+                _state.update {
+                    it.copy(
+                        bondedPrinters = printers,
+                        printerError = missingPrinterMessage,
+                        printerMessage = if (printers.isEmpty()) {
+                            getApplication<Application>().getString(R.string.printer_no_paired)
+                        } else {
+                            null
+                        }
+                    )
+                }
+            } catch (ex: Exception) {
+                if (ex is CancellationException) {
+                    throw ex
+                }
+                Log.e(javaClass.simpleName, "Failed to refresh printers", ex)
+                _state.update {
+                    it.copy(
+                        printerError = if (ex is PrinterPermissionMissingException) {
+                            getApplication<Application>().getString(R.string.printer_permission_missing)
+                        } else {
+                            getApplication<Application>().getString(R.string.printer_list_failed)
+                        },
+                        printerMessage = null
+                    )
+                }
+            } finally {
+                _state.update { it.copy(printerLoading = false) }
+            }
+        }
+    }
+
+    fun setPrinterPermissionDenied() {
+        _state.update {
+            it.copy(
+                printerError = getApplication<Application>().getString(R.string.printer_permission_missing),
+                printerMessage = null
+            )
+        }
+    }
+
+    fun printKgtLabel(code: String) {
+        viewModelScope.launch {
+            printKgtLabelInternal(code)
         }
     }
 
@@ -724,6 +822,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val bulkyItemsMode = normalizeBulkyItemsMode(job, state.value.bulkyItemsMode)
                 val result = scanRepo.scan(job.id, code, bulkyItemsMode)
+                val autoPrintEnabled = state.value.printerAutoPrintEnabled
                 _state.update { 
                     it.copy(
                         lastCode = code, 
@@ -740,6 +839,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 followLocalScanResult(result)
+
+                if (shouldAutoPrintKgtLabel(autoPrintEnabled, job, bulkyItemsMode, result)) {
+                    result.extId?.let { extId ->
+                        viewModelScope.launch {
+                            printKgtLabelInternal(extId)
+                        }
+                    }
+                }
                 
                 val extIdSpeechText = if (bulkyItemsModeNotifies(bulkyItemsMode) && !result.extId.isNullOrBlank()) {
                     getApplication<Application>().getString(R.string.bulky_items_number_speech, result.extId)
@@ -827,7 +934,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 MainState(
                     email = it.email,
                     password = "",
-                    externalScannerEnabled = it.externalScannerEnabled
+                    externalScannerEnabled = it.externalScannerEnabled,
+                    printerAutoPrintEnabled = it.printerAutoPrintEnabled,
+                    printerBluetoothAddress = it.printerBluetoothAddress,
+                    bondedPrinters = it.bondedPrinters
                 )
             }
         }
@@ -841,6 +951,93 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 action.scope,
                 highlightedParcelId = action.highlightedParcelId
             )
+        }
+    }
+
+    private suspend fun printKgtLabelInternal(code: String) {
+        val labelCode = kgtLabelCode(code)
+        if (labelCode == null) {
+            _state.update {
+                it.copy(
+                    printerError = getApplication<Application>().getString(R.string.printer_invalid_label),
+                    printerMessage = null
+                )
+            }
+            return
+        }
+
+        _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
+        try {
+            val result = labelPrintService.print(state.value.printerBluetoothAddress, labelCode)
+            applyPrinterResult(result)
+        } finally {
+            _state.update { it.copy(printerLoading = false) }
+        }
+    }
+
+    private fun applyPrinterResult(result: KgtLabelPrintResult) {
+        when (result) {
+            KgtLabelPrintResult.Success -> {
+                _state.update {
+                    it.copy(
+                        printerMessage = getApplication<Application>().getString(R.string.printer_printed),
+                        printerError = null
+                    )
+                }
+            }
+            KgtLabelPrintResult.MissingPrinter -> {
+                _state.update {
+                    it.copy(
+                        printerError = getApplication<Application>().getString(R.string.printer_select_required),
+                        printerMessage = null
+                    )
+                }
+            }
+            KgtLabelPrintResult.PermissionMissing -> {
+                setPrinterPermissionDenied()
+            }
+            is KgtLabelPrintResult.PrinterNotFound -> {
+                _state.update {
+                    it.copy(
+                        printerError = getApplication<Application>().getString(R.string.printer_not_found),
+                        printerMessage = null
+                    )
+                }
+            }
+            is KgtLabelPrintResult.InvalidLabel -> {
+                _state.update {
+                    it.copy(
+                        printerError = getApplication<Application>().getString(R.string.printer_invalid_label),
+                        printerMessage = null
+                    )
+                }
+            }
+            is KgtLabelPrintResult.Failed -> {
+                _state.update {
+                    it.copy(
+                        printerError = getApplication<Application>().getString(
+                            R.string.printer_print_failed,
+                            result.message?.takeIf { message -> message.isNotBlank() }
+                                ?: getApplication<Application>().getString(R.string.error_unknown)
+                        ),
+                        printerMessage = null
+                    )
+                }
+            }
+        }
+    }
+
+    private fun selectedPrinterMissingMessage(
+        printers: List<BluetoothPrinterDevice>,
+        selectedAddress: String?
+    ): String? {
+        if (selectedAddress.isNullOrBlank()) {
+            return null
+        }
+        return if (printers.any { it.address == selectedAddress }) {
+            null
+        } else {
+            getApplication<Application>().getString(R.string.printer_not_found)
         }
     }
 }

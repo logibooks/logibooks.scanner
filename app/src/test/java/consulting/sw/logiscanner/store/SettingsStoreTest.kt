@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
@@ -50,6 +52,40 @@ class SettingsStoreTest {
         val store = SettingsStore(ThrowingPreferenceDataStore())
 
         assertFalse(store.externalScannerEnabled().first())
+    }
+
+    @Test
+    fun printerAutoPrintEnabledDefaultsFalseWhenNoValueWasSaved() = runTest {
+        val store = SettingsStore(testDataStore())
+
+        assertFalse(store.printerAutoPrintEnabled().first())
+    }
+
+    @Test
+    fun setPrinterAutoPrintEnabledPersistsValue() = runTest {
+        val store = SettingsStore(testDataStore())
+
+        store.setPrinterAutoPrintEnabled(true)
+
+        assertTrue(store.printerAutoPrintEnabled().first())
+    }
+
+    @Test
+    fun printerBluetoothAddressDefaultsNullWhenNoValueWasSaved() = runTest {
+        val store = SettingsStore(testDataStore())
+
+        assertNull(store.printerBluetoothAddress().first())
+    }
+
+    @Test
+    fun setPrinterBluetoothAddressPersistsAndClearsValue() = runTest {
+        val store = SettingsStore(testDataStore())
+
+        store.setPrinterBluetoothAddress("AA:BB:CC:DD:EE:FF")
+        assertEquals("AA:BB:CC:DD:EE:FF", store.printerBluetoothAddress().first())
+
+        store.setPrinterBluetoothAddress(null)
+        assertNull(store.printerBluetoothAddress().first())
     }
 
     private fun testDataStore(): DataStore<Preferences> = FakePreferenceDataStore()
