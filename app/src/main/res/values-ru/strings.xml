@@ -15,7 +15,7 @@ This file is a part of LogiScanner application
     <string name="logging_in">Вход…</string>
     <string name="show_password">Показать пароль</string>
     <string name="hide_password">Скрыть пароль</string>
-    <string name="external_hid_device_label">Использовать</string>
+    <string name="external_hid_device_label">Разрешить</string>
     <string name="version_label">Версия %s</string>
 
     <string name="settings_title">Настройки</string>
@@ -23,7 +23,7 @@ This file is a part of LogiScanner application
     <string name="settings_back">Назад</string>
     <string name="settings_printer_title">Принтер</string>
     <string name="settings_kgt_title">Настройки режима КГТ</string>
-    <string name="settings_hid_title">Внешнее HID-устройство</string>
+    <string name="settings_hid_title">Внешний сканер</string>
 
     <string name="select_scan_job">Выберите задание</string>
     <string name="no_scan_jobs">Нет доступных заданий сканирования</string>
