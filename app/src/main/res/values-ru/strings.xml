@@ -15,7 +15,7 @@ This file is a part of LogiScanner application
     <string name="logging_in">Вход…</string>
     <string name="show_password">Показать пароль</string>
     <string name="hide_password">Скрыть пароль</string>
-    <string name="external_hid_device_label">Использовать внешнее HID-устройство</string>
+    <string name="external_hid_device_label">Использовать</string>
     <string name="version_label">Версия %s</string>
 
     <string name="settings_title">Настройки</string>
@@ -55,6 +55,8 @@ This file is a part of LogiScanner application
     <string name="printer_select_required">Выберите принтер перед печатью</string>
     <string name="printer_selected_address">Сохранённый принтер: %1$s</string>
     <string name="printer_auto_print_label">Автопечать КГТ</string>
+    <string name="printer_auto_print_enable">Автопечать выключена. Нажмите, чтобы включить</string>
+    <string name="printer_auto_print_disable">Автопечать включена. Нажмите, чтобы выключить</string>
     <string name="printer_refresh">Обновить принтеры</string>
     <string name="printer_print_label">Печать этикетки КГТ</string>
     <string name="printer_no_paired">Нет сопряжённых Bluetooth принтеров</string>

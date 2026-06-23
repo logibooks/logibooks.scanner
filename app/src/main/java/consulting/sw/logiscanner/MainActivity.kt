@@ -1055,16 +1055,6 @@ private fun ScanScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    if (bulkyItemsModeEnabled) {
-                        PrinterAutoPrintPanel(
-                            autoPrintEnabled = printerAutoPrintEnabled,
-                            loading = printerLoading,
-                            message = printerMessage,
-                            error = printerError,
-                            onAutoPrintEnabledChange = onPrinterAutoPrintEnabledChange
-                        )
-                    }
-
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
@@ -1096,6 +1086,10 @@ private fun ScanScreen(
                 autoFollow = monitorAutoFollow,
                 bulkyItemsMode = bulkyItemsMode,
                 bulkyItemsModeEnabled = bulkyItemsModeEnabled,
+                printerAutoPrintEnabled = printerAutoPrintEnabled,
+                printerLoading = printerLoading,
+                printerMessage = printerMessage,
+                printerError = printerError,
                 onPrintKgtLabel = onPrintKgtLabel,
                 jumpNumber = monitorJumpNumber,
                 jumpLoading = monitorJumpLoading,
@@ -1104,6 +1098,7 @@ private fun ScanScreen(
                 onOpenBox = onOpenMonitorBox,
                 onToggleAutoFollow = onToggleMonitorAutoFollow,
                 onToggleBulkyItemsMode = onToggleBulkyItemsMode,
+                onPrinterAutoPrintEnabledChange = onPrinterAutoPrintEnabledChange,
                 onJumpNumberChange = onMonitorJumpNumberChange,
                 onJumpToNumber = onJumpToMonitorNumber,
                 onJumpFieldFocusChanged = {
@@ -1237,45 +1232,6 @@ private fun PrinterSelectorPanel(
 }
 
 @Composable
-private fun PrinterAutoPrintPanel(
-    autoPrintEnabled: Boolean,
-    loading: Boolean,
-    message: String?,
-    error: String?,
-    onAutoPrintEnabledChange: (Boolean) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = !loading) {
-                    onAutoPrintEnabledChange(!autoPrintEnabled)
-                },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Checkbox(
-                checked = autoPrintEnabled,
-                onCheckedChange = onAutoPrintEnabledChange,
-                enabled = !loading
-            )
-            Text(
-                stringResource(R.string.printer_auto_print_label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        PrinterStatusMessages(
-            loading = loading,
-            message = message,
-            error = error
-        )
-    }
-}
-
-@Composable
 private fun PrinterStatusMessages(
     loading: Boolean,
     message: String?,
@@ -1337,6 +1293,10 @@ private fun ScanJobMonitorPanel(
     autoFollow: Boolean,
     bulkyItemsMode: Int,
     bulkyItemsModeEnabled: Boolean,
+    printerAutoPrintEnabled: Boolean,
+    printerLoading: Boolean,
+    printerMessage: String?,
+    printerError: String?,
     onPrintKgtLabel: (String) -> Unit,
     jumpNumber: String,
     jumpLoading: Boolean,
@@ -1345,6 +1305,7 @@ private fun ScanJobMonitorPanel(
     onOpenBox: (ScanJobMonitorBox) -> Unit,
     onToggleAutoFollow: () -> Unit,
     onToggleBulkyItemsMode: () -> Unit,
+    onPrinterAutoPrintEnabledChange: (Boolean) -> Unit,
     onJumpNumberChange: (String) -> Unit,
     onJumpToNumber: () -> Unit,
     onJumpFieldFocusChanged: (Boolean) -> Unit = {}
@@ -1401,6 +1362,34 @@ private fun ScanJobMonitorPanel(
                         )
                     }
                 }
+                if (bulkyItemsModeEnabled) {
+                    IconButton(
+                        onClick = {
+                            onPrinterAutoPrintEnabledChange(!printerAutoPrintEnabled)
+                        },
+                        enabled = !printerLoading,
+                        modifier = Modifier
+                            .width(36.dp)
+                            .height(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Print,
+                            contentDescription = if (printerAutoPrintEnabled) {
+                                stringResource(R.string.printer_auto_print_disable)
+                            } else {
+                                stringResource(R.string.printer_auto_print_enable)
+                            },
+                            tint = if (printerAutoPrintEnabled) {
+                                AutoFollowOnIconColor
+                            } else {
+                                AutoFollowOffIconColor
+                            },
+                            modifier = Modifier
+                                .width(18.dp)
+                                .height(18.dp)
+                        )
+                    }
+                }
                 IconButton(
                     onClick = onToggleAutoFollow,
                     modifier = Modifier
@@ -1424,6 +1413,13 @@ private fun ScanJobMonitorPanel(
                             .height(18.dp)
                     )
                 }
+            }
+            if (bulkyItemsModeEnabled) {
+                PrinterStatusMessages(
+                    loading = printerLoading,
+                    message = printerMessage,
+                    error = printerError
+                )
             }
 
             Row(

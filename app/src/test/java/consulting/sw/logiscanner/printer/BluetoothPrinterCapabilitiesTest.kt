@@ -13,6 +13,7 @@ class BluetoothPrinterCapabilitiesTest {
     @Test
     fun printerImagingClassIsIncluded() {
         assertTrue(isBluetoothPrinterClass(IMAGING_MAJOR, IMAGING_PRINTER))
+        assertTrue(isBluetoothPrinterCandidate(IMAGING_MAJOR, IMAGING_PRINTER, "Printer"))
     }
 
     @Test
@@ -24,6 +25,16 @@ class BluetoothPrinterCapabilitiesTest {
         assertFalse(isBluetoothPrinterClass(IMAGING_MAJOR, IMAGING_UNCATEGORIZED))
         assertFalse(isBluetoothPrinterClass(null, IMAGING_PRINTER))
         assertFalse(isBluetoothPrinterClass(IMAGING_MAJOR, null))
+        assertFalse(isBluetoothPrinterCandidate(IMAGING_MAJOR, IMAGING_SCANNER, "Bluetooth scanner"))
+        assertFalse(isBluetoothPrinterCandidate(PERIPHERAL_MAJOR, PERIPHERAL_KEYBOARD, "Keyboard"))
+        assertFalse(isBluetoothPrinterCandidate(null, null, "Phone"))
+    }
+
+    @Test
+    fun knownTscPrinterNamesAreIncludedWhenClassIsIncomplete() {
+        assertTrue(isBluetoothPrinterCandidate(null, null, "TSC RE310"))
+        assertTrue(isBluetoothPrinterCandidate(null, null, "RE310-A001-0002"))
+        assertTrue(isBluetoothPrinterCandidate(PERIPHERAL_MAJOR, PERIPHERAL_KEYBOARD, "TSC Printer"))
     }
 
     private companion object {

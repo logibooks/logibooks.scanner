@@ -15,7 +15,7 @@ This file is a part of LogiScanner application
     <string name="logging_in">Logging in…</string>
     <string name="show_password">Show password</string>
     <string name="hide_password">Hide password</string>
-    <string name="external_hid_device_label">Enable external HID device</string>
+    <string name="external_hid_device_label">Enable</string>
     <string name="version_label">Version %s</string>
 
     <string name="settings_title">Settings</string>
@@ -55,6 +55,8 @@ This file is a part of LogiScanner application
     <string name="printer_select_required">Select a printer before printing</string>
     <string name="printer_selected_address">Saved printer: %1$s</string>
     <string name="printer_auto_print_label">Auto-print BI labels</string>
+    <string name="printer_auto_print_enable">Auto-print is off. Tap to turn on</string>
+    <string name="printer_auto_print_disable">Auto-print is on. Tap to turn off</string>
     <string name="printer_refresh">Refresh printers</string>
     <string name="printer_print_label">Print BI label</string>
     <string name="printer_no_paired">No paired Bluetooth printers</string>
