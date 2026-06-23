@@ -765,8 +765,8 @@ private fun SettingsScreen(
                 IconButton(
                     onClick = onBack,
                     modifier = Modifier
-                        .width(40.dp)
-                        .height(40.dp)
+                        .width(48.dp)
+                        .height(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
