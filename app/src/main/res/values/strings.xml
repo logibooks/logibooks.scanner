@@ -15,8 +15,15 @@ This file is a part of LogiScanner application
     <string name="logging_in">Logging in…</string>
     <string name="show_password">Show password</string>
     <string name="hide_password">Hide password</string>
-    <string name="external_scanner_checkbox">Use external scanner</string>
+    <string name="external_hid_device_label">Enable</string>
     <string name="version_label">Version %s</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_open">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_printer_title">Printer</string>
+    <string name="settings_kgt_title">BI mode settings</string>
+    <string name="settings_hid_title">External HID device</string>
 
     <string name="select_scan_job">Select Scan Job</string>
     <string name="no_scan_jobs">No scan jobs available</string>
@@ -40,14 +47,15 @@ This file is a part of LogiScanner application
     <string name="count_result">Parcels found: %d</string>
 
     <string name="monitor_title">Scan job monitor</string>
-    <string name="bulky_items_mode_enable">BI mode is off. Tap to enable silent mode</string>
-    <string name="bulky_items_mode_silent_disable">BI mode is silent. Tap to enable notification mode</string>
-    <string name="bulky_items_mode_notify_disable">BI mode is notifying. Tap to turn off</string>
+    <string name="bulky_items_mode_enable">BI mode is off. Tap to turn on</string>
+    <string name="bulky_items_mode_disable">BI mode is on. Tap to turn off</string>
     <string name="bulky_items_number_speech">BI number: %1$s</string>
+    <string name="kgt_auto_print_label">Automatically print label</string>
+    <string name="kgt_voice_enabled_label">Voice accompaniment</string>
     <string name="printer_select">Select printer</string>
+    <string name="printer_none">No printer</string>
     <string name="printer_select_required">Select a printer before printing</string>
     <string name="printer_selected_address">Saved printer: %1$s</string>
-    <string name="printer_auto_print_label">Auto-print BI labels</string>
     <string name="printer_refresh">Refresh printers</string>
     <string name="printer_print_label">Print BI label</string>
     <string name="printer_no_paired">No paired Bluetooth printers</string>

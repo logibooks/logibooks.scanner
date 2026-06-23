@@ -28,6 +28,13 @@ class BluetoothPrinterClient(
         ensureBluetoothConnectPermission()
         adapter().bondedDevices
             .orEmpty()
+            .filter { device ->
+                isBluetoothPrinterCandidate(
+                    majorDeviceClass = device.bluetoothClass?.majorDeviceClass,
+                    deviceClass = device.bluetoothClass?.deviceClass,
+                    name = device.name
+                )
+            }
             .map { device ->
                 BluetoothPrinterDevice(
                     name = device.name.orEmpty(),
@@ -49,7 +56,11 @@ class BluetoothPrinterClient(
                     .firstOrNull { it.address == address }
                     ?: throw PrinterNotFoundException(address)
 
-                bluetoothAdapter.cancelDiscovery()
+                try {
+                    bluetoothAdapter.cancelDiscovery()
+                } catch (_: SecurityException) {
+                    // Discovery cancellation only improves connection speed; printing can continue without it.
+                }
                 var socket: BluetoothSocket? = null
                 try {
                     socket = device.createRfcommSocketToServiceRecord(SPP_UUID)

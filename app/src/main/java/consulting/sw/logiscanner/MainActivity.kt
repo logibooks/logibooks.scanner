@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -169,9 +170,8 @@ private val CheckStatusDarkGreenText = Color(0xFFA5D6A7)
 private val CheckStatusDarkGreenBorder = Color(0xFF66BB6A)
 private val AutoFollowOnIconColor = Color(0xFF4CAF50)
 private val AutoFollowOffIconColor = Color(0xFFFF9800)
-private val BulkyItemsSilentIconColor = AutoFollowOnIconColor
-private val BulkyItemsNotifyIconColor = AutoFollowOnIconColor
-private val BulkyItemsNotifyBorderColor = BulkyItemsNotifyIconColor
+private val KgtModeOnIconColor = AutoFollowOnIconColor
+private val KgtModeOffIconColor = AutoFollowOffIconColor
 
 
 class MainActivity : ComponentActivity() {
@@ -241,13 +241,48 @@ class MainActivity : ComponentActivity() {
                             LoginScreen(
                                 email = state.email,
                                 password = state.password,
-                                externalScannerEnabled = state.externalScannerEnabled,
                                 isBusy = state.isBusy,
                                 error = state.error,
                                 onEmailChange = vm::setEmail,
                                 onPasswordChange = vm::setPassword,
-                                onExternalScannerEnabledChange = vm::setExternalScannerEnabled,
                                 onLogin = vm::login
+                            )
+                        }
+                        state.settingsOpen -> {
+                            SettingsScreen(
+                                displayName = state.displayName,
+                                externalScannerEnabled = state.externalScannerEnabled,
+                                printerBluetoothAddress = state.printerBluetoothAddress,
+                                bondedPrinters = state.bondedPrinters,
+                                printerAutoPrintEnabled = state.printerAutoPrintEnabled,
+                                kgtVoiceEnabled = state.kgtVoiceEnabled,
+                                printerLoading = state.printerLoading,
+                                printerMessage = state.printerMessage,
+                                printerError = state.printerError,
+                                onExternalScannerEnabledChange = vm::setExternalScannerEnabled,
+                                onPrinterSelected = vm::setPrinterBluetoothAddress,
+                                onPrinterAutoPrintEnabledChange = { enabled ->
+                                    if (enabled) {
+                                        runPrinterAction {
+                                            vm.setPrinterAutoPrintEnabled(true)
+                                            vm.refreshPrinters()
+                                        }
+                                    } else {
+                                        vm.setPrinterAutoPrintEnabled(false)
+                                    }
+                                },
+                                onKgtVoiceEnabledChange = vm::setKgtVoiceEnabled,
+                                onRefreshPrinters = {
+                                    runPrinterAction {
+                                        vm.refreshPrinters()
+                                    }
+                                },
+                                onBack = {
+                                    if (state.externalScannerEnabled) {
+                                        focusManager.clearFocus()
+                                    }
+                                    vm.closeSettings()
+                                }
                             )
                         }
                         state.selectedScanJob == null -> {
@@ -265,7 +300,13 @@ class MainActivity : ComponentActivity() {
                                     }
                                     vm.logout()
                                 },
-                                onRefresh = vm::loadScanJobs
+                                onRefresh = vm::loadScanJobs,
+                                onOpenSettings = {
+                                    if (state.externalScannerEnabled) {
+                                        focusManager.clearFocus()
+                                    }
+                                    vm.openSettings()
+                                }
                             )
                         }
                         else -> {
@@ -293,9 +334,6 @@ class MainActivity : ComponentActivity() {
                                 monitorAutoFollow = state.monitorAutoFollow,
                                 bulkyItemsMode = state.bulkyItemsMode,
                                 bulkyItemsModeEnabled = bulkyItemsModeEnabled(state.selectedScanJob),
-                                printerAutoPrintEnabled = state.printerAutoPrintEnabled,
-                                printerBluetoothAddress = state.printerBluetoothAddress,
-                                bondedPrinters = state.bondedPrinters,
                                 printerLoading = state.printerLoading,
                                 printerMessage = state.printerMessage,
                                 printerError = state.printerError,
@@ -309,22 +347,6 @@ class MainActivity : ComponentActivity() {
                                 onOpenMonitorBox = vm::openMonitorBox,
                                 onToggleMonitorAutoFollow = vm::toggleMonitorAutoFollow,
                                 onToggleBulkyItemsMode = vm::toggleBulkyItemsMode,
-                                onPrinterAutoPrintEnabledChange = { enabled ->
-                                    if (enabled) {
-                                        runPrinterAction {
-                                            vm.setPrinterAutoPrintEnabled(true)
-                                            vm.refreshPrinters()
-                                        }
-                                    } else {
-                                        vm.setPrinterAutoPrintEnabled(false)
-                                    }
-                                },
-                                onPrinterSelected = vm::setPrinterBluetoothAddress,
-                                onRefreshPrinters = {
-                                    runPrinterAction {
-                                        vm.refreshPrinters()
-                                    }
-                                },
                                 onPrintKgtLabel = { code ->
                                     runPrinterAction {
                                         vm.printKgtLabel(code)
@@ -343,6 +365,12 @@ class MainActivity : ComponentActivity() {
                                         focusManager.clearFocus()
                                     }
                                     vm.logout()
+                                },
+                                onOpenSettings = {
+                                    if (state.externalScannerEnabled) {
+                                        focusManager.clearFocus()
+                                    }
+                                    vm.openSettings()
                                 },
                                 onScanned = vm::onScanned
                             )
@@ -399,12 +427,10 @@ private fun requiredBluetoothPrinterPermissions(): Array<String> {
 private fun LoginScreen(
     email: String,
     password: String,
-    externalScannerEnabled: Boolean,
     isBusy: Boolean,
     error: String?,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
-    onExternalScannerEnabledChange: (Boolean) -> Unit,
     onLogin: () -> Unit
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
@@ -510,28 +536,6 @@ private fun LoginScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = !isBusy) {
-                            onExternalScannerEnabledChange(!externalScannerEnabled)
-                        },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Checkbox(
-                        checked = externalScannerEnabled,
-                        onCheckedChange = onExternalScannerEnabledChange,
-                        enabled = !isBusy
-                    )
-                    Text(
-                        stringResource(R.string.external_scanner_checkbox),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
                 if (error != null) {
                     Text(error, color = MaterialTheme.colorScheme.error)
                 }
@@ -563,7 +567,8 @@ private fun JobSelectionScreen(
     onSelectJob: (ScanJob) -> Unit,
     onDismissMessage: () -> Unit,
     onLogout: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -571,9 +576,57 @@ private fun JobSelectionScreen(
             .padding(horizontal = 24.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.weight(3f)) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onOpenSettings,
+                    enabled = !isBusy,
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = stringResource(R.string.settings_open)
+                    )
+                }
+                IconButton(
+                    onClick = onRefresh,
+                    enabled = !isBusy,
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.RotateLeft,
+                        contentDescription = stringResource(R.string.refresh_jobs)
+                    )
+                }
+                IconButton(
+                    onClick = onLogout,
+                    enabled = !isBusy,
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = stringResource(R.string.logout)
+                    )
+                }
+            }
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text(
                     stringResource(R.string.select_scan_job),
                     style = MaterialTheme.typography.headlineSmall,
@@ -583,30 +636,6 @@ private fun JobSelectionScreen(
                     Text(
                         stringResource(R.string.logged_in_as, displayName),
                         style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Button(
-                    onClick = onRefresh,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.RotateLeft,
-                        contentDescription = stringResource(R.string.refresh_jobs)
-                    )
-                }
-                Button(
-                    onClick = onLogout,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Logout,
-                        contentDescription = stringResource(R.string.logout)
                     )
                 }
             }
@@ -701,6 +730,169 @@ private fun JobSelectionScreen(
 }
 
 @Composable
+private fun SettingsScreen(
+    displayName: String?,
+    externalScannerEnabled: Boolean,
+    printerBluetoothAddress: String?,
+    bondedPrinters: List<BluetoothPrinterDevice>,
+    printerAutoPrintEnabled: Boolean,
+    kgtVoiceEnabled: Boolean,
+    printerLoading: Boolean,
+    printerMessage: String?,
+    printerError: String?,
+    onExternalScannerEnabledChange: (Boolean) -> Unit,
+    onPrinterSelected: (String?) -> Unit,
+    onPrinterAutoPrintEnabledChange: (Boolean) -> Unit,
+    onKgtVoiceEnabledChange: (Boolean) -> Unit,
+    onRefreshPrinters: () -> Unit,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .width(48.dp)
+                        .height(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.settings_back)
+                    )
+                }
+            }
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    stringResource(R.string.settings_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (!displayName.isNullOrBlank()) {
+                    Text(
+                        stringResource(R.string.logged_in_as, displayName),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    stringResource(R.string.settings_printer_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                PrinterSelectorPanel(
+                    printers = bondedPrinters,
+                    selectedAddress = printerBluetoothAddress,
+                    loading = printerLoading,
+                    message = printerMessage,
+                    error = printerError,
+                    onPrinterSelected = onPrinterSelected,
+                    onRefreshPrinters = onRefreshPrinters
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    stringResource(R.string.settings_kgt_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                SettingsCheckboxRow(
+                    checked = printerAutoPrintEnabled,
+                    label = stringResource(R.string.kgt_auto_print_label),
+                    onCheckedChange = onPrinterAutoPrintEnabledChange
+                )
+                SettingsCheckboxRow(
+                    checked = kgtVoiceEnabled,
+                    label = stringResource(R.string.kgt_voice_enabled_label),
+                    onCheckedChange = onKgtVoiceEnabledChange
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    stringResource(R.string.settings_hid_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                SettingsCheckboxRow(
+                    checked = externalScannerEnabled,
+                    label = stringResource(R.string.external_hid_device_label),
+                    onCheckedChange = onExternalScannerEnabledChange
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+        VersionFooter()
+    }
+}
+
+@Composable
+private fun SettingsCheckboxRow(
+    checked: Boolean,
+    label: String,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onCheckedChange(!checked)
+            },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
 private fun DismissibleMessage(message: String, onDismiss: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -761,9 +953,6 @@ private fun ScanScreen(
     monitorAutoFollow: Boolean,
     bulkyItemsMode: Int,
     bulkyItemsModeEnabled: Boolean,
-    printerAutoPrintEnabled: Boolean,
-    printerBluetoothAddress: String?,
-    bondedPrinters: List<BluetoothPrinterDevice>,
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
@@ -777,14 +966,12 @@ private fun ScanScreen(
     onOpenMonitorBox: (ScanJobMonitorBox) -> Unit,
     onToggleMonitorAutoFollow: () -> Unit,
     onToggleBulkyItemsMode: () -> Unit,
-    onPrinterAutoPrintEnabledChange: (Boolean) -> Unit,
-    onPrinterSelected: (String?) -> Unit,
-    onRefreshPrinters: () -> Unit,
     onPrintKgtLabel: (String) -> Unit,
     onMonitorJumpNumberChange: (String) -> Unit,
     onJumpToMonitorNumber: () -> Unit,
     onBackToJobs: () -> Unit,
     onLogout: () -> Unit,
+    onOpenSettings: () -> Unit,
     onScanned: (String) -> Unit
 ) {
     var isJumpFieldFocused by remember { mutableStateOf(false) }
@@ -806,9 +993,57 @@ private fun ScanScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.weight(3f)) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onOpenSettings,
+                        enabled = !isBusy,
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = stringResource(R.string.settings_open)
+                        )
+                    }
+                    IconButton(
+                        onClick = onBackToJobs,
+                        enabled = !isBusy,
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back_to_jobs)
+                        )
+                    }
+                    IconButton(
+                        onClick = onLogout,
+                        enabled = !isBusy,
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = stringResource(R.string.logout)
+                        )
+                    }
+                }
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
                         stringResource(R.string.ready_to_scan),
                         style = MaterialTheme.typography.headlineSmall,
@@ -818,30 +1053,6 @@ private fun ScanScreen(
                         Text(
                             stringResource(R.string.logged_in_as, displayName),
                             style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Button(
-                        onClick = onBackToJobs,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back_to_jobs)
-                        )
-                    }
-                    Button(
-                        onClick = onLogout,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = stringResource(R.string.logout)
                         )
                     }
                 }
@@ -890,20 +1101,6 @@ private fun ScanScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    if (bulkyItemsModeEnabled) {
-                        PrinterSettingsPanel(
-                            printers = bondedPrinters,
-                            selectedAddress = printerBluetoothAddress,
-                            autoPrintEnabled = printerAutoPrintEnabled,
-                            loading = printerLoading,
-                            message = printerMessage,
-                            error = printerError,
-                            onAutoPrintEnabledChange = onPrinterAutoPrintEnabledChange,
-                            onPrinterSelected = onPrinterSelected,
-                            onRefreshPrinters = onRefreshPrinters
-                        )
-                    }
-
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
@@ -935,6 +1132,9 @@ private fun ScanScreen(
                 autoFollow = monitorAutoFollow,
                 bulkyItemsMode = bulkyItemsMode,
                 bulkyItemsModeEnabled = bulkyItemsModeEnabled,
+                printerLoading = printerLoading,
+                printerMessage = printerMessage,
+                printerError = printerError,
                 onPrintKgtLabel = onPrintKgtLabel,
                 jumpNumber = monitorJumpNumber,
                 jumpLoading = monitorJumpLoading,
@@ -973,14 +1173,12 @@ private fun ScanScreen(
 }
 
 @Composable
-private fun PrinterSettingsPanel(
+private fun PrinterSelectorPanel(
     printers: List<BluetoothPrinterDevice>,
     selectedAddress: String?,
-    autoPrintEnabled: Boolean,
     loading: Boolean,
     message: String?,
     error: String?,
-    onAutoPrintEnabledChange: (Boolean) -> Unit,
     onPrinterSelected: (String?) -> Unit,
     onRefreshPrinters: () -> Unit
 ) {
@@ -1020,6 +1218,13 @@ private fun PrinterSettingsPanel(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.printer_none)) },
+                        onClick = {
+                            onPrinterSelected(null)
+                            expanded = false
+                        }
+                    )
                     if (printers.isEmpty()) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.printer_no_paired)) },
@@ -1062,50 +1267,41 @@ private fun PrinterSettingsPanel(
             }
         }
 
-        Row(
+        PrinterStatusMessages(
+            loading = loading,
+            message = message,
+            error = error
+        )
+    }
+}
+
+@Composable
+private fun PrinterStatusMessages(
+    loading: Boolean,
+    message: String?,
+    error: String?
+) {
+    if (loading) {
+        LinearProgressIndicator(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(enabled = !loading) {
-                    onAutoPrintEnabledChange(!autoPrintEnabled)
-                },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Checkbox(
-                checked = autoPrintEnabled,
-                onCheckedChange = onAutoPrintEnabledChange,
-                enabled = !loading
-            )
-            Text(
-                stringResource(R.string.printer_auto_print_label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        if (loading) {
-            LinearProgressIndicator(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp),
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        error?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-        message?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+                .height(4.dp),
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+    error?.let {
+        Text(
+            it,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+    message?.let {
+        Text(
+            it,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -1117,7 +1313,7 @@ private fun selectedPrinterDisplayName(
     val selectedPrinter = printers.firstOrNull { it.address == selectedAddress }
     return when {
         selectedPrinter != null -> selectedPrinter.displayName
-        selectedAddress.isNullOrBlank() -> stringResource(R.string.printer_select)
+        selectedAddress.isNullOrBlank() -> stringResource(R.string.printer_none)
         else -> stringResource(R.string.printer_selected_address, selectedAddress)
     }
 }
@@ -1141,6 +1337,9 @@ private fun ScanJobMonitorPanel(
     autoFollow: Boolean,
     bulkyItemsMode: Int,
     bulkyItemsModeEnabled: Boolean,
+    printerLoading: Boolean,
+    printerMessage: String?,
+    printerError: String?,
     onPrintKgtLabel: (String) -> Unit,
     jumpNumber: String,
     jumpLoading: Boolean,
@@ -1170,34 +1369,24 @@ private fun ScanJobMonitorPanel(
                     modifier = Modifier.weight(1f)
                 )
                 if (bulkyItemsModeEnabled) {
+                    val kgtModeOn = bulkyItemsMode != BulkyItemsModes.OFF
                     IconButton(
                         onClick = onToggleBulkyItemsMode,
                         modifier = Modifier
                             .width(36.dp)
                             .height(36.dp)
-                            .then(
-                                if (bulkyItemsMode == BulkyItemsModes.NOTIFY) {
-                                    Modifier.border(
-                                        width = 1.dp,
-                                        color = BulkyItemsNotifyBorderColor,
-                                        shape = RoundedCornerShape(18.dp)
-                                    )
-                                } else {
-                                    Modifier
-                                }
-                            )
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Inventory2,
-                            contentDescription = when (bulkyItemsMode) {
-                                BulkyItemsModes.SILENT -> stringResource(R.string.bulky_items_mode_silent_disable)
-                                BulkyItemsModes.NOTIFY -> stringResource(R.string.bulky_items_mode_notify_disable)
-                                else -> stringResource(R.string.bulky_items_mode_enable)
+                            contentDescription = if (kgtModeOn) {
+                                stringResource(R.string.bulky_items_mode_disable)
+                            } else {
+                                stringResource(R.string.bulky_items_mode_enable)
                             },
-                            tint = when (bulkyItemsMode) {
-                                BulkyItemsModes.SILENT -> BulkyItemsSilentIconColor
-                                BulkyItemsModes.NOTIFY -> BulkyItemsNotifyIconColor
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (kgtModeOn) {
+                                KgtModeOnIconColor
+                            } else {
+                                KgtModeOffIconColor
                             },
                             modifier = Modifier
                                 .width(18.dp)
@@ -1228,6 +1417,13 @@ private fun ScanJobMonitorPanel(
                             .height(18.dp)
                     )
                 }
+            }
+            if (bulkyItemsModeEnabled) {
+                PrinterStatusMessages(
+                    loading = printerLoading,
+                    message = printerMessage,
+                    error = printerError
+                )
             }
 
             Row(
