@@ -7,19 +7,28 @@ package consulting.sw.logiscanner.printer
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 class TscLabelRendererTest {
 
-    private val renderer = TscLabelRenderer()
+    private val renderer = TscLabelRenderer(
+        Clock.fixed(
+            Instant.parse("2026-06-23T10:05:30Z"),
+            ZoneId.of("Europe/Moscow")
+        )
+    )
 
     @Test
     fun renderCommandsBuilds58By40QrLabel() {
         val commands = renderer.renderCommands("KGT-15")
 
         assertTrue(commands.contains("SIZE 58 mm,40 mm"))
-        assertTrue(commands.contains("QRCODE 130,32,L,7,A,0,M2,S7,\"KGT-15\""))
-        assertTrue(commands.contains("TEXT "))
-        assertTrue(commands.contains("\"KGT-15\""))
+        assertTrue(commands.contains("QRCODE 148,18,L,8,A,0,M2,S7,\"KGT-15\""))
+        assertTrue(commands.contains("TEXT 50,190,\"3\",270,1,1,\"GTC-Express\""))
+        assertTrue(commands.contains("TEXT 136,230,\"3\",0,2,2,\"KGT-15\""))
+        assertTrue(commands.contains("TEXT 104,288,\"3\",0,1,1,\"23.06.2026 13:05\""))
         assertTrue(commands.endsWith("PRINT 1,1\r\n"))
     }
 
