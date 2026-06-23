@@ -25,6 +25,7 @@ class ScanResultColorTest {
         assertTrue(colors.contains(ScanResultColor.OK))
         assertTrue(colors.contains(ScanResultColor.ISSUE))
         assertTrue(colors.contains(ScanResultColor.SERVER_ERROR))
+        assertTrue(colors.contains(ScanResultColor.IGNORED))
     }
     
     @Test

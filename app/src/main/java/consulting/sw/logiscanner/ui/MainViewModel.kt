@@ -45,7 +45,7 @@ import java.time.OffsetDateTime
 import java.util.Locale
 
 enum class ScanResultColor {
-    NONE, NOT_FOUND, OK, ISSUE, SERVER_ERROR
+    NONE, NOT_FOUND, OK, ISSUE, SERVER_ERROR, IGNORED
 }
 
 fun determineScanResultColor(result: ScanResultItem): ScanResultColor {
@@ -105,6 +105,13 @@ data class MainState(
 internal fun openSettingsState(state: MainState): MainState = state.copy(settingsOpen = true)
 
 internal fun closeSettingsState(state: MainState): MainState = state.copy(settingsOpen = false)
+
+internal fun stoppedScanWarningState(state: MainState, message: String): MainState {
+    return state.copy(
+        error = message,
+        scanResultColor = ScanResultColor.IGNORED
+    )
+}
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -934,6 +941,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Ignore scans when not in scanning mode
         if (!state.value.isScanning) {
             Log.d(javaClass.simpleName, "Scan received but not in scanning mode, ignoring: $code")
+            colorResetJob?.cancel()
+            _state.update {
+                stoppedScanWarningState(
+                    it,
+                    getApplication<Application>().getString(R.string.scan_stopped_warning)
+                )
+            }
+            if (ttsReady) {
+                tts?.speak(
+                    getApplication<Application>().getString(R.string.scan_stopped_tts),
+                    TextToSpeech.QUEUE_FLUSH,
+                    null,
+                    "scan_stopped_${System.currentTimeMillis()}"
+                )
+            }
+            colorResetJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(1500)
+                _state.update { it.copy(scanResultColor = ScanResultColor.NONE) }
+            }
             return
         }
         
