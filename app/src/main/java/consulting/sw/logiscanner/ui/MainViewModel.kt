@@ -947,7 +947,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         colorResetJob?.cancel()
         
         viewModelScope.launch {
-            _state.update { it.copy(isBusy = true, error = null, scanResultColor = ScanResultColor.NONE) }
+            _state.update {
+                it.copy(
+                    isBusy = true,
+                    error = null,
+                    printerError = null,
+                    printerMessage = null,
+                    scanResultColor = ScanResultColor.NONE
+                )
+            }
             try {
                 val printerSelected = hasSelectedPrinter(state.value.printerBluetoothAddress)
                 val submode = state.value.relabelingSubmode

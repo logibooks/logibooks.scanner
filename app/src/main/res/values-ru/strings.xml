@@ -119,6 +119,7 @@ This file is a part of LogiScanner application
     <string name="monitor_back_to_boxes">К коробкам</string>
     <string name="monitor_expand_parcel">Развернуть посылку</string>
     <string name="monitor_collapse_parcel">Свернуть посылку</string>
+    <string name="monitor_parcel_gtc_code">Стикер ГТК</string>
     <string name="monitor_parcel_scanned_sticker">Сканированный стикер</string>
     <string name="monitor_parcel_scanned_user">Сканировал</string>
     <string name="monitor_parcel_scanned_time">Время</string>

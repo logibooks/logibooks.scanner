@@ -215,6 +215,9 @@ fun monitorParcelAttributeSpecs(
     parcel.scannedTime?.takeIf { it.isNotBlank() }?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_scanned_time, formatMonitorTime(it))
     }
+    parcel.parcelId?.let {
+        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_gtc_code, it.toString().padStart(9, '0'))
+    }
     parcel.extId?.takeIf { it.isNotBlank() }?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_ext_id, it)
     }

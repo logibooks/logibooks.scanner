@@ -115,6 +115,7 @@ This file is a part of LogiScanner application
     <string name="monitor_back_to_boxes">Back to boxes</string>
     <string name="monitor_expand_parcel">Expand parcel</string>
     <string name="monitor_collapse_parcel">Collapse parcel</string>
+    <string name="monitor_parcel_gtc_code">GTC sticker</string>
     <string name="monitor_parcel_scanned_sticker">Scanned sticker</string>
     <string name="monitor_parcel_scanned_user">Scanned by</string>
     <string name="monitor_parcel_scanned_time">Time</string>

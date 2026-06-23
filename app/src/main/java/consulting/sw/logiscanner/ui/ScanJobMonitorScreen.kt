@@ -175,14 +175,6 @@ internal fun ScanJobMonitorPanel(
                     )
                 }
             }
-            if (printerLoading || printerMessage != null || printerError != null || bulkyItemsMode != BulkyItemsModes.OFF) {
-                PrinterStatusMessages(
-                    loading = printerLoading,
-                    message = printerMessage,
-                    error = printerError
-                )
-            }
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -276,6 +268,9 @@ internal fun ScanJobMonitorPanel(
                 lastExtId = lastExtId,
                 lastScanTime = lastScanTime,
                 printerSelected = printerSelected,
+                printerLoading = printerLoading,
+                printerMessage = printerMessage,
+                printerError = printerError,
                 onPrintKgtLabel = onPrintKgtLabel
             )
 
@@ -955,6 +950,9 @@ private fun LocalScanResult(
     lastExtId: String?,
     lastScanTime: String?,
     printerSelected: Boolean,
+    printerLoading: Boolean,
+    printerMessage: String?,
+    printerError: String?,
     onPrintKgtLabel: (String) -> Unit
 ) {
     val display = localScanResultDisplay(
@@ -1052,5 +1050,10 @@ private fun LocalScanResult(
         numberAttribute?.let { (label, value) ->
             MonitorAttribute(label = label, value = value)
         }
+        PrinterStatusMessages(
+            loading = printerLoading,
+            message = printerMessage,
+            error = printerError
+        )
     }
 }
