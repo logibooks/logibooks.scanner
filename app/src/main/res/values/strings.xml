@@ -22,6 +22,7 @@ This file is a part of LogiScanner application
     <string name="settings_open">Settings</string>
     <string name="settings_back">Back</string>
     <string name="settings_printer_title">Printer</string>
+    <string name="settings_relabeling_mode_title">Marking mode</string>
     <string name="settings_kgt_title">BI mode settings</string>
     <string name="settings_hid_title">External scanner device</string>
 
@@ -49,6 +50,10 @@ This file is a part of LogiScanner application
     <string name="monitor_title">Scan job monitor</string>
     <string name="bulky_items_mode_enable">BI mode is off. Tap to turn on</string>
     <string name="bulky_items_mode_disable">BI mode is on. Tap to turn off</string>
+    <string name="relabeling_mode_enable">Relabeling is off. Tap to turn on</string>
+    <string name="relabeling_mode_disable">Relabeling is on. Tap to turn off</string>
+    <string name="relabeling_mode_full">Full</string>
+    <string name="relabeling_mode_kgt_only">KGT only</string>
     <string name="bulky_items_number_speech">BI number: %1$s</string>
     <string name="kgt_auto_print_label">Automatically print label</string>
     <string name="kgt_voice_enabled_label">Voice accompaniment</string>
@@ -57,12 +62,12 @@ This file is a part of LogiScanner application
     <string name="printer_select_required">Select a printer before printing</string>
     <string name="printer_selected_address">Saved printer: %1$s</string>
     <string name="printer_refresh">Refresh printers</string>
-    <string name="printer_print_label">Print BI label</string>
+    <string name="printer_print_label">Print label</string>
     <string name="printer_no_paired">No paired Bluetooth printers</string>
     <string name="printer_permission_missing">Bluetooth printer permission is required</string>
     <string name="printer_not_found">Printer not found</string>
     <string name="printer_list_failed">Unable to load paired printers</string>
-    <string name="printer_invalid_label">Unable to print this BI code</string>
+    <string name="printer_invalid_label">Unable to print this label</string>
     <string name="printer_printed">Label printed</string>
     <string name="printer_print_failed">Unable to print label: %1$s</string>
     <string name="monitor_auto_follow_disable">Auto-follow is on. Tap to turn off</string>
@@ -110,6 +115,7 @@ This file is a part of LogiScanner application
     <string name="monitor_back_to_boxes">Back to boxes</string>
     <string name="monitor_expand_parcel">Expand parcel</string>
     <string name="monitor_collapse_parcel">Collapse parcel</string>
+    <string name="monitor_parcel_gtc_code">GTC sticker</string>
     <string name="monitor_parcel_scanned_sticker">Scanned sticker</string>
     <string name="monitor_parcel_scanned_user">Scanned by</string>
     <string name="monitor_parcel_scanned_time">Time</string>

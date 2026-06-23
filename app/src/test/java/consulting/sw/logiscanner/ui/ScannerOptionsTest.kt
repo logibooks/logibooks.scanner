@@ -8,8 +8,10 @@ import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
 import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScanJob
+import consulting.sw.logiscanner.net.ScanJobMonitorFollowTarget
 import consulting.sw.logiscanner.net.ScanResultItem
 import consulting.sw.logiscanner.net.ScannedItemSources
+import consulting.sw.logiscanner.store.RelabelingSubmode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -63,6 +65,11 @@ class ScannerOptionsTest {
     @Test
     fun mainStateDefaultsKgtVoiceDisabled() {
         assertFalse(MainState().kgtVoiceEnabled)
+    }
+
+    @Test
+    fun mainStateDefaultsRelabelingSubmodeKgt() {
+        assertEquals(RelabelingSubmode.KGT, MainState().relabelingSubmode)
     }
 
     @Test
@@ -128,6 +135,20 @@ class ScannerOptionsTest {
     }
 
     @Test
+    fun relabelingModeAvailabilityKeepsKgtWbrOnlyAndRequiresPrinterForFull() {
+        val wbrJob = scanJob(registerType = RegisterTypes.WBR)
+        val otherJob = scanJob(registerType = 1)
+
+        assertTrue(relabelingModeAvailable(wbrJob, RelabelingSubmode.KGT, printerSelected = false))
+        assertFalse(relabelingModeAvailable(otherJob, RelabelingSubmode.KGT, printerSelected = true))
+        assertFalse(relabelingModeAvailable(null, RelabelingSubmode.KGT, printerSelected = true))
+        assertTrue(relabelingModeAvailable(wbrJob, RelabelingSubmode.FULL, printerSelected = true))
+        assertTrue(relabelingModeAvailable(otherJob, RelabelingSubmode.FULL, printerSelected = true))
+        assertFalse(relabelingModeAvailable(wbrJob, RelabelingSubmode.FULL, printerSelected = false))
+        assertFalse(relabelingModeAvailable(null, RelabelingSubmode.FULL, printerSelected = true))
+    }
+
+    @Test
     fun normalizeBulkyItemsModeRejectsNonWbrAndInvalidValues() {
         val wbrJob = scanJob(registerType = RegisterTypes.WBR)
 
@@ -189,6 +210,125 @@ class ScannerOptionsTest {
     }
 
     @Test
+    fun normalizeRelabelingModeRejectsUnavailableModesAndDisablesFullVoice() {
+        val wbrJob = scanJob(registerType = RegisterTypes.WBR)
+        val otherJob = scanJob(registerType = 1)
+
+        assertEquals(
+            BulkyItemsModes.NOTIFY,
+            normalizeRelabelingMode(
+                wbrJob,
+                RelabelingSubmode.KGT,
+                BulkyItemsModes.SILENT,
+                voiceEnabled = true,
+                printerSelected = false
+            )
+        )
+        assertEquals(
+            BulkyItemsModes.OFF,
+            normalizeRelabelingMode(
+                otherJob,
+                RelabelingSubmode.KGT,
+                BulkyItemsModes.SILENT,
+                voiceEnabled = false,
+                printerSelected = true
+            )
+        )
+        assertEquals(
+            BulkyItemsModes.SILENT,
+            normalizeRelabelingMode(
+                otherJob,
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.NOTIFY,
+                voiceEnabled = true,
+                printerSelected = true
+            )
+        )
+        assertEquals(
+            BulkyItemsModes.OFF,
+            normalizeRelabelingMode(
+                otherJob,
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                voiceEnabled = true,
+                printerSelected = false
+            )
+        )
+    }
+
+    @Test
+    fun nextRelabelingModeUsesKgtVoiceAndFullSilentMode() {
+        val wbrJob = scanJob(registerType = RegisterTypes.WBR)
+        val otherJob = scanJob(registerType = 1)
+
+        assertEquals(
+            BulkyItemsModes.NOTIFY,
+            nextRelabelingMode(
+                wbrJob,
+                RelabelingSubmode.KGT,
+                BulkyItemsModes.OFF,
+                voiceEnabled = true,
+                printerSelected = false
+            )
+        )
+        assertEquals(
+            BulkyItemsModes.SILENT,
+            nextRelabelingMode(
+                otherJob,
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.OFF,
+                voiceEnabled = true,
+                printerSelected = true
+            )
+        )
+        assertEquals(
+            BulkyItemsModes.OFF,
+            nextRelabelingMode(
+                otherJob,
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                voiceEnabled = true,
+                printerSelected = true
+            )
+        )
+        assertEquals(
+            BulkyItemsModes.OFF,
+            nextRelabelingMode(
+                otherJob,
+                RelabelingSubmode.KGT,
+                BulkyItemsModes.OFF,
+                voiceEnabled = true,
+                printerSelected = true
+            )
+        )
+    }
+
+    @Test
+    fun backendBulkyItemsModeKeepsKgtAndTurnsFullModeOff() {
+        val wbrJob = scanJob(registerType = RegisterTypes.WBR)
+        val otherJob = scanJob(registerType = 1)
+
+        assertEquals(
+            BulkyItemsModes.NOTIFY,
+            backendBulkyItemsMode(
+                wbrJob,
+                RelabelingSubmode.KGT,
+                BulkyItemsModes.SILENT,
+                voiceEnabled = true
+            )
+        )
+        assertEquals(
+            BulkyItemsModes.OFF,
+            backendBulkyItemsMode(
+                otherJob,
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                voiceEnabled = true
+            )
+        )
+    }
+
+    @Test
     fun kgtLabelCodeTrimsAndRejectsBlankValues() {
         assertEquals("15", kgtLabelCode(" 15 "))
         assertNull(kgtLabelCode(" "))
@@ -198,7 +338,9 @@ class ScannerOptionsTest {
     @Test
     fun canManualPrintKgtLabelRequiresCode() {
         assertTrue(canManualPrintKgtLabel("15"))
+        assertTrue(canManualPrintKgtLabel("15", printerSelected = true))
         assertFalse(canManualPrintKgtLabel(" "))
+        assertFalse(canManualPrintKgtLabel("15", printerSelected = false))
     }
 
     @Test
@@ -217,18 +359,113 @@ class ScannerOptionsTest {
         assertFalse(shouldAutoPrintKgtLabel(false, wbrJob, BulkyItemsModes.SILENT, result))
         assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.OFF, result))
         assertFalse(shouldAutoPrintKgtLabel(true, scanJob(registerType = 1), BulkyItemsModes.SILENT, result))
+        assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, result, printerSelected = false))
         assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = null)))
         assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = "15", count = 0)))
         assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = "15", hasIssues = true)))
     }
 
-    private fun scanJob(registerType: Int): ScanJob {
+    @Test
+    fun shouldAutoPrintFullRelabelingLabelRequiresFullModePrinterAndResolvedParcel() {
+        val job = scanJob(registerType = 1, registerId = 45)
+        val result = scanResultItem(
+            extId = null,
+            followTarget = ScanJobMonitorFollowTarget(parcelId = 123)
+        )
+
+        assertTrue(
+            shouldAutoPrintFullRelabelingLabel(
+                submode = RelabelingSubmode.FULL,
+                relabelingMode = BulkyItemsModes.SILENT,
+                printerSelected = true,
+                job = job,
+                result = result
+            )
+        )
+        assertFalse(
+            shouldAutoPrintFullRelabelingLabel(
+                RelabelingSubmode.KGT,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                job = job,
+                result = result
+            )
+        )
+        assertFalse(
+            shouldAutoPrintFullRelabelingLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.OFF,
+                printerSelected = true,
+                job = job,
+                result = result
+            )
+        )
+        assertFalse(
+            shouldAutoPrintFullRelabelingLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = false,
+                job = job,
+                result = result
+            )
+        )
+        assertFalse(
+            shouldAutoPrintFullRelabelingLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                job = scanJob(registerType = 1, registerId = 0),
+                result = result
+            )
+        )
+        assertFalse(
+            shouldAutoPrintFullRelabelingLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                job = job,
+                result = scanResultItem(
+                    extId = null,
+                    followTarget = ScanJobMonitorFollowTarget(parcelId = null)
+                )
+            )
+        )
+        assertFalse(
+            shouldAutoPrintFullRelabelingLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                job = job,
+                result = scanResultItem(
+                    extId = null,
+                    count = 2,
+                    followTarget = ScanJobMonitorFollowTarget(parcelId = 123)
+                )
+            )
+        )
+        assertFalse(
+            shouldAutoPrintFullRelabelingLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                job = job,
+                result = scanResultItem(
+                    extId = null,
+                    scanSource = ScannedItemSources.BOX_STICKER,
+                    followTarget = ScanJobMonitorFollowTarget(parcelId = 123)
+                )
+            )
+        )
+    }
+
+    private fun scanJob(registerType: Int, registerId: Int = 10): ScanJob {
         return ScanJob(
             id = 1,
             name = "Job",
             description = null,
             status = "InProgress",
             type = "Scan",
+            registerId = registerId,
             registerType = registerType
         )
     }
@@ -236,17 +473,20 @@ class ScannerOptionsTest {
     private fun scanResultItem(
         extId: String?,
         count: Int = 1,
-        hasIssues: Boolean = false
+        hasIssues: Boolean = false,
+        scanSource: Int = ScannedItemSources.PARCEL_STICKER,
+        followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget()
     ): ScanResultItem {
         return ScanResultItem(
             count = count,
             parcelCount = count,
             boxCount = 0,
-            scanSource = ScannedItemSources.PARCEL_STICKER,
+            scanSource = scanSource,
             itemNumbers = emptyList(),
             extData = null,
             extId = extId,
-            hasIssues = hasIssues
+            hasIssues = hasIssues,
+            followTarget = followTarget
         )
     }
 }

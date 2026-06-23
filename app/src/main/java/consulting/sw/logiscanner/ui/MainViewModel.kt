@@ -30,6 +30,7 @@ import consulting.sw.logiscanner.repo.ScanJobMonitorRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import consulting.sw.logiscanner.repo.ScanJobRepository
 import consulting.sw.logiscanner.repo.ScanRepository
+import consulting.sw.logiscanner.store.RelabelingSubmode
 import consulting.sw.logiscanner.store.SettingsStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -79,6 +80,7 @@ data class MainState(
     val bulkyItemsMode: Int = BulkyItemsModes.OFF,
     val printerAutoPrintEnabled: Boolean = false,
     val kgtVoiceEnabled: Boolean = false,
+    val relabelingSubmode: RelabelingSubmode = RelabelingSubmode.KGT,
     val printerBluetoothAddress: String? = null,
     val bondedPrinters: List<BluetoothPrinterDevice> = emptyList(),
     val printerLoading: Boolean = false,
@@ -148,7 +150,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update {
                     it.copy(
                         kgtVoiceEnabled = enabled,
-                        bulkyItemsMode = applyBulkyItemsVoiceSetting(it.bulkyItemsMode, enabled)
+                        bulkyItemsMode = applyRelabelingVoiceSetting(
+                            it.relabelingSubmode,
+                            it.bulkyItemsMode,
+                            enabled
+                        )
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            settingsStore.relabelingSubmode().collect { submode ->
+                _state.update {
+                    val printerSelected = hasSelectedPrinter(it.printerBluetoothAddress)
+                    it.copy(
+                        relabelingSubmode = submode,
+                        bulkyItemsMode = normalizeRelabelingMode(
+                            it.selectedScanJob,
+                            submode,
+                            it.bulkyItemsMode,
+                            it.kgtVoiceEnabled,
+                            printerSelected
+                        )
                     )
                 }
             }
@@ -156,7 +180,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             settingsStore.printerBluetoothAddress().collect { address ->
-                _state.update { it.copy(printerBluetoothAddress = address) }
+                _state.update {
+                    it.copy(
+                        printerBluetoothAddress = address,
+                        bulkyItemsMode = normalizeRelabelingMode(
+                            it.selectedScanJob,
+                            it.relabelingSubmode,
+                            it.bulkyItemsMode,
+                            it.kgtVoiceEnabled,
+                            hasSelectedPrinter(address)
+                        )
+                    )
+                }
             }
         }
 
@@ -220,6 +255,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setPrinterAutoPrintEnabled(value: Boolean) {
+        if (value && !hasSelectedPrinter(state.value.printerBluetoothAddress)) {
+            return
+        }
         _state.update { it.copy(printerAutoPrintEnabled = value, printerError = null, printerMessage = null) }
         viewModelScope.launch {
             settingsStore.setPrinterAutoPrintEnabled(value)
@@ -230,7 +268,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update {
             it.copy(
                 kgtVoiceEnabled = value,
-                bulkyItemsMode = applyBulkyItemsVoiceSetting(it.bulkyItemsMode, value)
+                bulkyItemsMode = applyRelabelingVoiceSetting(
+                    it.relabelingSubmode,
+                    it.bulkyItemsMode,
+                    value
+                )
             )
         }
         viewModelScope.launch {
@@ -238,9 +280,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setPrinterBluetoothAddress(value: String?) {
-        _state.update { it.copy(printerBluetoothAddress = value, printerError = null, printerMessage = null) }
+    fun setRelabelingSubmode(value: RelabelingSubmode) {
+        if (value == RelabelingSubmode.FULL && !hasSelectedPrinter(state.value.printerBluetoothAddress)) {
+            return
+        }
+
+        _state.update {
+            val printerSelected = hasSelectedPrinter(it.printerBluetoothAddress)
+            it.copy(
+                relabelingSubmode = value,
+                bulkyItemsMode = normalizeRelabelingMode(
+                    it.selectedScanJob,
+                    value,
+                    it.bulkyItemsMode,
+                    it.kgtVoiceEnabled,
+                    printerSelected
+                ),
+                printerError = null,
+                printerMessage = null
+            )
+        }
         viewModelScope.launch {
+            settingsStore.setRelabelingSubmode(value)
+        }
+    }
+
+    fun setPrinterBluetoothAddress(value: String?) {
+        val printerCleared = value.isNullOrBlank()
+        _state.update {
+            val clearFullMode = printerCleared && it.relabelingSubmode == RelabelingSubmode.FULL
+            val nextSubmode = if (clearFullMode) RelabelingSubmode.KGT else it.relabelingSubmode
+            it.copy(
+                printerBluetoothAddress = value,
+                relabelingSubmode = nextSubmode,
+                bulkyItemsMode = normalizeRelabelingMode(
+                    it.selectedScanJob,
+                    nextSubmode,
+                    it.bulkyItemsMode,
+                    it.kgtVoiceEnabled,
+                    hasSelectedPrinter(value)
+                ),
+                printerError = null,
+                printerMessage = null
+            )
+        }
+        viewModelScope.launch {
+            if (printerCleared) {
+                settingsStore.setRelabelingSubmode(RelabelingSubmode.KGT)
+            }
             settingsStore.setPrinterBluetoothAddress(value)
         }
     }
@@ -435,11 +522,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectScanJob(job: ScanJob?) {
         viewModelScope.launch {
             val jobChanged = state.value.selectedScanJob?.id != job?.id
-            val nextBulkyItemsMode = if (bulkyItemsModeEnabled(job)) {
-                applyBulkyItemsVoiceSetting(state.value.bulkyItemsMode, state.value.kgtVoiceEnabled)
-            } else {
-                BulkyItemsModes.OFF
-            }
+            val nextBulkyItemsMode = normalizeRelabelingMode(
+                job,
+                state.value.relabelingSubmode,
+                state.value.bulkyItemsMode,
+                state.value.kgtVoiceEnabled,
+                hasSelectedPrinter(state.value.printerBluetoothAddress)
+            )
             if (job == null) {
                 stopScanJobMonitor()
             }
@@ -511,10 +600,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleBulkyItemsMode() {
         _state.update {
             it.copy(
-                bulkyItemsMode = nextBulkyItemsMode(
+                bulkyItemsMode = nextRelabelingMode(
                     job = it.selectedScanJob,
+                    submode = it.relabelingSubmode,
                     currentMode = it.bulkyItemsMode,
-                    voiceEnabled = it.kgtVoiceEnabled
+                    voiceEnabled = it.kgtVoiceEnabled,
+                    printerSelected = hasSelectedPrinter(it.printerBluetoothAddress)
                 )
             )
         }
@@ -856,13 +947,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         colorResetJob?.cancel()
         
         viewModelScope.launch {
-            _state.update { it.copy(isBusy = true, error = null, scanResultColor = ScanResultColor.NONE) }
-            try {
-                val voiceEnabled = state.value.kgtVoiceEnabled
-                val bulkyItemsMode = normalizeBulkyItemsMode(
-                    job,
-                    applyBulkyItemsVoiceSetting(state.value.bulkyItemsMode, voiceEnabled)
+            _state.update {
+                it.copy(
+                    isBusy = true,
+                    error = null,
+                    printerError = null,
+                    printerMessage = null,
+                    scanResultColor = ScanResultColor.NONE
                 )
+            }
+            try {
+                val printerSelected = hasSelectedPrinter(state.value.printerBluetoothAddress)
+                val submode = state.value.relabelingSubmode
+                val voiceEnabled = submode == RelabelingSubmode.KGT && state.value.kgtVoiceEnabled
+                val relabelingMode = normalizeRelabelingMode(
+                    job,
+                    submode,
+                    state.value.bulkyItemsMode,
+                    voiceEnabled,
+                    printerSelected
+                )
+                val bulkyItemsMode = backendBulkyItemsMode(job, submode, relabelingMode, voiceEnabled)
                 val result = scanRepo.scan(job.id, code, bulkyItemsMode)
                 val autoPrintEnabled = state.value.printerAutoPrintEnabled
                 _state.update { 
@@ -882,25 +987,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 followLocalScanResult(result)
 
-                if (shouldAutoPrintKgtLabel(autoPrintEnabled, job, bulkyItemsMode, result)) {
+                if (shouldAutoPrintKgtLabel(autoPrintEnabled, job, bulkyItemsMode, result, printerSelected)) {
                     result.extId?.let { extId ->
                         viewModelScope.launch {
                             printKgtLabelInternal(extId)
                         }
                     }
                 }
+
+                if (shouldAutoPrintFullRelabelingLabel(submode, relabelingMode, printerSelected, job, result)) {
+                    result.followTarget.parcelId?.let { parcelId ->
+                        viewModelScope.launch {
+                            printFullRelabelingLabelInternal(parcelId, job.registerId)
+                        }
+                    }
+                }
                 
+                val fullRelabelingVoiceDisabled = submode == RelabelingSubmode.FULL
+                    && relabelingMode != BulkyItemsModes.OFF
                 val extIdSpeechText = if (
-                    bulkyItemsModeNotifies(bulkyItemsMode, voiceEnabled) && !result.extId.isNullOrBlank()
+                    !fullRelabelingVoiceDisabled
+                    && relabelingModeNotifies(submode, relabelingMode, voiceEnabled)
+                    && !result.extId.isNullOrBlank()
                 ) {
                     getApplication<Application>().getString(R.string.bulky_items_number_speech, result.extId)
                 } else {
                     null
                 }
-                val speechText = listOfNotNull(
-                    extIdSpeechText,
-                    result.extData?.takeIf { it.isNotBlank() }
-                ).joinToString(". ")
+                val speechText = if (fullRelabelingVoiceDisabled) {
+                    ""
+                } else {
+                    listOfNotNull(
+                        extIdSpeechText,
+                        result.extData?.takeIf { it.isNotBlank() }
+                    ).joinToString(". ")
+                }
                 if (speechText.isNotEmpty() && ttsReady) {
                     tts?.speak(speechText, TextToSpeech.QUEUE_FLUSH, null, "scan_result_${System.currentTimeMillis()}")
                 }
@@ -981,6 +1102,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     externalScannerEnabled = it.externalScannerEnabled,
                     printerAutoPrintEnabled = it.printerAutoPrintEnabled,
                     kgtVoiceEnabled = it.kgtVoiceEnabled,
+                    relabelingSubmode = it.relabelingSubmode,
                     printerBluetoothAddress = it.printerBluetoothAddress,
                     bondedPrinters = it.bondedPrinters
                 )
@@ -1014,6 +1136,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
         try {
             val result = labelPrintService.print(state.value.printerBluetoothAddress, labelCode)
+            applyPrinterResult(result)
+        } finally {
+            _state.update { it.copy(printerLoading = false) }
+        }
+    }
+
+    private suspend fun printFullRelabelingLabelInternal(parcelId: Int, registerId: Int) {
+        if (parcelId <= 0 || registerId <= 0) {
+            _state.update {
+                it.copy(
+                    printerError = getApplication<Application>().getString(R.string.printer_invalid_label),
+                    printerMessage = null
+                )
+            }
+            return
+        }
+
+        _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
+        try {
+            val result = labelPrintService.printFullRelabeling(
+                state.value.printerBluetoothAddress,
+                parcelId,
+                registerId
+            )
             applyPrinterResult(result)
         } finally {
             _state.update { it.copy(printerLoading = false) }

@@ -37,7 +37,8 @@ import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.ScanScreen
 import consulting.sw.logiscanner.ui.SettingsScreen
-import consulting.sw.logiscanner.ui.bulkyItemsModeEnabled
+import consulting.sw.logiscanner.ui.hasSelectedPrinter
+import consulting.sw.logiscanner.ui.relabelingModeAvailable
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 import java.util.Locale
 
@@ -68,6 +69,7 @@ class MainActivity : ComponentActivity() {
             val state by vm.state.collectAsState()
             val context = LocalContext.current
             val focusManager = LocalFocusManager.current
+            val printerSelected = hasSelectedPrinter(state.printerBluetoothAddress)
             var pendingPrinterAction by remember { mutableStateOf<(() -> Unit)?>(null) }
             val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()
@@ -123,6 +125,7 @@ class MainActivity : ComponentActivity() {
                                 bondedPrinters = state.bondedPrinters,
                                 printerAutoPrintEnabled = state.printerAutoPrintEnabled,
                                 kgtVoiceEnabled = state.kgtVoiceEnabled,
+                                relabelingSubmode = state.relabelingSubmode,
                                 printerLoading = state.printerLoading,
                                 printerMessage = state.printerMessage,
                                 printerError = state.printerError,
@@ -139,6 +142,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onKgtVoiceEnabledChange = vm::setKgtVoiceEnabled,
+                                onRelabelingSubmodeChange = vm::setRelabelingSubmode,
                                 onRefreshPrinters = {
                                     runPrinterAction {
                                         vm.refreshPrinters()
@@ -200,7 +204,12 @@ class MainActivity : ComponentActivity() {
                                 monitorError = state.monitorError,
                                 monitorAutoFollow = state.monitorAutoFollow,
                                 bulkyItemsMode = state.bulkyItemsMode,
-                                bulkyItemsModeEnabled = bulkyItemsModeEnabled(state.selectedScanJob),
+                                relabelingModeAvailable = relabelingModeAvailable(
+                                    state.selectedScanJob,
+                                    state.relabelingSubmode,
+                                    printerSelected
+                                ),
+                                printerSelected = printerSelected,
                                 printerLoading = state.printerLoading,
                                 printerMessage = state.printerMessage,
                                 printerError = state.printerError,

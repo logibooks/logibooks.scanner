@@ -22,6 +22,7 @@ This file is a part of LogiScanner application
     <string name="settings_open">Настройки</string>
     <string name="settings_back">Назад</string>
     <string name="settings_printer_title">Принтер</string>
+    <string name="settings_relabeling_mode_title">Режим маркировки</string>
     <string name="settings_kgt_title">Настройки режима КГТ</string>
     <string name="settings_hid_title">Внешний сканер</string>
 
@@ -49,6 +50,10 @@ This file is a part of LogiScanner application
     <string name="monitor_title">Монитор сканирования</string>
     <string name="bulky_items_mode_enable">Режим КГТ выключен. Нажмите, чтобы включить</string>
     <string name="bulky_items_mode_disable">Режим КГТ включен. Нажмите, чтобы выключить</string>
+    <string name="relabeling_mode_enable">Перемаркировка выключена. Нажмите, чтобы включить</string>
+    <string name="relabeling_mode_disable">Перемаркировка включена. Нажмите, чтобы выключить</string>
+    <string name="relabeling_mode_full">Полная</string>
+    <string name="relabeling_mode_kgt_only">Только КГТ</string>
     <string name="bulky_items_number_speech">Номер КГТ: %1$s</string>
     <string name="kgt_auto_print_label">Автоматическая печать наклейки</string>
     <string name="kgt_voice_enabled_label">Голосовое сопровождение</string>
@@ -57,12 +62,12 @@ This file is a part of LogiScanner application
     <string name="printer_select_required">Выберите принтер перед печатью</string>
     <string name="printer_selected_address">Сохранённый принтер: %1$s</string>
     <string name="printer_refresh">Обновить принтеры</string>
-    <string name="printer_print_label">Печать этикетки КГТ</string>
+    <string name="printer_print_label">Печать этикетки</string>
     <string name="printer_no_paired">Нет сопряжённых Bluetooth принтеров</string>
     <string name="printer_permission_missing">Разрешите доступ к Bluetooth принтеру</string>
     <string name="printer_not_found">Принтер не найден</string>
     <string name="printer_list_failed">Не удалось загрузить список принтеров</string>
-    <string name="printer_invalid_label">Не удалось напечатать этот номер КГТ</string>
+    <string name="printer_invalid_label">Не удалось напечатать эту этикетку</string>
     <string name="printer_printed">Этикетка напечатана</string>
     <string name="printer_print_failed">Не удалось напечатать этикетку: %1$s</string>
     <string name="monitor_auto_follow_disable">Автослежение включено. Нажмите, чтобы выключить</string>
@@ -114,6 +119,7 @@ This file is a part of LogiScanner application
     <string name="monitor_back_to_boxes">К коробкам</string>
     <string name="monitor_expand_parcel">Развернуть посылку</string>
     <string name="monitor_collapse_parcel">Свернуть посылку</string>
+    <string name="monitor_parcel_gtc_code">Стикер ГТК</string>
     <string name="monitor_parcel_scanned_sticker">Сканированный стикер</string>
     <string name="monitor_parcel_scanned_user">Сканировал</string>
     <string name="monitor_parcel_scanned_time">Время</string>

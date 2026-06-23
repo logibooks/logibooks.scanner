@@ -19,6 +19,17 @@ import java.io.IOException
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
+enum class RelabelingSubmode(val storageValue: String) {
+    KGT("kgt"),
+    FULL("full");
+
+    companion object {
+        fun fromStorage(value: String?): RelabelingSubmode {
+            return values().firstOrNull { it.storageValue == value } ?: KGT
+        }
+    }
+}
+
 class SettingsStore(private val dataStore: DataStore<Preferences>) {
 
     constructor(context: Context) : this(context.settingsDataStore)
@@ -28,6 +39,7 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         private val KEY_PRINTER_AUTO_PRINT_ENABLED = booleanPreferencesKey("printer_auto_print_enabled")
         private val KEY_PRINTER_BLUETOOTH_ADDRESS = stringPreferencesKey("printer_bluetooth_address")
         private val KEY_KGT_VOICE_ENABLED = booleanPreferencesKey("kgt_voice_enabled")
+        private val KEY_RELABELING_SUBMODE = stringPreferencesKey("relabeling_submode")
     }
 
     fun externalScannerEnabled(): Flow<Boolean> = preferences()
@@ -48,6 +60,11 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
     fun kgtVoiceEnabled(): Flow<Boolean> = preferences()
         .map {
             it[KEY_KGT_VOICE_ENABLED] ?: false
+        }
+
+    fun relabelingSubmode(): Flow<RelabelingSubmode> = preferences()
+        .map {
+            RelabelingSubmode.fromStorage(it[KEY_RELABELING_SUBMODE])
         }
 
     private fun preferences(): Flow<Preferences> = dataStore.data
@@ -84,6 +101,12 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
     suspend fun setKgtVoiceEnabled(enabled: Boolean) {
         dataStore.edit {
             it[KEY_KGT_VOICE_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setRelabelingSubmode(submode: RelabelingSubmode) {
+        dataStore.edit {
+            it[KEY_RELABELING_SUBMODE] = submode.storageValue
         }
     }
 }

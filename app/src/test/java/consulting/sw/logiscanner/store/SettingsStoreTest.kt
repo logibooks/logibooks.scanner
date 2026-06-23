@@ -7,6 +7,7 @@ package consulting.sw.logiscanner.store
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.preferencesOf
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -87,6 +88,33 @@ class SettingsStoreTest {
     }
 
     @Test
+    fun relabelingSubmodeDefaultsKgtWhenNoValueWasSaved() = runTest {
+        val store = SettingsStore(testDataStore())
+
+        assertEquals(RelabelingSubmode.KGT, store.relabelingSubmode().first())
+    }
+
+    @Test
+    fun setRelabelingSubmodePersistsValue() = runTest {
+        val store = SettingsStore(testDataStore())
+
+        store.setRelabelingSubmode(RelabelingSubmode.FULL)
+
+        assertEquals(RelabelingSubmode.FULL, store.relabelingSubmode().first())
+    }
+
+    @Test
+    fun relabelingSubmodeFallsBackToKgtForInvalidSavedValue() = runTest {
+        val store = SettingsStore(
+            FakePreferenceDataStore(
+                preferencesOf(stringPreferencesKey("relabeling_submode") to "bad")
+            )
+        )
+
+        assertEquals(RelabelingSubmode.KGT, store.relabelingSubmode().first())
+    }
+
+    @Test
     fun printerBluetoothAddressDefaultsNullWhenNoValueWasSaved() = runTest {
         val store = SettingsStore(testDataStore())
 
@@ -106,8 +134,10 @@ class SettingsStoreTest {
 
     private fun testDataStore(): DataStore<Preferences> = FakePreferenceDataStore()
 
-    private class FakePreferenceDataStore : DataStore<Preferences> {
-        private val state = MutableStateFlow(preferencesOf())
+    private class FakePreferenceDataStore(
+        initial: Preferences = preferencesOf()
+    ) : DataStore<Preferences> {
+        private val state = MutableStateFlow(initial)
 
         override val data: Flow<Preferences> = state
 

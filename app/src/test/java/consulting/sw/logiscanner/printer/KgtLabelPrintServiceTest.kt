@@ -36,6 +36,19 @@ class KgtLabelPrintServiceTest {
     }
 
     @Test
+    fun printFullRelabelingRendersPaddedParcelAndRegisterIds() = runTest {
+        val client = RecordingClient()
+        val service = KgtLabelPrintService(TscLabelRenderer(), client)
+
+        val result = service.printFullRelabeling("AA:BB", parcelId = 123, registerId = 45)
+
+        assertEquals(KgtLabelPrintResult.Success, result)
+        assertEquals("AA:BB", client.prints.single().address)
+        assertTrue(client.prints.single().payload.contains("\"000000123\""))
+        assertTrue(client.prints.single().payload.contains("\"000045\""))
+    }
+
+    @Test
     fun printMapsKnownFailures() = runTest {
         assertEquals(
             KgtLabelPrintResult.PermissionMissing,

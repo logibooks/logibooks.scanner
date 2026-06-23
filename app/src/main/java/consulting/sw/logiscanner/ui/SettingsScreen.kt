@@ -14,7 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -23,11 +26,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
+import consulting.sw.logiscanner.store.RelabelingSubmode
 
 @Composable
 internal fun SettingsScreen(
@@ -52,6 +59,7 @@ internal fun SettingsScreen(
     bondedPrinters: List<BluetoothPrinterDevice>,
     printerAutoPrintEnabled: Boolean,
     kgtVoiceEnabled: Boolean,
+    relabelingSubmode: RelabelingSubmode,
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
@@ -59,12 +67,16 @@ internal fun SettingsScreen(
     onPrinterSelected: (String?) -> Unit,
     onPrinterAutoPrintEnabledChange: (Boolean) -> Unit,
     onKgtVoiceEnabledChange: (Boolean) -> Unit,
+    onRelabelingSubmodeChange: (RelabelingSubmode) -> Unit,
     onRefreshPrinters: () -> Unit,
     onBack: () -> Unit
 ) {
+    val printerSelected = hasSelectedPrinter(printerBluetoothAddress)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -138,6 +150,32 @@ internal fun SettingsScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
+                    stringResource(R.string.settings_relabeling_mode_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                SettingsRadioRow(
+                    selected = relabelingSubmode == RelabelingSubmode.FULL,
+                    label = stringResource(R.string.relabeling_mode_full),
+                    enabled = printerSelected,
+                    onClick = { onRelabelingSubmodeChange(RelabelingSubmode.FULL) }
+                )
+                SettingsRadioRow(
+                    selected = relabelingSubmode == RelabelingSubmode.KGT,
+                    label = stringResource(R.string.relabeling_mode_kgt_only),
+                    enabled = true,
+                    onClick = { onRelabelingSubmodeChange(RelabelingSubmode.KGT) }
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
                     stringResource(R.string.settings_kgt_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
@@ -145,6 +183,7 @@ internal fun SettingsScreen(
                 SettingsCheckboxRow(
                     checked = printerAutoPrintEnabled,
                     label = stringResource(R.string.kgt_auto_print_label),
+                    enabled = printerSelected,
                     onCheckedChange = onPrinterAutoPrintEnabledChange
                 )
                 SettingsCheckboxRow(
@@ -174,7 +213,7 @@ internal fun SettingsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(8.dp))
         VersionFooter()
     }
 }
@@ -299,13 +338,17 @@ private fun selectedPrinterDisplayName(
 private fun SettingsCheckboxRow(
     checked: Boolean,
     label: String,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val contentColor = settingsRowContentColor(enabled)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .toggleable(
                 value = checked,
+                enabled = enabled,
                 role = Role.Checkbox,
                 onValueChange = onCheckedChange
             ),
@@ -314,13 +357,66 @@ private fun SettingsCheckboxRow(
     ) {
         Checkbox(
             checked = checked,
-            onCheckedChange = null
+            enabled = enabled,
+            onCheckedChange = null,
+            colors = CheckboxDefaults.colors(
+                disabledCheckedColor = contentColor,
+                disabledUncheckedColor = contentColor
+            )
         )
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = contentColor,
             modifier = Modifier.weight(1f)
         )
     }
 }
+
+@Composable
+private fun SettingsRadioRow(
+    selected: Boolean,
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val contentColor = settingsRowContentColor(enabled)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = selected,
+                enabled = enabled,
+                role = Role.RadioButton,
+                onClick = onClick
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        RadioButton(
+            selected = selected,
+            enabled = enabled,
+            onClick = null,
+            colors = RadioButtonDefaults.colors(
+                disabledSelectedColor = contentColor,
+                disabledUnselectedColor = contentColor
+            )
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = contentColor,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun settingsRowContentColor(enabled: Boolean) = if (enabled) {
+    MaterialTheme.colorScheme.onSurface
+} else {
+    MaterialTheme.colorScheme.onSurface.copy(alpha = SETTINGS_DISABLED_ALPHA)
+}
+
+private const val SETTINGS_DISABLED_ALPHA = 0.32f
