@@ -587,9 +587,10 @@ private fun JobSelectionScreen(
             ) {
                 IconButton(
                     onClick = onOpenSettings,
+                    enabled = !isBusy,
                     modifier = Modifier
-                        .width(40.dp)
-                        .height(40.dp)
+                        .width(48.dp)
+                        .height(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Settings,
@@ -598,9 +599,10 @@ private fun JobSelectionScreen(
                 }
                 IconButton(
                     onClick = onRefresh,
+                    enabled = !isBusy,
                     modifier = Modifier
-                        .width(40.dp)
-                        .height(40.dp)
+                        .width(48.dp)
+                        .height(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.RotateLeft,
@@ -609,9 +611,10 @@ private fun JobSelectionScreen(
                 }
                 IconButton(
                     onClick = onLogout,
+                    enabled = !isBusy,
                     modifier = Modifier
-                        .width(40.dp)
-                        .height(40.dp)
+                        .width(48.dp)
+                        .height(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout,
@@ -1001,9 +1004,10 @@ private fun ScanScreen(
                 ) {
                     IconButton(
                         onClick = onOpenSettings,
+                        enabled = !isBusy,
                         modifier = Modifier
-                            .width(40.dp)
-                            .height(40.dp)
+                            .width(48.dp)
+                            .height(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
@@ -1012,9 +1016,10 @@ private fun ScanScreen(
                     }
                     IconButton(
                         onClick = onBackToJobs,
+                        enabled = !isBusy,
                         modifier = Modifier
-                            .width(40.dp)
-                            .height(40.dp)
+                            .width(48.dp)
+                            .height(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -1023,9 +1028,10 @@ private fun ScanScreen(
                     }
                     IconButton(
                         onClick = onLogout,
+                        enabled = !isBusy,
                         modifier = Modifier
-                            .width(40.dp)
-                            .height(40.dp)
+                            .width(48.dp)
+                            .height(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Logout,
