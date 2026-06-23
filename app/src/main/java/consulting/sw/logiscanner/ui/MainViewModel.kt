@@ -306,8 +306,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setPrinterBluetoothAddress(value: String?) {
-        val clearFullMode = value.isNullOrBlank() && state.value.relabelingSubmode == RelabelingSubmode.FULL
+        val printerCleared = value.isNullOrBlank()
         _state.update {
+            val clearFullMode = printerCleared && it.relabelingSubmode == RelabelingSubmode.FULL
             val nextSubmode = if (clearFullMode) RelabelingSubmode.KGT else it.relabelingSubmode
             it.copy(
                 printerBluetoothAddress = value,
@@ -325,7 +326,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             settingsStore.setPrinterBluetoothAddress(value)
-            if (clearFullMode) {
+            if (printerCleared) {
                 settingsStore.setRelabelingSubmode(RelabelingSubmode.KGT)
             }
         }

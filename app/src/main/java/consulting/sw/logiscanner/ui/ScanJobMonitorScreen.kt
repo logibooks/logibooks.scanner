@@ -73,7 +73,6 @@ import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
-import consulting.sw.logiscanner.store.RelabelingSubmode
 import kotlinx.coroutines.delay
 
 @Composable
@@ -94,7 +93,6 @@ internal fun ScanJobMonitorPanel(
     error: String?,
     autoFollow: Boolean,
     bulkyItemsMode: Int,
-    relabelingSubmode: RelabelingSubmode,
     relabelingModeAvailable: Boolean,
     printerSelected: Boolean,
     printerLoading: Boolean,

@@ -204,7 +204,6 @@ class MainActivity : ComponentActivity() {
                                 monitorError = state.monitorError,
                                 monitorAutoFollow = state.monitorAutoFollow,
                                 bulkyItemsMode = state.bulkyItemsMode,
-                                relabelingSubmode = state.relabelingSubmode,
                                 relabelingModeAvailable = relabelingModeAvailable(
                                     state.selectedScanJob,
                                     state.relabelingSubmode,

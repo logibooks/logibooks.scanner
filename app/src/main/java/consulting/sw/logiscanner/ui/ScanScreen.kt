@@ -42,7 +42,6 @@ import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
-import consulting.sw.logiscanner.store.RelabelingSubmode
 
 @Composable
 internal fun ScanScreen(
@@ -68,7 +67,6 @@ internal fun ScanScreen(
     monitorError: String?,
     monitorAutoFollow: Boolean,
     bulkyItemsMode: Int,
-    relabelingSubmode: RelabelingSubmode,
     relabelingModeAvailable: Boolean,
     printerSelected: Boolean,
     printerLoading: Boolean,
@@ -249,7 +247,6 @@ internal fun ScanScreen(
                 error = monitorError,
                 autoFollow = monitorAutoFollow,
                 bulkyItemsMode = bulkyItemsMode,
-                relabelingSubmode = relabelingSubmode,
                 relabelingModeAvailable = relabelingModeAvailable,
                 printerSelected = printerSelected,
                 printerLoading = printerLoading,
