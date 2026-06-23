@@ -2,6 +2,8 @@
 // All rights reserved.
 // This file is a part of LogiScanner application
 
+import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import org.gradle.testing.jacoco.tasks.JacocoReport
@@ -120,15 +122,29 @@ val coverageExclusions = listOf(
     "**/*JsonAdapter$*.*"
 )
 
-tasks.register<JacocoReport>("jacocoDebugUnitTestReport") {
-    group = "verification"
-    description = "Generates JaCoCo coverage reports for debug unit tests."
+val ciJacocoXmlReport = layout.buildDirectory.file("tmp/coverage/jacoco-debug-unit-test.xml")
+val ciCoberturaReport = layout.buildDirectory.file("reports/coverage/cobertura.xml")
+val jacocoToCoberturaScript = rootProject.layout.projectDirectory.file("tools/jacoco_to_cobertura.py")
+val pythonExecutable = providers.gradleProperty("pythonExecutable")
+    .orElse(
+        providers.environmentVariable("PYTHON").orElse(
+            if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
+                "python"
+            } else {
+                "python3"
+            }
+        )
+    )
+
+val ciCoverageIntermediateReport = tasks.register<JacocoReport>("ciCoverageIntermediateReport") {
+    description = "Generates a temporary JaCoCo XML report for CI coverage conversion."
 
     dependsOn("testDebugUnitTest")
 
     reports {
         xml.required.set(true)
-        html.required.set(true)
+        xml.outputLocation.set(ciJacocoXmlReport)
+        html.required.set(false)
         csv.required.set(false)
     }
 
@@ -154,6 +170,30 @@ tasks.register<JacocoReport>("jacocoDebugUnitTestReport") {
     )
 }
 
-tasks.named("check") {
-    dependsOn("jacocoDebugUnitTestReport")
+val deleteCiCoverageIntermediateReport = tasks.register<Delete>("deleteCiCoverageIntermediateReport") {
+    delete(ciJacocoXmlReport)
+}
+
+tasks.register<Exec>("ciCoberturaCoverage") {
+    group = "verification"
+    description = "Generates the Cobertura coverage report consumed by GitHub Code Quality."
+
+    dependsOn(ciCoverageIntermediateReport)
+    finalizedBy(deleteCiCoverageIntermediateReport)
+
+    inputs.file(ciJacocoXmlReport)
+    inputs.file(jacocoToCoberturaScript)
+    outputs.file(ciCoberturaReport)
+
+    workingDir(rootProject.projectDir)
+    commandLine(
+        pythonExecutable.get(),
+        jacocoToCoberturaScript.asFile.absolutePath,
+        ciJacocoXmlReport.get().asFile.absolutePath,
+        ciCoberturaReport.get().asFile.absolutePath,
+        "--source-root",
+        project.file("src/main/java").absolutePath,
+        "--project-root",
+        rootProject.projectDir.absolutePath
+    )
 }
