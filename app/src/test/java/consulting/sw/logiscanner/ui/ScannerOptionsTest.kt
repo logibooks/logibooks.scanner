@@ -53,6 +53,29 @@ class ScannerOptionsTest {
     }
 
     @Test
+    fun stoppedScanWarningPreservesScanDataAndBusyState() {
+        val state = MainState(
+            isBusy = false,
+            selectedScanJob = scanJob(registerType = RegisterTypes.WBR),
+            isScanning = false,
+            lastCode = "PREV",
+            lastParcelCount = 1,
+            lastBoxCount = 0,
+            scanResultColor = ScanResultColor.OK
+        )
+
+        val warned = stoppedScanWarningState(state, "Stopped")
+
+        assertFalse(warned.isBusy)
+        assertFalse(warned.isScanning)
+        assertEquals("PREV", warned.lastCode)
+        assertEquals(1, warned.lastParcelCount)
+        assertEquals(0, warned.lastBoxCount)
+        assertEquals("Stopped", warned.error)
+        assertEquals(ScanResultColor.IGNORED, warned.scanResultColor)
+    }
+
+    @Test
     fun mainStateDefaultsBulkyItemsModeOff() {
         assertEquals(BulkyItemsModes.OFF, MainState().bulkyItemsMode)
     }
@@ -91,6 +114,34 @@ class ScannerOptionsTest {
             R.string.scan_hint_external_enabled,
             scanHintResId(externalScannerEnabled = true)
         )
+    }
+
+    @Test
+    fun scanHintTellsOperatorToStartWhenStopped() {
+        assertEquals(
+            R.string.scan_hint_stopped,
+            scanHintResId(externalScannerEnabled = false, isScanning = false)
+        )
+        assertEquals(
+            R.string.scan_hint_stopped,
+            scanHintResId(externalScannerEnabled = true, isScanning = false)
+        )
+    }
+
+    @Test
+    fun scanTitleReflectsScanningState() {
+        assertEquals(R.string.ready_to_scan, scanTitleResId(isScanning = true))
+        assertEquals(R.string.scanning_stopped, scanTitleResId(isScanning = false))
+    }
+
+    @Test
+    fun scanReceiverFollowsScanScreenVisibility() {
+        val job = scanJob(registerType = RegisterTypes.WBR)
+
+        assertTrue(scanReceiverEnabled(isLoggedIn = true, settingsOpen = false, selectedJob = job))
+        assertFalse(scanReceiverEnabled(isLoggedIn = false, settingsOpen = false, selectedJob = job))
+        assertFalse(scanReceiverEnabled(isLoggedIn = true, settingsOpen = true, selectedJob = job))
+        assertFalse(scanReceiverEnabled(isLoggedIn = true, settingsOpen = false, selectedJob = null))
     }
 
     @Test

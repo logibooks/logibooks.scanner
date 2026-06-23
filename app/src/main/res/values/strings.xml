@@ -160,6 +160,7 @@ This file is a part of LogiScanner application
     
     <string name="scan_hint_hardware_only">Use the hardware Scan key</string>
     <string name="scan_hint_external_enabled">Use the hardware Scan key or Bluetooth scanner</string>
+    <string name="scan_hint_stopped">Press Start Scanning, then scan again</string>
     
     <!-- Login error messages -->
     <string name="login_error_invalid_credentials">Invalid email address or password</string>
@@ -172,4 +173,6 @@ This file is a part of LogiScanner application
     <!-- Scan error messages -->
     <string name="scan_error_job_invalid">Scan job is no longer active</string>
     <string name="scan_error_server">Server interaction error. Please try again later</string>
+    <string name="scan_stopped_warning">Scanning is stopped. Press Start Scanning, then scan again.</string>
+    <string name="scan_stopped_tts">Сканирование остановлено</string>
 </resources>

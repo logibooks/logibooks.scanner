@@ -164,6 +164,7 @@ This file is a part of LogiScanner application
     
     <string name="scan_hint_hardware_only">Используйте кнопку аппаратного сканирования</string>
     <string name="scan_hint_external_enabled">Используйте кнопку аппаратного сканирования или Bluetooth сканер</string>
+    <string name="scan_hint_stopped">Нажмите «Сканировать», затем повторите сканирование</string>
     
     <!-- Login error messages -->
     <string name="login_error_invalid_credentials">Неправильный адрес электронной почты или пароль</string>
@@ -176,4 +177,6 @@ This file is a part of LogiScanner application
     <!-- Scan error messages -->
     <string name="scan_error_job_invalid">Задание на сканирование неактивно</string>
     <string name="scan_error_server">Ошибка взаимодействия с сервером. Пожалуйста, повторите позже</string>
+    <string name="scan_stopped_warning">Сканирование остановлено. Нажмите «Сканировать», затем повторите сканирование.</string>
+    <string name="scan_stopped_tts">Сканирование остановлено</string>
 </resources>

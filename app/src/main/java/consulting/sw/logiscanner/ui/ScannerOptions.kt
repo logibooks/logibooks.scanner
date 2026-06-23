@@ -13,12 +13,34 @@ import consulting.sw.logiscanner.net.ScanResultItem
 import consulting.sw.logiscanner.store.RelabelingSubmode
 
 fun scanHintResId(externalScannerEnabled: Boolean): Int {
+    return scanHintResId(externalScannerEnabled, isScanning = true)
+}
+
+fun scanHintResId(externalScannerEnabled: Boolean, isScanning: Boolean): Int {
+    if (!isScanning) {
+        return R.string.scan_hint_stopped
+    }
+
     return if (externalScannerEnabled) {
         R.string.scan_hint_external_enabled
     } else {
         R.string.scan_hint_hardware_only
     }
 }
+
+fun scanTitleResId(isScanning: Boolean): Int {
+    return if (isScanning) {
+        R.string.ready_to_scan
+    } else {
+        R.string.scanning_stopped
+    }
+}
+
+fun scanReceiverEnabled(
+    isLoggedIn: Boolean,
+    settingsOpen: Boolean,
+    selectedJob: ScanJob?
+): Boolean = isLoggedIn && !settingsOpen && selectedJob != null
 
 fun hidScannerInputEnabled(externalScannerEnabled: Boolean): Boolean = externalScannerEnabled
 

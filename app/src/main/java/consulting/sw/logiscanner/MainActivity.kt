@@ -39,6 +39,7 @@ import consulting.sw.logiscanner.ui.ScanScreen
 import consulting.sw.logiscanner.ui.SettingsScreen
 import consulting.sw.logiscanner.ui.hasSelectedPrinter
 import consulting.sw.logiscanner.ui.relabelingModeAvailable
+import consulting.sw.logiscanner.ui.scanReceiverEnabled
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
 import java.util.Locale
 
@@ -98,6 +99,7 @@ class MainActivity : ComponentActivity() {
                     ScanResultColor.OK -> colorResource(id = R.color.scan_result_ok)
                     ScanResultColor.ISSUE -> colorResource(id = R.color.scan_result_issue)
                     ScanResultColor.SERVER_ERROR -> colorResource(id = R.color.scan_result_server_error)
+                    ScanResultColor.IGNORED -> colorResource(id = R.color.scan_result_ignored)
                     ScanResultColor.NONE -> MaterialTheme.colorScheme.background
                 }
 
@@ -255,9 +257,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Register/unregister receiver based on scanning state
-            DisposableEffect(state.isScanning) {
-                if (state.isScanning) {
+            val mt93ScanReceiverEnabled = scanReceiverEnabled(
+                isLoggedIn = state.isLoggedIn,
+                settingsOpen = state.settingsOpen,
+                selectedJob = state.selectedScanJob
+            )
+
+            // Register/unregister receiver based on scan screen visibility.
+            DisposableEffect(mt93ScanReceiverEnabled) {
+                if (mt93ScanReceiverEnabled) {
                     val r = Mt93ScanReceiver { code ->
                         vm.onScanned(code)
                     }

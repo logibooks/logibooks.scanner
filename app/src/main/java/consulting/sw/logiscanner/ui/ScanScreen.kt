@@ -105,7 +105,7 @@ internal fun ScanScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(horizontal = 16.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
@@ -161,7 +161,7 @@ internal fun ScanScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        stringResource(R.string.ready_to_scan),
+                        stringResource(scanTitleResId(isScanning)),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -278,7 +278,7 @@ internal fun ScanScreen(
 
         item {
             Text(
-                stringResource(scanHintResId(externalScannerEnabled)),
+                stringResource(scanHintResId(externalScannerEnabled, isScanning)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
