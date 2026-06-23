@@ -71,6 +71,22 @@ class SettingsStoreTest {
     }
 
     @Test
+    fun kgtVoiceEnabledDefaultsFalseWhenNoValueWasSaved() = runTest {
+        val store = SettingsStore(testDataStore())
+
+        assertFalse(store.kgtVoiceEnabled().first())
+    }
+
+    @Test
+    fun setKgtVoiceEnabledPersistsValue() = runTest {
+        val store = SettingsStore(testDataStore())
+
+        store.setKgtVoiceEnabled(true)
+
+        assertTrue(store.kgtVoiceEnabled().first())
+    }
+
+    @Test
     fun printerBluetoothAddressDefaultsNullWhenNoValueWasSaved() = runTest {
         val store = SettingsStore(testDataStore())
 

@@ -78,6 +78,7 @@ data class MainState(
     val monitorAutoFollow: Boolean = true,
     val bulkyItemsMode: Int = BulkyItemsModes.OFF,
     val printerAutoPrintEnabled: Boolean = false,
+    val kgtVoiceEnabled: Boolean = false,
     val printerBluetoothAddress: String? = null,
     val bondedPrinters: List<BluetoothPrinterDevice> = emptyList(),
     val printerLoading: Boolean = false,
@@ -139,6 +140,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             settingsStore.printerAutoPrintEnabled().collect { enabled ->
                 _state.update { it.copy(printerAutoPrintEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            settingsStore.kgtVoiceEnabled().collect { enabled ->
+                _state.update {
+                    it.copy(
+                        kgtVoiceEnabled = enabled,
+                        bulkyItemsMode = applyBulkyItemsVoiceSetting(it.bulkyItemsMode, enabled)
+                    )
+                }
             }
         }
 
@@ -211,6 +223,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(printerAutoPrintEnabled = value, printerError = null, printerMessage = null) }
         viewModelScope.launch {
             settingsStore.setPrinterAutoPrintEnabled(value)
+        }
+    }
+
+    fun setKgtVoiceEnabled(value: Boolean) {
+        _state.update {
+            it.copy(
+                kgtVoiceEnabled = value,
+                bulkyItemsMode = applyBulkyItemsVoiceSetting(it.bulkyItemsMode, value)
+            )
+        }
+        viewModelScope.launch {
+            settingsStore.setKgtVoiceEnabled(value)
         }
     }
 
@@ -412,7 +436,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val jobChanged = state.value.selectedScanJob?.id != job?.id
             val nextBulkyItemsMode = if (bulkyItemsModeEnabled(job)) {
-                state.value.bulkyItemsMode
+                applyBulkyItemsVoiceSetting(state.value.bulkyItemsMode, state.value.kgtVoiceEnabled)
             } else {
                 BulkyItemsModes.OFF
             }
@@ -486,7 +510,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleBulkyItemsMode() {
         _state.update {
-            it.copy(bulkyItemsMode = nextBulkyItemsMode(it.selectedScanJob, it.bulkyItemsMode))
+            it.copy(
+                bulkyItemsMode = nextBulkyItemsMode(
+                    job = it.selectedScanJob,
+                    currentMode = it.bulkyItemsMode,
+                    voiceEnabled = it.kgtVoiceEnabled
+                )
+            )
         }
     }
 
@@ -828,7 +858,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _state.update { it.copy(isBusy = true, error = null, scanResultColor = ScanResultColor.NONE) }
             try {
-                val bulkyItemsMode = normalizeBulkyItemsMode(job, state.value.bulkyItemsMode)
+                val voiceEnabled = state.value.kgtVoiceEnabled
+                val bulkyItemsMode = normalizeBulkyItemsMode(
+                    job,
+                    applyBulkyItemsVoiceSetting(state.value.bulkyItemsMode, voiceEnabled)
+                )
                 val result = scanRepo.scan(job.id, code, bulkyItemsMode)
                 val autoPrintEnabled = state.value.printerAutoPrintEnabled
                 _state.update { 
@@ -856,7 +890,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 
-                val extIdSpeechText = if (bulkyItemsModeNotifies(bulkyItemsMode) && !result.extId.isNullOrBlank()) {
+                val extIdSpeechText = if (
+                    bulkyItemsModeNotifies(bulkyItemsMode, voiceEnabled) && !result.extId.isNullOrBlank()
+                ) {
                     getApplication<Application>().getString(R.string.bulky_items_number_speech, result.extId)
                 } else {
                     null
@@ -944,6 +980,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     password = "",
                     externalScannerEnabled = it.externalScannerEnabled,
                     printerAutoPrintEnabled = it.printerAutoPrintEnabled,
+                    kgtVoiceEnabled = it.kgtVoiceEnabled,
                     printerBluetoothAddress = it.printerBluetoothAddress,
                     bondedPrinters = it.bondedPrinters
                 )

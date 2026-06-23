@@ -170,9 +170,8 @@ private val CheckStatusDarkGreenText = Color(0xFFA5D6A7)
 private val CheckStatusDarkGreenBorder = Color(0xFF66BB6A)
 private val AutoFollowOnIconColor = Color(0xFF4CAF50)
 private val AutoFollowOffIconColor = Color(0xFFFF9800)
-private val BulkyItemsSilentIconColor = AutoFollowOnIconColor
-private val BulkyItemsNotifyIconColor = AutoFollowOnIconColor
-private val BulkyItemsNotifyBorderColor = BulkyItemsNotifyIconColor
+private val KgtModeOnIconColor = AutoFollowOnIconColor
+private val KgtModeOffIconColor = AutoFollowOffIconColor
 
 
 class MainActivity : ComponentActivity() {
@@ -255,11 +254,24 @@ class MainActivity : ComponentActivity() {
                                 externalScannerEnabled = state.externalScannerEnabled,
                                 printerBluetoothAddress = state.printerBluetoothAddress,
                                 bondedPrinters = state.bondedPrinters,
+                                printerAutoPrintEnabled = state.printerAutoPrintEnabled,
+                                kgtVoiceEnabled = state.kgtVoiceEnabled,
                                 printerLoading = state.printerLoading,
                                 printerMessage = state.printerMessage,
                                 printerError = state.printerError,
                                 onExternalScannerEnabledChange = vm::setExternalScannerEnabled,
                                 onPrinterSelected = vm::setPrinterBluetoothAddress,
+                                onPrinterAutoPrintEnabledChange = { enabled ->
+                                    if (enabled) {
+                                        runPrinterAction {
+                                            vm.setPrinterAutoPrintEnabled(true)
+                                            vm.refreshPrinters()
+                                        }
+                                    } else {
+                                        vm.setPrinterAutoPrintEnabled(false)
+                                    }
+                                },
+                                onKgtVoiceEnabledChange = vm::setKgtVoiceEnabled,
                                 onRefreshPrinters = {
                                     runPrinterAction {
                                         vm.refreshPrinters()
@@ -322,7 +334,6 @@ class MainActivity : ComponentActivity() {
                                 monitorAutoFollow = state.monitorAutoFollow,
                                 bulkyItemsMode = state.bulkyItemsMode,
                                 bulkyItemsModeEnabled = bulkyItemsModeEnabled(state.selectedScanJob),
-                                printerAutoPrintEnabled = state.printerAutoPrintEnabled,
                                 printerLoading = state.printerLoading,
                                 printerMessage = state.printerMessage,
                                 printerError = state.printerError,
@@ -336,16 +347,6 @@ class MainActivity : ComponentActivity() {
                                 onOpenMonitorBox = vm::openMonitorBox,
                                 onToggleMonitorAutoFollow = vm::toggleMonitorAutoFollow,
                                 onToggleBulkyItemsMode = vm::toggleBulkyItemsMode,
-                                onPrinterAutoPrintEnabledChange = { enabled ->
-                                    if (enabled) {
-                                        runPrinterAction {
-                                            vm.setPrinterAutoPrintEnabled(true)
-                                            vm.refreshPrinters()
-                                        }
-                                    } else {
-                                        vm.setPrinterAutoPrintEnabled(false)
-                                    }
-                                },
                                 onPrintKgtLabel = { code ->
                                     runPrinterAction {
                                         vm.printKgtLabel(code)
@@ -731,11 +732,15 @@ private fun SettingsScreen(
     externalScannerEnabled: Boolean,
     printerBluetoothAddress: String?,
     bondedPrinters: List<BluetoothPrinterDevice>,
+    printerAutoPrintEnabled: Boolean,
+    kgtVoiceEnabled: Boolean,
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
     onExternalScannerEnabledChange: (Boolean) -> Unit,
     onPrinterSelected: (String?) -> Unit,
+    onPrinterAutoPrintEnabledChange: (Boolean) -> Unit,
+    onKgtVoiceEnabledChange: (Boolean) -> Unit,
     onRefreshPrinters: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -815,35 +820,72 @@ private fun SettingsScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
+                    stringResource(R.string.settings_kgt_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                SettingsCheckboxRow(
+                    checked = printerAutoPrintEnabled,
+                    label = stringResource(R.string.kgt_auto_print_label),
+                    onCheckedChange = onPrinterAutoPrintEnabledChange
+                )
+                SettingsCheckboxRow(
+                    checked = kgtVoiceEnabled,
+                    label = stringResource(R.string.kgt_voice_enabled_label),
+                    onCheckedChange = onKgtVoiceEnabledChange
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
                     stringResource(R.string.settings_hid_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            onExternalScannerEnabledChange(!externalScannerEnabled)
-                        },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Checkbox(
-                        checked = externalScannerEnabled,
-                        onCheckedChange = onExternalScannerEnabledChange
-                    )
-                    Text(
-                        stringResource(R.string.external_hid_device_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                SettingsCheckboxRow(
+                    checked = externalScannerEnabled,
+                    label = stringResource(R.string.external_hid_device_label),
+                    onCheckedChange = onExternalScannerEnabledChange
+                )
             }
         }
 
         Spacer(modifier = Modifier.weight(1f))
         VersionFooter()
+    }
+}
+
+@Composable
+private fun SettingsCheckboxRow(
+    checked: Boolean,
+    label: String,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onCheckedChange(!checked)
+            },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -908,7 +950,6 @@ private fun ScanScreen(
     monitorAutoFollow: Boolean,
     bulkyItemsMode: Int,
     bulkyItemsModeEnabled: Boolean,
-    printerAutoPrintEnabled: Boolean,
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
@@ -922,7 +963,6 @@ private fun ScanScreen(
     onOpenMonitorBox: (ScanJobMonitorBox) -> Unit,
     onToggleMonitorAutoFollow: () -> Unit,
     onToggleBulkyItemsMode: () -> Unit,
-    onPrinterAutoPrintEnabledChange: (Boolean) -> Unit,
     onPrintKgtLabel: (String) -> Unit,
     onMonitorJumpNumberChange: (String) -> Unit,
     onJumpToMonitorNumber: () -> Unit,
@@ -1086,7 +1126,6 @@ private fun ScanScreen(
                 autoFollow = monitorAutoFollow,
                 bulkyItemsMode = bulkyItemsMode,
                 bulkyItemsModeEnabled = bulkyItemsModeEnabled,
-                printerAutoPrintEnabled = printerAutoPrintEnabled,
                 printerLoading = printerLoading,
                 printerMessage = printerMessage,
                 printerError = printerError,
@@ -1098,7 +1137,6 @@ private fun ScanScreen(
                 onOpenBox = onOpenMonitorBox,
                 onToggleAutoFollow = onToggleMonitorAutoFollow,
                 onToggleBulkyItemsMode = onToggleBulkyItemsMode,
-                onPrinterAutoPrintEnabledChange = onPrinterAutoPrintEnabledChange,
                 onJumpNumberChange = onMonitorJumpNumberChange,
                 onJumpToNumber = onJumpToMonitorNumber,
                 onJumpFieldFocusChanged = {
@@ -1293,7 +1331,6 @@ private fun ScanJobMonitorPanel(
     autoFollow: Boolean,
     bulkyItemsMode: Int,
     bulkyItemsModeEnabled: Boolean,
-    printerAutoPrintEnabled: Boolean,
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
@@ -1305,7 +1342,6 @@ private fun ScanJobMonitorPanel(
     onOpenBox: (ScanJobMonitorBox) -> Unit,
     onToggleAutoFollow: () -> Unit,
     onToggleBulkyItemsMode: () -> Unit,
-    onPrinterAutoPrintEnabledChange: (Boolean) -> Unit,
     onJumpNumberChange: (String) -> Unit,
     onJumpToNumber: () -> Unit,
     onJumpFieldFocusChanged: (Boolean) -> Unit = {}
@@ -1327,62 +1363,24 @@ private fun ScanJobMonitorPanel(
                     modifier = Modifier.weight(1f)
                 )
                 if (bulkyItemsModeEnabled) {
+                    val kgtModeOn = bulkyItemsMode != BulkyItemsModes.OFF
                     IconButton(
                         onClick = onToggleBulkyItemsMode,
                         modifier = Modifier
                             .width(36.dp)
                             .height(36.dp)
-                            .then(
-                                if (bulkyItemsMode == BulkyItemsModes.NOTIFY) {
-                                    Modifier.border(
-                                        width = 1.dp,
-                                        color = BulkyItemsNotifyBorderColor,
-                                        shape = RoundedCornerShape(18.dp)
-                                    )
-                                } else {
-                                    Modifier
-                                }
-                            )
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Inventory2,
-                            contentDescription = when (bulkyItemsMode) {
-                                BulkyItemsModes.SILENT -> stringResource(R.string.bulky_items_mode_silent_disable)
-                                BulkyItemsModes.NOTIFY -> stringResource(R.string.bulky_items_mode_notify_disable)
-                                else -> stringResource(R.string.bulky_items_mode_enable)
-                            },
-                            tint = when (bulkyItemsMode) {
-                                BulkyItemsModes.SILENT -> BulkyItemsSilentIconColor
-                                BulkyItemsModes.NOTIFY -> BulkyItemsNotifyIconColor
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            modifier = Modifier
-                                .width(18.dp)
-                                .height(18.dp)
-                        )
-                    }
-                }
-                if (bulkyItemsModeEnabled) {
-                    IconButton(
-                        onClick = {
-                            onPrinterAutoPrintEnabledChange(!printerAutoPrintEnabled)
-                        },
-                        enabled = !printerLoading,
-                        modifier = Modifier
-                            .width(36.dp)
-                            .height(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Print,
-                            contentDescription = if (printerAutoPrintEnabled) {
-                                stringResource(R.string.printer_auto_print_disable)
+                            contentDescription = if (kgtModeOn) {
+                                stringResource(R.string.bulky_items_mode_disable)
                             } else {
-                                stringResource(R.string.printer_auto_print_enable)
+                                stringResource(R.string.bulky_items_mode_enable)
                             },
-                            tint = if (printerAutoPrintEnabled) {
-                                AutoFollowOnIconColor
+                            tint = if (kgtModeOn) {
+                                KgtModeOnIconColor
                             } else {
-                                AutoFollowOffIconColor
+                                KgtModeOffIconColor
                             },
                             modifier = Modifier
                                 .width(18.dp)

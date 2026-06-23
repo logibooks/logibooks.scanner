@@ -39,21 +39,39 @@ fun normalizeBulkyItemsMode(job: ScanJob?, mode: Int): Int {
     }
 }
 
-/** Cycles BI mode through Off, Silent, and Notify for WBR scan jobs. */
-fun nextBulkyItemsMode(job: ScanJob?, currentMode: Int): Int {
+/** Returns the backend mode for enabled BI mode using the current voice setting. */
+fun enabledBulkyItemsMode(voiceEnabled: Boolean): Int {
+    return if (voiceEnabled) {
+        BulkyItemsModes.NOTIFY
+    } else {
+        BulkyItemsModes.SILENT
+    }
+}
+
+/** Toggles BI mode as a two-state Off/On option for WBR scan jobs. */
+fun nextBulkyItemsMode(job: ScanJob?, currentMode: Int, voiceEnabled: Boolean): Int {
     if (!bulkyItemsModeEnabled(job)) {
         return BulkyItemsModes.OFF
     }
 
     return when (normalizeBulkyItemsMode(job, currentMode)) {
-        BulkyItemsModes.OFF -> BulkyItemsModes.SILENT
-        BulkyItemsModes.SILENT -> BulkyItemsModes.NOTIFY
+        BulkyItemsModes.OFF -> enabledBulkyItemsMode(voiceEnabled)
         else -> BulkyItemsModes.OFF
     }
 }
 
 /** Returns true when BI mode should announce the returned ExtId. */
-fun bulkyItemsModeNotifies(mode: Int): Boolean = mode == BulkyItemsModes.NOTIFY
+fun bulkyItemsModeNotifies(mode: Int, voiceEnabled: Boolean): Boolean {
+    return voiceEnabled && mode != BulkyItemsModes.OFF
+}
+
+fun applyBulkyItemsVoiceSetting(mode: Int, voiceEnabled: Boolean): Int {
+    return when (mode) {
+        BulkyItemsModes.SILENT,
+        BulkyItemsModes.NOTIFY -> enabledBulkyItemsMode(voiceEnabled)
+        else -> BulkyItemsModes.OFF
+    }
+}
 
 fun kgtLabelCode(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
 

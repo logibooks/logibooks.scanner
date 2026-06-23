@@ -22,6 +22,7 @@ This file is a part of LogiScanner application
     <string name="settings_open">Настройки</string>
     <string name="settings_back">Назад</string>
     <string name="settings_printer_title">Принтер</string>
+    <string name="settings_kgt_title">Настройки режима КГТ</string>
     <string name="settings_hid_title">Внешнее HID-устройство</string>
 
     <string name="select_scan_job">Выберите задание</string>
@@ -46,17 +47,15 @@ This file is a part of LogiScanner application
     <string name="count_result">Найдено посылок: %d</string>
 
     <string name="monitor_title">Монитор сканирования</string>
-    <string name="bulky_items_mode_enable">Режим КГТ выключен. Нажмите, чтобы включить без звука</string>
-    <string name="bulky_items_mode_silent_disable">Режим КГТ включен без звука. Нажмите, чтобы включить звук</string>
-    <string name="bulky_items_mode_notify_disable">Режим КГТ включен со звуком. Нажмите, чтобы выключить</string>
+    <string name="bulky_items_mode_enable">Режим КГТ выключен. Нажмите, чтобы включить</string>
+    <string name="bulky_items_mode_disable">Режим КГТ включен. Нажмите, чтобы выключить</string>
     <string name="bulky_items_number_speech">Номер КГТ: %1$s</string>
+    <string name="kgt_auto_print_label">Автоматическая печать наклейки</string>
+    <string name="kgt_voice_enabled_label">Голосовое сопровождение</string>
     <string name="printer_select">Выбрать принтер</string>
     <string name="printer_none">Без принтера</string>
     <string name="printer_select_required">Выберите принтер перед печатью</string>
     <string name="printer_selected_address">Сохранённый принтер: %1$s</string>
-    <string name="printer_auto_print_label">Автопечать КГТ</string>
-    <string name="printer_auto_print_enable">Автопечать выключена. Нажмите, чтобы включить</string>
-    <string name="printer_auto_print_disable">Автопечать включена. Нажмите, чтобы выключить</string>
     <string name="printer_refresh">Обновить принтеры</string>
     <string name="printer_print_label">Печать этикетки КГТ</string>
     <string name="printer_no_paired">Нет сопряжённых Bluetooth принтеров</string>

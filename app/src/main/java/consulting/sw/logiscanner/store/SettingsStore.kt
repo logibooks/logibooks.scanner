@@ -27,6 +27,7 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
         private val KEY_EXTERNAL_SCANNER_ENABLED = booleanPreferencesKey("external_scanner_enabled")
         private val KEY_PRINTER_AUTO_PRINT_ENABLED = booleanPreferencesKey("printer_auto_print_enabled")
         private val KEY_PRINTER_BLUETOOTH_ADDRESS = stringPreferencesKey("printer_bluetooth_address")
+        private val KEY_KGT_VOICE_ENABLED = booleanPreferencesKey("kgt_voice_enabled")
     }
 
     fun externalScannerEnabled(): Flow<Boolean> = preferences()
@@ -42,6 +43,11 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
     fun printerBluetoothAddress(): Flow<String?> = preferences()
         .map {
             it[KEY_PRINTER_BLUETOOTH_ADDRESS]
+        }
+
+    fun kgtVoiceEnabled(): Flow<Boolean> = preferences()
+        .map {
+            it[KEY_KGT_VOICE_ENABLED] ?: false
         }
 
     private fun preferences(): Flow<Preferences> = dataStore.data
@@ -72,6 +78,12 @@ class SettingsStore(private val dataStore: DataStore<Preferences>) {
             } else {
                 it[KEY_PRINTER_BLUETOOTH_ADDRESS] = address
             }
+        }
+    }
+
+    suspend fun setKgtVoiceEnabled(enabled: Boolean) {
+        dataStore.edit {
+            it[KEY_KGT_VOICE_ENABLED] = enabled
         }
     }
 }

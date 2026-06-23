@@ -37,6 +37,7 @@ class ScannerOptionsTest {
             selectedScanJobTypeDisplay = "WBR",
             bulkyItemsMode = BulkyItemsModes.NOTIFY,
             printerAutoPrintEnabled = true,
+            kgtVoiceEnabled = true,
             printerBluetoothAddress = "AA:BB:CC:DD:EE:FF",
             isScanning = true,
             lastCode = "123"
@@ -57,6 +58,11 @@ class ScannerOptionsTest {
     @Test
     fun mainStateDefaultsPrinterAutoPrintDisabled() {
         assertFalse(MainState().printerAutoPrintEnabled)
+    }
+
+    @Test
+    fun mainStateDefaultsKgtVoiceDisabled() {
+        assertFalse(MainState().kgtVoiceEnabled)
     }
 
     @Test
@@ -132,13 +138,54 @@ class ScannerOptionsTest {
     }
 
     @Test
-    fun nextBulkyItemsModeCyclesOnlyForWbr() {
+    fun nextBulkyItemsModeTogglesOnlyForWbr() {
         val wbrJob = scanJob(registerType = RegisterTypes.WBR)
 
-        assertEquals(BulkyItemsModes.SILENT, nextBulkyItemsMode(wbrJob, BulkyItemsModes.OFF))
-        assertEquals(BulkyItemsModes.NOTIFY, nextBulkyItemsMode(wbrJob, BulkyItemsModes.SILENT))
-        assertEquals(BulkyItemsModes.OFF, nextBulkyItemsMode(wbrJob, BulkyItemsModes.NOTIFY))
-        assertEquals(BulkyItemsModes.OFF, nextBulkyItemsMode(scanJob(registerType = 1), BulkyItemsModes.SILENT))
+        assertEquals(
+            BulkyItemsModes.SILENT,
+            nextBulkyItemsMode(wbrJob, BulkyItemsModes.OFF, voiceEnabled = false)
+        )
+        assertEquals(
+            BulkyItemsModes.NOTIFY,
+            nextBulkyItemsMode(wbrJob, BulkyItemsModes.OFF, voiceEnabled = true)
+        )
+        assertEquals(
+            BulkyItemsModes.OFF,
+            nextBulkyItemsMode(wbrJob, BulkyItemsModes.SILENT, voiceEnabled = false)
+        )
+        assertEquals(
+            BulkyItemsModes.OFF,
+            nextBulkyItemsMode(wbrJob, BulkyItemsModes.NOTIFY, voiceEnabled = true)
+        )
+        assertEquals(
+            BulkyItemsModes.OFF,
+            nextBulkyItemsMode(scanJob(registerType = 1), BulkyItemsModes.SILENT, voiceEnabled = false)
+        )
+    }
+
+    @Test
+    fun bulkyItemsVoiceSettingControlsEnabledBackendMode() {
+        assertEquals(BulkyItemsModes.SILENT, enabledBulkyItemsMode(voiceEnabled = false))
+        assertEquals(BulkyItemsModes.NOTIFY, enabledBulkyItemsMode(voiceEnabled = true))
+        assertEquals(
+            BulkyItemsModes.OFF,
+            applyBulkyItemsVoiceSetting(BulkyItemsModes.OFF, voiceEnabled = true)
+        )
+        assertEquals(
+            BulkyItemsModes.OFF,
+            applyBulkyItemsVoiceSetting(99, voiceEnabled = true)
+        )
+        assertEquals(
+            BulkyItemsModes.SILENT,
+            applyBulkyItemsVoiceSetting(BulkyItemsModes.NOTIFY, voiceEnabled = false)
+        )
+        assertEquals(
+            BulkyItemsModes.NOTIFY,
+            applyBulkyItemsVoiceSetting(BulkyItemsModes.SILENT, voiceEnabled = true)
+        )
+        assertFalse(bulkyItemsModeNotifies(BulkyItemsModes.SILENT, voiceEnabled = false))
+        assertTrue(bulkyItemsModeNotifies(BulkyItemsModes.SILENT, voiceEnabled = true))
+        assertFalse(bulkyItemsModeNotifies(BulkyItemsModes.OFF, voiceEnabled = true))
     }
 
     @Test
