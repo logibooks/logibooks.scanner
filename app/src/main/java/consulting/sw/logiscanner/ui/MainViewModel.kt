@@ -325,10 +325,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
         viewModelScope.launch {
-            settingsStore.setPrinterBluetoothAddress(value)
             if (printerCleared) {
                 settingsStore.setRelabelingSubmode(RelabelingSubmode.KGT)
             }
+            settingsStore.setPrinterBluetoothAddress(value)
         }
     }
 
