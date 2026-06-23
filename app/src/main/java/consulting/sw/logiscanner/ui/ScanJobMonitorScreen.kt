@@ -73,6 +73,7 @@ import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
+import consulting.sw.logiscanner.store.RelabelingSubmode
 import kotlinx.coroutines.delay
 
 @Composable
@@ -93,7 +94,9 @@ internal fun ScanJobMonitorPanel(
     error: String?,
     autoFollow: Boolean,
     bulkyItemsMode: Int,
-    bulkyItemsModeEnabled: Boolean,
+    relabelingSubmode: RelabelingSubmode,
+    relabelingModeAvailable: Boolean,
+    printerSelected: Boolean,
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
@@ -125,31 +128,30 @@ internal fun ScanJobMonitorPanel(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
-                if (bulkyItemsModeEnabled) {
-                    val kgtModeOn = bulkyItemsMode != BulkyItemsModes.OFF
-                    IconButton(
-                        onClick = onToggleBulkyItemsMode,
+                val relabelingModeOn = bulkyItemsMode != BulkyItemsModes.OFF
+                IconButton(
+                    onClick = onToggleBulkyItemsMode,
+                    enabled = relabelingModeAvailable,
+                    modifier = Modifier
+                        .width(36.dp)
+                        .height(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Inventory2,
+                        contentDescription = if (relabelingModeOn) {
+                            stringResource(R.string.relabeling_mode_disable)
+                        } else {
+                            stringResource(R.string.relabeling_mode_enable)
+                        },
+                        tint = when {
+                            !relabelingModeAvailable -> MaterialTheme.colorScheme.onSurfaceVariant
+                            relabelingModeOn -> KgtModeOnIconColor
+                            else -> KgtModeOffIconColor
+                        },
                         modifier = Modifier
-                            .width(36.dp)
-                            .height(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Inventory2,
-                            contentDescription = if (kgtModeOn) {
-                                stringResource(R.string.bulky_items_mode_disable)
-                            } else {
-                                stringResource(R.string.bulky_items_mode_enable)
-                            },
-                            tint = if (kgtModeOn) {
-                                KgtModeOnIconColor
-                            } else {
-                                KgtModeOffIconColor
-                            },
-                            modifier = Modifier
-                                .width(18.dp)
-                                .height(18.dp)
-                        )
-                    }
+                            .width(18.dp)
+                            .height(18.dp)
+                    )
                 }
                 IconButton(
                     onClick = onToggleAutoFollow,
@@ -175,7 +177,7 @@ internal fun ScanJobMonitorPanel(
                     )
                 }
             }
-            if (bulkyItemsModeEnabled) {
+            if (printerLoading || printerMessage != null || printerError != null || bulkyItemsMode != BulkyItemsModes.OFF) {
                 PrinterStatusMessages(
                     loading = printerLoading,
                     message = printerMessage,
@@ -275,6 +277,7 @@ internal fun ScanJobMonitorPanel(
                 lastExtData = lastExtData,
                 lastExtId = lastExtId,
                 lastScanTime = lastScanTime,
+                printerSelected = printerSelected,
                 onPrintKgtLabel = onPrintKgtLabel
             )
 
@@ -319,6 +322,7 @@ internal fun ScanJobMonitorPanel(
                         snapshot = detailSnapshot,
                         loading = detailLoading,
                         highlightedParcelId = highlightedParcelId,
+                        printerSelected = printerSelected,
                         onPrintKgtLabel = onPrintKgtLabel,
                         onOpenRegister = onOpenRegister
                     )
@@ -439,6 +443,7 @@ private fun MonitorBoxDetail(
     snapshot: ScanJobMonitorSnapshot?,
     loading: Boolean,
     highlightedParcelId: Int?,
+    printerSelected: Boolean,
     onPrintKgtLabel: (String) -> Unit,
     onOpenRegister: () -> Unit
 ) {
@@ -582,6 +587,7 @@ private fun MonitorBoxDetail(
                         weightCorrection = weightCorrection,
                         expanded = expandedParcelKey == parcelKey,
                         highlighted = highlighted,
+                        printerSelected = printerSelected,
                         onPrintKgtLabel = onPrintKgtLabel,
                         onToggleExpanded = {
                             expandedParcelKey = if (expandedParcelKey == parcelKey) null else parcelKey
@@ -599,6 +605,7 @@ private fun MonitorParcelRow(
     weightCorrection: MonitorWeightCorrection?,
     expanded: Boolean,
     highlighted: Boolean,
+    printerSelected: Boolean,
     onPrintKgtLabel: (String) -> Unit,
     onToggleExpanded: () -> Unit
 ) {
@@ -701,7 +708,7 @@ private fun MonitorParcelRow(
                     overflow = TextOverflow.Visible
                 )
             }
-            MonitorParcelAttributes(parcel, weightCorrection, onPrintKgtLabel)
+            MonitorParcelAttributes(parcel, weightCorrection, printerSelected, onPrintKgtLabel)
         }
     }
 }
@@ -717,6 +724,7 @@ private fun isHighlightedMonitorParcel(
 private fun MonitorParcelAttributes(
     parcel: ScanJobMonitorParcel,
     weightCorrection: MonitorWeightCorrection?,
+    printerSelected: Boolean,
     onPrintKgtLabel: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -731,10 +739,11 @@ private fun MonitorParcelAttributes(
                     value = value,
                     correctedValue = correctedValue
                 )
-            } else if (attribute.labelResId == R.string.monitor_parcel_ext_id && canManualPrintKgtLabel(value)) {
+            } else if (attribute.labelResId == R.string.monitor_parcel_ext_id && kgtLabelCode(value) != null) {
                 KgtPrintAttribute(
                     label = stringResource(attribute.labelResId),
                     value = value.orEmpty(),
+                    printEnabled = canManualPrintKgtLabel(value, printerSelected),
                     onPrintKgtLabel = onPrintKgtLabel
                 )
             } else if (!value.isNullOrBlank()) {
@@ -883,6 +892,7 @@ private fun MonitorAttribute(label: String, value: String) {
 private fun KgtPrintAttribute(
     label: String,
     value: String,
+    printEnabled: Boolean,
     onPrintKgtLabel: (String) -> Unit
 ) {
     Row(
@@ -911,6 +921,7 @@ private fun KgtPrintAttribute(
             )
             IconButton(
                 onClick = { onPrintKgtLabel(value) },
+                enabled = printEnabled,
                 modifier = Modifier
                     .width(32.dp)
                     .height(32.dp)
@@ -945,6 +956,7 @@ private fun LocalScanResult(
     lastExtData: String?,
     lastExtId: String?,
     lastScanTime: String?,
+    printerSelected: Boolean,
     onPrintKgtLabel: (String) -> Unit
 ) {
     val display = localScanResultDisplay(
@@ -1025,10 +1037,11 @@ private fun LocalScanResult(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        display.extId?.takeIf { it.isNotBlank() }?.let { extId ->
+        display.extId?.takeIf { kgtLabelCode(it) != null }?.let { extId ->
             KgtPrintAttribute(
                 label = stringResource(R.string.monitor_parcel_ext_id),
                 value = extId,
+                printEnabled = canManualPrintKgtLabel(extId, printerSelected),
                 onPrintKgtLabel = onPrintKgtLabel
             )
         }

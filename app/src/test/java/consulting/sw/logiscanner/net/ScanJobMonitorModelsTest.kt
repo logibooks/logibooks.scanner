@@ -13,6 +13,28 @@ import org.junit.Test
 class ScanJobMonitorModelsTest {
 
     @Test
+    fun scanJob_parsesRegisterId() {
+        val json = """
+            {
+              "id": 7,
+              "name": "Packing",
+              "description": null,
+              "status": "InProgress",
+              "type": "Scan",
+              "registerId": 44,
+              "registerType": 2
+            }
+        """.trimIndent()
+
+        val adapter = Moshi.Builder().build().adapter(ScanJob::class.java)
+        val job = adapter.fromJson(json)
+
+        assertNotNull(job)
+        assertEquals(44, job!!.registerId)
+        assertEquals(RegisterTypes.WBR, job.registerType)
+    }
+
+    @Test
     fun scanJobMonitorSnapshot_parsesBackendShape() {
         val json = """
             {
