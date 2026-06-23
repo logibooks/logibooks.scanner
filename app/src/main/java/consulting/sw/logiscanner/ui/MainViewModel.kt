@@ -865,7 +865,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     extIdSpeechText,
                     result.extData?.takeIf { it.isNotBlank() }
                 ).joinToString(". ")
-                if (!speechText.isNullOrEmpty() && ttsReady) {
+                if (speechText.isNotEmpty() && ttsReady) {
                     tts?.speak(speechText, TextToSpeech.QUEUE_FLUSH, null, "scan_result_${System.currentTimeMillis()}")
                 }
                 

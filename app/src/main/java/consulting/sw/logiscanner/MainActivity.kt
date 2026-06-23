@@ -575,9 +575,54 @@ private fun JobSelectionScreen(
             .padding(horizontal = 24.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.weight(3f)) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = stringResource(R.string.settings_open)
+                    )
+                }
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.RotateLeft,
+                        contentDescription = stringResource(R.string.refresh_jobs)
+                    )
+                }
+                IconButton(
+                    onClick = onLogout,
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = stringResource(R.string.logout)
+                    )
+                }
+            }
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text(
                     stringResource(R.string.select_scan_job),
                     style = MaterialTheme.typography.headlineSmall,
@@ -587,39 +632,6 @@ private fun JobSelectionScreen(
                     Text(
                         stringResource(R.string.logged_in_as, displayName),
                         style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Button(
-                    onClick = onOpenSettings,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = stringResource(R.string.settings_open)
-                    )
-                }
-                Button(
-                    onClick = onRefresh,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.RotateLeft,
-                        contentDescription = stringResource(R.string.refresh_jobs)
-                    )
-                }
-                Button(
-                    onClick = onLogout,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Logout,
-                        contentDescription = stringResource(R.string.logout)
                     )
                 }
             }
@@ -733,10 +745,31 @@ private fun SettingsScreen(
             .padding(horizontal = 24.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.settings_back)
+                    )
+                }
+            }
+
             Column(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.weight(3f)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     stringResource(R.string.settings_title),
@@ -749,15 +782,6 @@ private fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-            }
-            Button(
-                onClick = onBack,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.settings_back)
-                )
             }
         }
 
@@ -926,9 +950,54 @@ private fun ScanScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.weight(3f)) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onOpenSettings,
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = stringResource(R.string.settings_open)
+                        )
+                    }
+                    IconButton(
+                        onClick = onBackToJobs,
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back_to_jobs)
+                        )
+                    }
+                    IconButton(
+                        onClick = onLogout,
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = stringResource(R.string.logout)
+                        )
+                    }
+                }
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
                         stringResource(R.string.ready_to_scan),
                         style = MaterialTheme.typography.headlineSmall,
@@ -938,39 +1007,6 @@ private fun ScanScreen(
                         Text(
                             stringResource(R.string.logged_in_as, displayName),
                             style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Button(
-                        onClick = onOpenSettings,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = stringResource(R.string.settings_open)
-                        )
-                    }
-                    Button(
-                        onClick = onBackToJobs,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back_to_jobs)
-                        )
-                    }
-                    Button(
-                        onClick = onLogout,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = stringResource(R.string.logout)
                         )
                     }
                 }
