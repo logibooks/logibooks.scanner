@@ -62,6 +62,7 @@ data class MainState(
     val password: String = "",
     val externalScannerEnabled: Boolean = false,
     val isLoggedIn: Boolean = false,
+    val settingsOpen: Boolean = false,
     val isBusy: Boolean = false,
     val displayName: String? = null,
     val scanJobs: List<ScanJob> = emptyList(),
@@ -97,6 +98,10 @@ data class MainState(
     val scanResultColor: ScanResultColor = ScanResultColor.NONE,
     val error: String? = null
 )
+
+internal fun openSettingsState(state: MainState): MainState = state.copy(settingsOpen = true)
+
+internal fun closeSettingsState(state: MainState): MainState = state.copy(settingsOpen = false)
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -192,6 +197,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setEmail(value: String) = _state.update { it.copy(email = value) }
     fun setPassword(value: String) = _state.update { it.copy(password = value) }
+    fun openSettings() = _state.update(::openSettingsState)
+    fun closeSettings() = _state.update(::closeSettingsState)
+
     fun setExternalScannerEnabled(value: Boolean) {
         _state.update { it.copy(externalScannerEnabled = value) }
         viewModelScope.launch {

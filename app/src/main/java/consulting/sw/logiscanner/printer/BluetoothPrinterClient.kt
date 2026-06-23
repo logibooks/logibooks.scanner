@@ -28,6 +28,12 @@ class BluetoothPrinterClient(
         ensureBluetoothConnectPermission()
         adapter().bondedDevices
             .orEmpty()
+            .filter { device ->
+                isBluetoothPrinterClass(
+                    majorDeviceClass = device.bluetoothClass?.majorDeviceClass,
+                    deviceClass = device.bluetoothClass?.deviceClass
+                )
+            }
             .map { device ->
                 BluetoothPrinterDevice(
                     name = device.name.orEmpty(),
@@ -46,7 +52,12 @@ class BluetoothPrinterClient(
                 val bluetoothAdapter = adapter()
                 val device = bluetoothAdapter.bondedDevices
                     .orEmpty()
-                    .firstOrNull { it.address == address }
+                    .firstOrNull {
+                        it.address == address && isBluetoothPrinterClass(
+                            majorDeviceClass = it.bluetoothClass?.majorDeviceClass,
+                            deviceClass = it.bluetoothClass?.deviceClass
+                        )
+                    }
                     ?: throw PrinterNotFoundException(address)
 
                 bluetoothAdapter.cancelDiscovery()

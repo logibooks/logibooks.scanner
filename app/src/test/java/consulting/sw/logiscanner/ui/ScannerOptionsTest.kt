@@ -24,6 +24,32 @@ class ScannerOptionsTest {
     }
 
     @Test
+    fun mainStateDefaultsSettingsClosed() {
+        assertFalse(MainState().settingsOpen)
+    }
+
+    @Test
+    fun settingsOpenClosePreservesScanState() {
+        val state = MainState(
+            externalScannerEnabled = true,
+            isLoggedIn = true,
+            selectedScanJob = scanJob(registerType = RegisterTypes.WBR),
+            selectedScanJobTypeDisplay = "WBR",
+            bulkyItemsMode = BulkyItemsModes.NOTIFY,
+            printerAutoPrintEnabled = true,
+            printerBluetoothAddress = "AA:BB:CC:DD:EE:FF",
+            isScanning = true,
+            lastCode = "123"
+        )
+
+        val opened = openSettingsState(state)
+        val closed = closeSettingsState(opened)
+
+        assertEquals(state.copy(settingsOpen = true), opened)
+        assertEquals(state, closed)
+    }
+
+    @Test
     fun mainStateDefaultsBulkyItemsModeOff() {
         assertEquals(BulkyItemsModes.OFF, MainState().bulkyItemsMode)
     }
