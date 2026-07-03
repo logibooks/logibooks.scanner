@@ -35,6 +35,28 @@ class ScanJobMonitorModelsTest {
     }
 
     @Test
+    fun scanJob_parsesWbrNRegisterType() {
+        val json = """
+            {
+              "id": 8,
+              "name": "Packing WbrN",
+              "description": null,
+              "status": "InProgress",
+              "type": "Scan",
+              "registerId": 45,
+              "registerType": ${RegisterTypes.WBR_N}
+            }
+        """.trimIndent()
+
+        val adapter = Moshi.Builder().build().adapter(ScanJob::class.java)
+        val job = adapter.fromJson(json)
+
+        assertNotNull(job)
+        assertEquals(45, job!!.registerId)
+        assertEquals(RegisterTypes.WBR_N, job.registerType)
+    }
+
+    @Test
     fun scanJobMonitorSnapshot_parsesBackendShape() {
         val json = """
             {

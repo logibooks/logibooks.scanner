@@ -181,6 +181,7 @@ class ScannerOptionsTest {
     @Test
     fun bulkyItemsModeIsEnabledOnlyForWbrScanJobs() {
         assertTrue(bulkyItemsModeEnabled(scanJob(registerType = RegisterTypes.WBR)))
+        assertFalse(bulkyItemsModeEnabled(scanJob(registerType = RegisterTypes.WBR_N)))
         assertFalse(bulkyItemsModeEnabled(scanJob(registerType = 1)))
         assertFalse(bulkyItemsModeEnabled(null))
     }
@@ -188,14 +189,18 @@ class ScannerOptionsTest {
     @Test
     fun relabelingModeAvailabilityKeepsKgtWbrOnlyAndRequiresPrinterForFull() {
         val wbrJob = scanJob(registerType = RegisterTypes.WBR)
+        val wbrNJob = scanJob(registerType = RegisterTypes.WBR_N)
         val otherJob = scanJob(registerType = 1)
 
         assertTrue(relabelingModeAvailable(wbrJob, RelabelingSubmode.KGT, printerSelected = false))
+        assertFalse(relabelingModeAvailable(wbrNJob, RelabelingSubmode.KGT, printerSelected = true))
         assertFalse(relabelingModeAvailable(otherJob, RelabelingSubmode.KGT, printerSelected = true))
         assertFalse(relabelingModeAvailable(null, RelabelingSubmode.KGT, printerSelected = true))
         assertTrue(relabelingModeAvailable(wbrJob, RelabelingSubmode.FULL, printerSelected = true))
+        assertTrue(relabelingModeAvailable(wbrNJob, RelabelingSubmode.FULL, printerSelected = true))
         assertTrue(relabelingModeAvailable(otherJob, RelabelingSubmode.FULL, printerSelected = true))
         assertFalse(relabelingModeAvailable(wbrJob, RelabelingSubmode.FULL, printerSelected = false))
+        assertFalse(relabelingModeAvailable(wbrNJob, RelabelingSubmode.FULL, printerSelected = false))
         assertFalse(relabelingModeAvailable(null, RelabelingSubmode.FULL, printerSelected = true))
     }
 
@@ -206,6 +211,7 @@ class ScannerOptionsTest {
         assertEquals(BulkyItemsModes.SILENT, normalizeBulkyItemsMode(wbrJob, BulkyItemsModes.SILENT))
         assertEquals(BulkyItemsModes.NOTIFY, normalizeBulkyItemsMode(wbrJob, BulkyItemsModes.NOTIFY))
         assertEquals(BulkyItemsModes.OFF, normalizeBulkyItemsMode(wbrJob, 99))
+        assertEquals(BulkyItemsModes.OFF, normalizeBulkyItemsMode(scanJob(registerType = RegisterTypes.WBR_N), BulkyItemsModes.NOTIFY))
         assertEquals(BulkyItemsModes.OFF, normalizeBulkyItemsMode(scanJob(registerType = 1), BulkyItemsModes.NOTIFY))
     }
 
@@ -357,12 +363,22 @@ class ScannerOptionsTest {
     @Test
     fun backendBulkyItemsModeKeepsKgtAndTurnsFullModeOff() {
         val wbrJob = scanJob(registerType = RegisterTypes.WBR)
+        val wbrNJob = scanJob(registerType = RegisterTypes.WBR_N)
         val otherJob = scanJob(registerType = 1)
 
         assertEquals(
             BulkyItemsModes.NOTIFY,
             backendBulkyItemsMode(
                 wbrJob,
+                RelabelingSubmode.KGT,
+                BulkyItemsModes.SILENT,
+                voiceEnabled = true
+            )
+        )
+        assertEquals(
+            BulkyItemsModes.OFF,
+            backendBulkyItemsMode(
+                wbrNJob,
                 RelabelingSubmode.KGT,
                 BulkyItemsModes.SILENT,
                 voiceEnabled = true
@@ -409,6 +425,7 @@ class ScannerOptionsTest {
         )
         assertFalse(shouldAutoPrintKgtLabel(false, wbrJob, BulkyItemsModes.SILENT, result))
         assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.OFF, result))
+        assertFalse(shouldAutoPrintKgtLabel(true, scanJob(registerType = RegisterTypes.WBR_N), BulkyItemsModes.SILENT, result))
         assertFalse(shouldAutoPrintKgtLabel(true, scanJob(registerType = 1), BulkyItemsModes.SILENT, result))
         assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, result, printerSelected = false))
         assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = null)))
