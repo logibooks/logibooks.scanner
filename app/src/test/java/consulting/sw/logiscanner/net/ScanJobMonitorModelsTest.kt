@@ -44,7 +44,7 @@ class ScanJobMonitorModelsTest {
               "status": "InProgress",
               "type": "Scan",
               "registerId": 45,
-              "registerType": 2097154
+              "registerType": ${RegisterTypes.WBR_N}
             }
         """.trimIndent()
 
