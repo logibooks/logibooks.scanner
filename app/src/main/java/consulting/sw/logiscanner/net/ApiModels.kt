@@ -42,6 +42,7 @@ data class ScanJob(
 /** Register type ids used by scanner-only feature gates. */
 object RegisterTypes {
     const val WBR = 2
+    const val WBR_N = 2 * 1024 * 1024 + WBR
 }
 
 /** Bulky item mode values sent with scan requests. */
