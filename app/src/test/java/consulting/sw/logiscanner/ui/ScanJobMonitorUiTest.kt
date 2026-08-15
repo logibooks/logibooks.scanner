@@ -22,6 +22,7 @@ import org.junit.Test
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class ScanJobMonitorUiTest {
 
@@ -30,6 +31,30 @@ class ScanJobMonitorUiTest {
         assertTrue(isUnassignedMonitorBox(ScanJobMonitorBox(area = ScanJobMonitorAreas.UNASSIGNED)))
         assertTrue(isUnassignedMonitorBox(ScanJobMonitorBox(boxId = null, bucketIndex = 2)))
         assertFalse(isUnassignedMonitorBox(ScanJobMonitorBox(area = ScanJobMonitorAreas.BOX, boxId = 7)))
+    }
+
+    @Test
+    fun isPhysicalMonitorBox_excludesPseudoGroups() {
+        assertTrue(isPhysicalMonitorBox(ScanJobMonitorBox(area = ScanJobMonitorAreas.BOX, boxId = 7)))
+        assertFalse(isPhysicalMonitorBox(ScanJobMonitorBox(area = ScanJobMonitorAreas.UNASSIGNED)))
+        assertFalse(isPhysicalMonitorBox(ScanJobMonitorBox(area = ScanJobMonitorAreas.NOT_IN_REGISTER)))
+    }
+
+    @Test
+    fun formatMonitorBoxDimensions_requiresAllValuesAndUsesLocale() {
+        val box = ScanJobMonitorBox(lengthCm = 10.5, widthCm = 20.0, heightCm = 30.25)
+
+        assertEquals("10.5 × 20 × 30.25", formatMonitorBoxDimensions(box, Locale.US))
+        assertEquals("10,5 × 20 × 30,25", formatMonitorBoxDimensions(box, Locale.forLanguageTag("ru-RU")))
+        assertNull(formatMonitorBoxDimensions(box.copy(widthCm = null), Locale.US))
+        assertNull(formatMonitorBoxDimensions(null, Locale.US))
+    }
+
+    @Test
+    fun formatMonitorBoxWeight_usesThreeDigitsAndHandlesMissingValue() {
+        assertEquals("4.125", formatMonitorBoxWeight(4.125, Locale.US))
+        assertEquals("4,125", formatMonitorBoxWeight(4.125, Locale.forLanguageTag("ru-RU")))
+        assertNull(formatMonitorBoxWeight(null, Locale.US))
     }
 
     @Test

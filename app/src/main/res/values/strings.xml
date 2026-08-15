@@ -107,6 +107,11 @@ This file is a part of LogiScanner application
     <string name="monitor_unassigned_group">No box</string>
     <string name="monitor_unassigned_group_numbered">No box %1$d</string>
     <string name="monitor_box_display_name">Box %1$s</string>
+    <string name="monitor_box_dimensions">Dimensions</string>
+    <string name="monitor_box_weight">Weight</string>
+    <string name="monitor_not_set">not set</string>
+    <string name="monitor_box_dimensions_value">%1$s cm</string>
+    <string name="monitor_box_weight_value">%1$s kg</string>
     <string name="monitor_current_box_numbered">Current box %1$s</string>
     <string name="monitor_closed">Scan job %s</string>
     <string name="monitor_detail_loading">Loading detail…</string>
