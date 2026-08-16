@@ -382,32 +382,72 @@ private fun MonitorBoxRow(
         box.boxStickerScanned -> MaterialTheme.colorScheme.onPrimaryContainer
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
+    val dimensionsText = formatMonitorBoxDimensions(box)?.let {
+        stringResource(R.string.monitor_box_dimensions_value, it)
+    }
+    val weightText = formatMonitorBoxWeight(box.weightKg)?.let {
+        stringResource(R.string.monitor_box_weight_value, it)
+    }
+    val measurementsText = listOfNotNull(dimensionsText, weightText).joinToString(" / ")
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
             .clickable { onOpenBox(box) }
             .padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Text(
                 monitorBoxDisplayName(context, box),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f)
+                    .alignByBaseline()
             )
-            MonitorBoxParcelProgressText(box)
+            StatusPill(
+                statusText,
+                statusBackground,
+                statusContent,
+                modifier = Modifier.alignByBaseline()
+            )
         }
-        StatusPill(statusText, statusBackground, statusContent)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            MonitorBoxParcelProgressText(
+                box,
+                modifier = Modifier
+                    .weight(1f)
+                    .alignByBaseline()
+            )
+            if (measurementsText.isNotEmpty()) {
+                Text(
+                    measurementsText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.alignByBaseline()
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun MonitorBoxParcelProgressText(box: ScanJobMonitorBox) {
+private fun MonitorBoxParcelProgressText(
+    box: ScanJobMonitorBox,
+    modifier: Modifier = Modifier
+) {
     val restrictedColor = MaterialTheme.colorScheme.error
     val text = buildAnnotatedString {
         append("${box.totalParcels} / ")
@@ -427,7 +467,8 @@ private fun MonitorBoxParcelProgressText(box: ScanJobMonitorBox) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
     )
 }
 
@@ -510,29 +551,46 @@ private fun MonitorBoxDetail(
                 )
             }
         }
-        MonitorParcelsStatistics(
-            total = box.totalParcels,
-            scanned = box.parcelsWithStickerScanned,
-            notScanned = box.parcelsWithStickerNotScanned,
-            restricted = box.restrictedParcels
-        )
-        box.boxScannedSticker?.takeIf { it.isNotBlank() }?.let { scannedSticker ->
-            MonitorAttribute(
-                label = stringResource(R.string.monitor_parcel_scanned_sticker),
-                value = scannedSticker
+        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            MonitorParcelsStatistics(
+                total = box.totalParcels,
+                scanned = box.parcelsWithStickerScanned,
+                notScanned = box.parcelsWithStickerNotScanned,
+                restricted = box.restrictedParcels
             )
-        }
-        if (box.boxScannedUserName.isNotBlank()) {
-            MonitorAttribute(
-                label = stringResource(R.string.monitor_parcel_scanned_user),
-                value = box.boxScannedUserName
-            )
-        }
-        if (!box.boxScannedTime.isNullOrBlank()) {
-            MonitorAttribute(
-                label = stringResource(R.string.monitor_parcel_scanned_time),
-                value = formatMonitorTime(box.boxScannedTime)
-            )
+            if (isPhysicalMonitorBox(box)) {
+                val notSetText = stringResource(R.string.monitor_not_set)
+                MonitorAttribute(
+                    label = stringResource(R.string.monitor_box_dimensions),
+                    value = formatMonitorBoxDimensions(box)?.let {
+                        stringResource(R.string.monitor_box_dimensions_value, it)
+                    } ?: notSetText
+                )
+                MonitorAttribute(
+                    label = stringResource(R.string.monitor_box_weight),
+                    value = formatMonitorBoxWeight(box.weightKg)?.let {
+                        stringResource(R.string.monitor_box_weight_value, it)
+                    } ?: notSetText
+                )
+            }
+            box.boxScannedSticker?.takeIf { it.isNotBlank() }?.let { scannedSticker ->
+                MonitorAttribute(
+                    label = stringResource(R.string.monitor_parcel_scanned_sticker),
+                    value = scannedSticker
+                )
+            }
+            if (box.boxScannedUserName.isNotBlank()) {
+                MonitorAttribute(
+                    label = stringResource(R.string.monitor_parcel_scanned_user),
+                    value = box.boxScannedUserName
+                )
+            }
+            if (!box.boxScannedTime.isNullOrBlank()) {
+                MonitorAttribute(
+                    label = stringResource(R.string.monitor_parcel_scanned_time),
+                    value = formatMonitorTime(box.boxScannedTime)
+                )
+            }
         }
 
         Text(

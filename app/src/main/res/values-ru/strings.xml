@@ -111,6 +111,11 @@ This file is a part of LogiScanner application
     <string name="monitor_unassigned_group">Без коробки</string>
     <string name="monitor_unassigned_group_numbered">Без коробки %1$d</string>
     <string name="monitor_box_display_name">Коробка %1$s</string>
+    <string name="monitor_box_dimensions">Габариты</string>
+    <string name="monitor_box_weight">Вес</string>
+    <string name="monitor_not_set">не задано</string>
+    <string name="monitor_box_dimensions_value">%1$s см</string>
+    <string name="monitor_box_weight_value">%1$s кг</string>
     <string name="monitor_current_box_numbered">Текущая коробка %1$s</string>
     <string name="monitor_closed">Сканирование %s</string>
     <string name="monitor_detail_loading">Загрузка деталей…</string>

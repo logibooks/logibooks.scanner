@@ -29,6 +29,23 @@ fun isUnassignedMonitorBox(box: ScanJobMonitorBox?): Boolean {
     return box?.area == ScanJobMonitorAreas.UNASSIGNED || (box?.boxId == null && box?.bucketIndex != null)
 }
 
+fun isPhysicalMonitorBox(box: ScanJobMonitorBox?): Boolean {
+    return box?.area == ScanJobMonitorAreas.BOX && box.boxId != null
+}
+
+fun formatMonitorBoxDimensions(box: ScanJobMonitorBox?, locale: Locale = Locale.getDefault()): String? {
+    val dimensions = listOf(box?.lengthCm, box?.widthCm, box?.heightCm)
+    if (dimensions.any { it == null || !it.isFinite() }) return null
+    return dimensions.joinToString(" × ") { dimension ->
+        String.format(locale, "%.2f", dimension).trimEnd('0').trimEnd('.', ',')
+    }
+}
+
+fun formatMonitorBoxWeight(value: Double?, locale: Locale = Locale.getDefault()): String? {
+    if (value == null || !value.isFinite()) return null
+    return String.format(locale, "%.3f", value)
+}
+
 fun monitorBoxDisplayName(context: Context, box: ScanJobMonitorBox?): String {
     if (box == null) return ""
     if (isUnassignedMonitorBox(box)) {

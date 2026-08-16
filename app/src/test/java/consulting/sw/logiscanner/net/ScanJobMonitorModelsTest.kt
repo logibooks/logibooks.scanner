@@ -87,6 +87,10 @@ class ScanJobMonitorModelsTest {
                   "area": 1,
                   "boxId": 7,
                   "boxCode": "BOX-1",
+                  "lengthCm": 10.5,
+                  "widthCm": 20.0,
+                  "heightCm": 30.25,
+                  "weightKg": 4.125,
                   "boxStickerScanned": true,
                   "boxScannedSticker": "BOX-1",
                   "boxScannedUserName": "Operator",
@@ -101,6 +105,10 @@ class ScanJobMonitorModelsTest {
                 "area": 1,
                 "boxId": 7,
                 "boxCode": "BOX-1",
+                "lengthCm": 11.0,
+                "widthCm": 22.0,
+                "heightCm": 33.0,
+                "weightKg": 5.555,
                 "boxStickerScanned": true,
                 "totalParcels": 1,
                 "parcelsWithStickerScanned": 1,
@@ -145,8 +153,16 @@ class ScanJobMonitorModelsTest {
         assertEquals(1, snapshot.restrictedParcels)
         assertEquals(1, snapshot.boxes.size)
         assertTrue(snapshot.boxes.first().boxStickerScanned)
+        assertEquals(10.5, snapshot.boxes.first().lengthCm!!, 0.0)
+        assertEquals(20.0, snapshot.boxes.first().widthCm!!, 0.0)
+        assertEquals(30.25, snapshot.boxes.first().heightCm!!, 0.0)
+        assertEquals(4.125, snapshot.boxes.first().weightKg!!, 0.0)
         assertEquals(1, snapshot.boxes.first().restrictedParcels)
         assertEquals(1, snapshot.box?.restrictedParcels)
+        assertEquals(11.0, snapshot.box?.lengthCm!!, 0.0)
+        assertEquals(22.0, snapshot.box?.widthCm!!, 0.0)
+        assertEquals(33.0, snapshot.box?.heightCm!!, 0.0)
+        assertEquals(5.555, snapshot.box?.weightKg!!, 0.0)
         assertEquals(1, snapshot.box?.parcels?.size)
         assertTrue(snapshot.box!!.parcels!!.first().isInRegister)
         assertTrue(snapshot.box!!.parcels!!.first().weightCorrectionEligible)
@@ -155,6 +171,19 @@ class ScanJobMonitorModelsTest {
         assertEquals(ParcelCheckStatusProjectionKinds.RESTRICTION, snapshot.box!!.parcels!!.first().checkStatusProjection?.kind)
         assertEquals("Запрет", snapshot.box!!.parcels!!.first().checkStatusProjection?.title)
         assertEquals("Стоп-слово", snapshot.box!!.parcels!!.first().checkStatusProjection?.restrictionReason)
+    }
+
+    @Test
+    fun scanJobMonitorBox_acceptsMissingMetricsFromOlderCore() {
+        val adapter = Moshi.Builder().build().adapter(ScanJobMonitorBox::class.java)
+
+        val box = adapter.fromJson("{\"boxId\":7,\"boxCode\":\"BOX-1\"}")
+
+        assertNotNull(box)
+        assertEquals(null, box!!.lengthCm)
+        assertEquals(null, box.widthCm)
+        assertEquals(null, box.heightCm)
+        assertEquals(null, box.weightKg)
     }
 
     @Test
