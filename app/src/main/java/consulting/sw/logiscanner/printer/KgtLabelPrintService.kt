@@ -13,13 +13,17 @@ sealed class KgtLabelPrintResult {
     object MissingPrinter : KgtLabelPrintResult()
     object PermissionMissing : KgtLabelPrintResult()
     data class PrinterNotFound(val address: String) : KgtLabelPrintResult()
-    data class InvalidLabel(val message: String) : KgtLabelPrintResult()
+    data class InvalidLabel(
+        val message: String,
+        val contentOverflow: Boolean = false
+    ) : KgtLabelPrintResult()
     data class Failed(val message: String?) : KgtLabelPrintResult()
 }
 
 class KgtLabelPrintService(
     private val renderer: TscLabelRenderer,
-    private val client: LabelPrinterClient
+    private val client: LabelPrinterClient,
+    private val tajikistanRenderer: TajikistanExportLabelRenderer = TajikistanExportLabelRenderer()
 ) {
     private val mutex = Mutex()
 
@@ -34,6 +38,15 @@ class KgtLabelPrintService(
     suspend fun printFullRelabeling(address: String?, parcelId: Int, registerId: Int): KgtLabelPrintResult {
         return printRendered(address) {
             renderer.renderFullRelabeling(parcelId, registerId)
+        }
+    }
+
+    suspend fun printTajikistanExport(
+        address: String?,
+        label: TajikistanExportLabel
+    ): KgtLabelPrintResult {
+        return printRendered(address) {
+            tajikistanRenderer.render(label)
         }
     }
 
@@ -55,6 +68,8 @@ class KgtLabelPrintService(
                 KgtLabelPrintResult.PermissionMissing
             } catch (ex: PrinterNotFoundException) {
                 KgtLabelPrintResult.PrinterNotFound(ex.address)
+            } catch (ex: TajikistanLabelOverflowException) {
+                KgtLabelPrintResult.InvalidLabel(ex.message.orEmpty(), contentOverflow = true)
             } catch (ex: IllegalArgumentException) {
                 KgtLabelPrintResult.InvalidLabel(ex.message.orEmpty())
             } catch (ex: Exception) {

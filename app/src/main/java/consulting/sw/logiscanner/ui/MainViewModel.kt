@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import consulting.sw.logiscanner.BuildConfig
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
+import consulting.sw.logiscanner.net.LabelTemplates
 import consulting.sw.logiscanner.net.SCAN_JOB_STATUS_IN_PROGRESS
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
@@ -25,6 +26,8 @@ import consulting.sw.logiscanner.printer.KgtLabelPrintResult
 import consulting.sw.logiscanner.printer.KgtLabelPrintService
 import consulting.sw.logiscanner.printer.PrinterPermissionMissingException
 import consulting.sw.logiscanner.printer.TscLabelRenderer
+import consulting.sw.logiscanner.printer.TajikistanExportLabel
+import consulting.sw.logiscanner.printer.toPrintableLabel
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
@@ -97,6 +100,7 @@ data class MainState(
     val lastItemNumbers: List<String> = emptyList(),
     val lastExtData: String? = null,
     val lastExtId: String? = null,
+    val lastTajikistanExportLabel: TajikistanExportLabel? = null,
     val lastScanTime: String? = null,
     val scanResultColor: ScanResultColor = ScanResultColor.NONE,
     val error: String? = null
@@ -395,6 +399,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun printLastTajikistanExportLabel() {
+        val label = state.value.lastTajikistanExportLabel
+        if (label == null) {
+            _state.update {
+                it.copy(
+                    printerError = getApplication<Application>().getString(R.string.printer_tj_label_missing_data),
+                    printerMessage = null
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            printTajikistanExportLabelInternal(label)
+        }
+    }
+
     fun login() {
         viewModelScope.launch {
             _state.update { it.copy(isBusy = true, error = null) }
@@ -569,6 +589,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastItemNumbers = if (jobChanged) emptyList() else it.lastItemNumbers,
                     lastExtData = if (jobChanged) null else it.lastExtData,
                     lastExtId = if (jobChanged) null else it.lastExtId,
+                    lastTajikistanExportLabel = if (jobChanged) null else it.lastTajikistanExportLabel,
                     lastScanTime = if (jobChanged) null else it.lastScanTime,
                     error = null, 
                     isScanning = false
@@ -996,6 +1017,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val bulkyItemsMode = backendBulkyItemsMode(job, submode, relabelingMode, voiceEnabled)
                 val result = scanRepo.scan(job.id, code, bulkyItemsMode)
                 val autoPrintEnabled = state.value.printerAutoPrintEnabled
+                val tajikistanLabel = if (
+                    result.labelTemplate == LabelTemplates.TAJIKISTAN_EXPORT
+                ) {
+                    result.exportLabel.toPrintableLabel()
+                } else {
+                    null
+                }
                 _state.update { 
                     it.copy(
                         lastCode = code, 
@@ -1005,6 +1033,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastItemNumbers = result.itemNumbers,
                         lastExtData = result.extData,
                         lastExtId = result.extId,
+                        lastTajikistanExportLabel = tajikistanLabel ?: it.lastTajikistanExportLabel,
                         lastScanTime = result.scanTime?.takeIf { scanTime -> scanTime.isNotBlank() }
                             ?: OffsetDateTime.now().toString(),
                         scanResultColor = determineScanResultColor(result)
@@ -1021,7 +1050,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
-                if (shouldAutoPrintFullRelabelingLabel(submode, relabelingMode, printerSelected, job, result)) {
+                if (shouldAutoPrintTajikistanExportLabel(submode, relabelingMode, printerSelected, result)) {
+                    tajikistanLabel?.let { label ->
+                        viewModelScope.launch {
+                            printTajikistanExportLabelInternal(label)
+                        }
+                    }
+                } else if (shouldAutoPrintFullRelabelingLabel(submode, relabelingMode, printerSelected, job, result)) {
                     result.followTarget.parcelId?.let { parcelId ->
                         viewModelScope.launch {
                             printFullRelabelingLabelInternal(parcelId, job.registerId)
@@ -1077,6 +1112,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastItemNumbers = emptyList(),
                             lastExtData = null,
                             lastExtId = null,
+                            lastTajikistanExportLabel = null,
                             lastScanTime = null,
                             error = getApplication<Application>().getString(R.string.scan_error_job_invalid),
                             scanResultColor = ScanResultColor.NONE
@@ -1192,6 +1228,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private suspend fun printTajikistanExportLabelInternal(label: TajikistanExportLabel) {
+        _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
+        try {
+            val result = labelPrintService.printTajikistanExport(
+                state.value.printerBluetoothAddress,
+                label
+            )
+            applyPrinterResult(result)
+        } finally {
+            _state.update { it.copy(printerLoading = false) }
+        }
+    }
+
     private fun applyPrinterResult(result: KgtLabelPrintResult) {
         when (result) {
             KgtLabelPrintResult.Success -> {
@@ -1224,7 +1273,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is KgtLabelPrintResult.InvalidLabel -> {
                 _state.update {
                     it.copy(
-                        printerError = getApplication<Application>().getString(R.string.printer_invalid_label),
+                        printerError = getApplication<Application>().getString(
+                            if (result.contentOverflow) {
+                                R.string.printer_tj_label_overflow
+                            } else {
+                                R.string.printer_invalid_label
+                            }
+                        ),
                         printerMessage = null
                     )
                 }

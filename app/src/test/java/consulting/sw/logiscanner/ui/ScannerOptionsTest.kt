@@ -6,6 +6,7 @@ package consulting.sw.logiscanner.ui
 
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
+import consulting.sw.logiscanner.net.LabelTemplates
 import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorFollowTarget
@@ -524,6 +525,108 @@ class ScannerOptionsTest {
                 )
             )
         )
+        assertFalse(
+            shouldAutoPrintFullRelabelingLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                job = job,
+                result = scanResultItem(
+                    extId = null,
+                    labelTemplate = LabelTemplates.TAJIKISTAN_EXPORT,
+                    followTarget = ScanJobMonitorFollowTarget(parcelId = 123)
+                )
+            )
+        )
+    }
+
+    @Test
+    fun shouldAutoPrintTajikistanLabelRequiresExactTemplateAndEligibleParcelScan() {
+        val result = scanResultItem(
+            extId = null,
+            labelTemplate = LabelTemplates.TAJIKISTAN_EXPORT
+        )
+
+        assertTrue(
+            shouldAutoPrintTajikistanExportLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                result = result
+            )
+        )
+        assertFalse(
+            shouldAutoPrintTajikistanExportLabel(
+                RelabelingSubmode.KGT,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                result = result
+            )
+        )
+        assertFalse(
+            shouldAutoPrintTajikistanExportLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.OFF,
+                printerSelected = true,
+                result = result
+            )
+        )
+        assertFalse(
+            shouldAutoPrintTajikistanExportLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = false,
+                result = result
+            )
+        )
+        assertFalse(
+            shouldAutoPrintTajikistanExportLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                result = scanResultItem(extId = null, labelTemplate = "UNKNOWN")
+            )
+        )
+        assertFalse(
+            shouldAutoPrintTajikistanExportLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                result = scanResultItem(
+                    extId = null,
+                    count = 2,
+                    labelTemplate = LabelTemplates.TAJIKISTAN_EXPORT
+                )
+            )
+        )
+        assertFalse(
+            shouldAutoPrintTajikistanExportLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                result = scanResultItem(
+                    extId = null,
+                    hasIssues = true,
+                    labelTemplate = LabelTemplates.TAJIKISTAN_EXPORT
+                )
+            )
+        )
+    }
+
+    @Test
+    fun repeatTajikistanLabelRequiresActiveFullModePrinterAndStoredLabel() {
+        assertTrue(
+            canRepeatTajikistanExportLabel(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                hasLabel = true
+            )
+        )
+        assertFalse(canRepeatTajikistanExportLabel(RelabelingSubmode.KGT, BulkyItemsModes.SILENT, true, true))
+        assertFalse(canRepeatTajikistanExportLabel(RelabelingSubmode.FULL, BulkyItemsModes.OFF, true, true))
+        assertFalse(canRepeatTajikistanExportLabel(RelabelingSubmode.FULL, BulkyItemsModes.SILENT, false, true))
+        assertFalse(canRepeatTajikistanExportLabel(RelabelingSubmode.FULL, BulkyItemsModes.SILENT, true, false))
     }
 
     private fun scanJob(registerType: Int, registerId: Int = 10): ScanJob {
@@ -543,7 +646,8 @@ class ScannerOptionsTest {
         count: Int = 1,
         hasIssues: Boolean = false,
         scanSource: Int = ScannedItemSources.PARCEL_STICKER,
-        followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget()
+        followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget(),
+        labelTemplate: String? = null
     ): ScanResultItem {
         return ScanResultItem(
             count = count,
@@ -554,7 +658,8 @@ class ScannerOptionsTest {
             extData = null,
             extId = extId,
             hasIssues = hasIssues,
-            followTarget = followTarget
+            followTarget = followTarget,
+            labelTemplate = labelTemplate
         )
     }
 }

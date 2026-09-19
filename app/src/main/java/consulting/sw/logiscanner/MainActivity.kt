@@ -37,6 +37,7 @@ import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.ScanScreen
 import consulting.sw.logiscanner.ui.SettingsScreen
+import consulting.sw.logiscanner.ui.canRepeatTajikistanExportLabel
 import consulting.sw.logiscanner.ui.hasSelectedPrinter
 import consulting.sw.logiscanner.ui.relabelingModeAvailable
 import consulting.sw.logiscanner.ui.scanReceiverEnabled
@@ -196,6 +197,13 @@ class MainActivity : ComponentActivity() {
                                 lastItemNumbers = state.lastItemNumbers,
                                 lastExtData = state.lastExtData,
                                 lastExtId = state.lastExtId,
+                                lastTajikistanExportLabel = state.lastTajikistanExportLabel,
+                                canPrintTajikistanExportLabel = canRepeatTajikistanExportLabel(
+                                    submode = state.relabelingSubmode,
+                                    relabelingMode = state.bulkyItemsMode,
+                                    printerSelected = printerSelected,
+                                    hasLabel = state.lastTajikistanExportLabel != null
+                                ),
                                 lastScanTime = state.lastScanTime,
                                 externalScannerEnabled = state.externalScannerEnabled,
                                 monitorSnapshot = state.monitorSnapshot,
@@ -228,6 +236,11 @@ class MainActivity : ComponentActivity() {
                                 onPrintKgtLabel = { code ->
                                     runPrinterAction {
                                         vm.printKgtLabel(code)
+                                    }
+                                },
+                                onPrintTajikistanExportLabel = {
+                                    runPrinterAction {
+                                        vm.printLastTajikistanExportLabel()
                                     }
                                 },
                                 onMonitorJumpNumberChange = vm::setMonitorJumpNumber,

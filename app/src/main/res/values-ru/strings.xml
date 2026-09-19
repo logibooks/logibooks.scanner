@@ -70,6 +70,11 @@ This file is a part of LogiScanner application
     <string name="printer_invalid_label">Не удалось напечатать эту этикетку</string>
     <string name="printer_printed">Этикетка напечатана</string>
     <string name="printer_print_failed">Не удалось напечатать этикетку: %1$s</string>
+    <string name="printer_tj_label_order">Номер заказа</string>
+    <string name="printer_repeat_label">Повторить последнюю этикетку</string>
+    <string name="printer_tj_label_missing_data">Не заполнены или некорректны обязательные данные этикетки для Таджикистана</string>
+    <string name="printer_tj_label_unsupported_barcode">Номер заказа нельзя закодировать штрихкодом Code128</string>
+    <string name="printer_tj_label_overflow">Данные не помещаются на этикетке 58 × 40 мм</string>
     <string name="monitor_auto_follow_disable">Автослежение включено. Нажмите, чтобы выключить</string>
     <string name="monitor_auto_follow_enable">Автослежение выключено. Нажмите, чтобы включить</string>
     <string name="monitor_jump_label">Перейти к посылке или коробке</string>

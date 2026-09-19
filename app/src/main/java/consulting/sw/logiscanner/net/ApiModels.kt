@@ -72,6 +72,10 @@ object ScannedItemSources {
     const val NOT_IN_REGISTER = 30
 }
 
+object LabelTemplates {
+    const val TAJIKISTAN_EXPORT = "TJ_EXPORT"
+}
+
 object ParcelCheckStatusProjectionKinds {
     const val NOT_CHECKED = 10
     const val RESTRICTION = 20
@@ -215,7 +219,32 @@ data class ScanResultItem(
     val hasIssues: Boolean = false,
     val scanCodeId: Int = 0,
     val scanTime: String? = null,
-    val followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget()
+    val followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget(),
+    val labelTemplate: String? = null,
+    val exportLabel: TajikistanExportLabelPayload? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TajikistanExportLabelPayload(
+    val orderNumber: String? = null,
+    val accountNumber: String? = null,
+    val placesCount: Int? = null,
+    val dispatchDate: String? = null,
+    val weightKg: Double? = null,
+    val declaredValue: Double? = null,
+    val currency: String? = null,
+    val senderName: String? = null,
+    val senderAddress: String? = null,
+    val recipientName: String? = null,
+    val recipientAddress: String? = null,
+    val recipientPhone: String? = null,
+    val items: List<TajikistanExportLabelItemPayload> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class TajikistanExportLabelItemPayload(
+    val description: String? = null,
+    val quantity: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
