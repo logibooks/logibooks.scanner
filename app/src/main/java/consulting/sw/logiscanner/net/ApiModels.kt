@@ -41,6 +41,7 @@ data class ScanJob(
 
 /** Register type ids used by scanner-only feature gates. */
 object RegisterTypes {
+    const val OZON = 1
     const val WBR = 2
     const val WBR_N = 2 * 1024 * 1024 + WBR
 }
@@ -130,6 +131,7 @@ data class ScanJobMonitorParcel(
     var stickerCode: String? = null,
     var postingNumber: String? = null,
     var barcode: String? = null,
+    var destinationCity: String? = null,
     var productName: String? = null,
     var weightKg: Double? = null,
     var weightCorrectionEligible: Boolean = false,

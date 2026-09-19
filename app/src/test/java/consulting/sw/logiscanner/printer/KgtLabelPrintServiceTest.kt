@@ -69,6 +69,22 @@ class KgtLabelPrintServiceTest {
     }
 
     @Test
+    fun printParcelLabelSendsMarketplacePayload() = runTest {
+        val client = RecordingClient()
+        val service = KgtLabelPrintService(TscLabelRenderer(), client)
+
+        val result = service.printParcelLabel(
+            "AA:BB",
+            ParcelLabel.Ozon("POST-1", "OZON-BARCODE", "Ташкент")
+        )
+
+        assertEquals(KgtLabelPrintResult.Success, result)
+        assertTrue(client.prints.single().payload.contains("BITMAP 0,0,58,320,0,"))
+        assertTrue(client.prints.single().payload.contains("QRCODE"))
+        assertTrue(client.prints.single().payload.contains("\"OZON-BARCODE\""))
+    }
+
+    @Test
     fun printMapsKnownFailures() = runTest {
         assertEquals(
             KgtLabelPrintResult.PermissionMissing,

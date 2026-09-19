@@ -23,7 +23,8 @@ sealed class KgtLabelPrintResult {
 class KgtLabelPrintService(
     private val renderer: TscLabelRenderer,
     private val client: LabelPrinterClient,
-    private val tajikistanRenderer: TajikistanExportLabelRenderer = TajikistanExportLabelRenderer()
+    private val tajikistanRenderer: TajikistanExportLabelRenderer = TajikistanExportLabelRenderer(),
+    private val parcelLabelRenderer: ParcelLabelRenderer = ParcelLabelRenderer()
 ) {
     private val mutex = Mutex()
 
@@ -47,6 +48,12 @@ class KgtLabelPrintService(
     ): KgtLabelPrintResult {
         return printRendered(address) {
             tajikistanRenderer.render(label)
+        }
+    }
+
+    suspend fun printParcelLabel(address: String?, label: ParcelLabel): KgtLabelPrintResult {
+        return printRendered(address) {
+            parcelLabelRenderer.render(label)
         }
     }
 

@@ -63,6 +63,8 @@ This file is a part of LogiScanner application
     <string name="printer_selected_address">Saved printer: %1$s</string>
     <string name="printer_refresh">Refresh printers</string>
     <string name="printer_print_label">Print label</string>
+    <string name="printer_parcel_label">Parcel label</string>
+    <string name="printer_print_parcel_label">Print parcel label</string>
     <string name="printer_no_paired">No paired Bluetooth printers</string>
     <string name="printer_permission_missing">Bluetooth printer permission is required</string>
     <string name="printer_not_found">Printer not found</string>

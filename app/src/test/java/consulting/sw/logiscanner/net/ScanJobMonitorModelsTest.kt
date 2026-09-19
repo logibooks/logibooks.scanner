@@ -125,6 +125,7 @@ class ScanJobMonitorModelsTest {
                     "parcelNumber": "P-1",
                     "extId": "15",
                     "barcode": "WBR-BAR-1",
+                    "destinationCity": "Tashkent",
                     "zone": 10,
                     "zoneName": "Green",
                     "statusId": 5,
@@ -168,6 +169,7 @@ class ScanJobMonitorModelsTest {
         assertTrue(snapshot.box!!.parcels!!.first().weightCorrectionEligible)
         assertEquals("15", snapshot.box!!.parcels!!.first().extId)
         assertEquals("WBR-BAR-1", snapshot.box!!.parcels!!.first().barcode)
+        assertEquals("Tashkent", snapshot.box!!.parcels!!.first().destinationCity)
         assertEquals(ParcelCheckStatusProjectionKinds.RESTRICTION, snapshot.box!!.parcels!!.first().checkStatusProjection?.kind)
         assertEquals("Запрет", snapshot.box!!.parcels!!.first().checkStatusProjection?.title)
         assertEquals("Стоп-слово", snapshot.box!!.parcels!!.first().checkStatusProjection?.restrictionReason)
