@@ -24,6 +24,7 @@ import consulting.sw.logiscanner.printer.BluetoothPrinterClient
 import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
 import consulting.sw.logiscanner.printer.KgtLabelPrintResult
 import consulting.sw.logiscanner.printer.KgtLabelPrintService
+import consulting.sw.logiscanner.printer.ParcelLabel
 import consulting.sw.logiscanner.printer.PrinterPermissionMissingException
 import consulting.sw.logiscanner.printer.TscLabelRenderer
 import consulting.sw.logiscanner.printer.TajikistanExportLabel
@@ -396,6 +397,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun printKgtLabel(code: String) {
         viewModelScope.launch {
             printKgtLabelInternal(code)
+        }
+    }
+
+    fun printParcelLabel(label: ParcelLabel) {
+        viewModelScope.launch {
+            printParcelLabelInternal(label)
         }
     }
 
@@ -1232,6 +1239,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
         try {
             val result = labelPrintService.printTajikistanExport(
+                state.value.printerBluetoothAddress,
+                label
+            )
+            applyPrinterResult(result)
+        } finally {
+            _state.update { it.copy(printerLoading = false) }
+        }
+    }
+
+    private suspend fun printParcelLabelInternal(label: ParcelLabel) {
+        _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
+        try {
+            val result = labelPrintService.printParcelLabel(
                 state.value.printerBluetoothAddress,
                 label
             )

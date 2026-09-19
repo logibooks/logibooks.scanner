@@ -42,6 +42,7 @@ import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
+import consulting.sw.logiscanner.printer.ParcelLabel
 import consulting.sw.logiscanner.printer.TajikistanExportLabel
 
 @Composable
@@ -86,6 +87,7 @@ internal fun ScanScreen(
     onToggleMonitorAutoFollow: () -> Unit,
     onToggleBulkyItemsMode: () -> Unit,
     onPrintKgtLabel: (String) -> Unit,
+    onPrintParcelLabel: (ParcelLabel) -> Unit,
     onPrintTajikistanExportLabel: () -> Unit,
     onMonitorJumpNumberChange: (String) -> Unit,
     onJumpToMonitorNumber: () -> Unit,
@@ -259,6 +261,7 @@ internal fun ScanScreen(
                 printerMessage = printerMessage,
                 printerError = printerError,
                 onPrintKgtLabel = onPrintKgtLabel,
+                onPrintParcelLabel = onPrintParcelLabel,
                 onPrintTajikistanExportLabel = onPrintTajikistanExportLabel,
                 jumpNumber = monitorJumpNumber,
                 jumpLoading = monitorJumpLoading,

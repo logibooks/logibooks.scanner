@@ -68,10 +68,12 @@ import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
+import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import consulting.sw.logiscanner.printer.ParcelLabel
 import consulting.sw.logiscanner.printer.TajikistanExportLabel
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import kotlinx.coroutines.delay
@@ -102,6 +104,7 @@ internal fun ScanJobMonitorPanel(
     printerMessage: String?,
     printerError: String?,
     onPrintKgtLabel: (String) -> Unit,
+    onPrintParcelLabel: (ParcelLabel) -> Unit,
     onPrintTajikistanExportLabel: () -> Unit,
     jumpNumber: String,
     jumpLoading: Boolean,
@@ -323,7 +326,9 @@ internal fun ScanJobMonitorPanel(
                         loading = detailLoading,
                         highlightedParcelId = highlightedParcelId,
                         printerSelected = printerSelected,
+                        printerLoading = printerLoading,
                         onPrintKgtLabel = onPrintKgtLabel,
+                        onPrintParcelLabel = onPrintParcelLabel,
                         onOpenRegister = onOpenRegister
                     )
                 }
@@ -485,7 +490,9 @@ private fun MonitorBoxDetail(
     loading: Boolean,
     highlightedParcelId: Int?,
     printerSelected: Boolean,
+    printerLoading: Boolean,
     onPrintKgtLabel: (String) -> Unit,
+    onPrintParcelLabel: (ParcelLabel) -> Unit,
     onOpenRegister: () -> Unit
 ) {
     val context = LocalContext.current
@@ -642,11 +649,14 @@ private fun MonitorBoxDetail(
                     val highlighted = isHighlightedMonitorParcel(parcel, highlightedParcelId)
                     MonitorParcelRow(
                         parcel = parcel,
+                        registerType = snapshot.registerType,
                         weightCorrection = weightCorrection,
                         expanded = expandedParcelKey == parcelKey,
                         highlighted = highlighted,
                         printerSelected = printerSelected,
+                        printerLoading = printerLoading,
                         onPrintKgtLabel = onPrintKgtLabel,
+                        onPrintParcelLabel = onPrintParcelLabel,
                         onToggleExpanded = {
                             expandedParcelKey = if (expandedParcelKey == parcelKey) null else parcelKey
                         }
@@ -660,11 +670,14 @@ private fun MonitorBoxDetail(
 @Composable
 private fun MonitorParcelRow(
     parcel: ScanJobMonitorParcel,
+    registerType: Int,
     weightCorrection: MonitorWeightCorrection?,
     expanded: Boolean,
     highlighted: Boolean,
     printerSelected: Boolean,
+    printerLoading: Boolean,
     onPrintKgtLabel: (String) -> Unit,
+    onPrintParcelLabel: (ParcelLabel) -> Unit,
     onToggleExpanded: () -> Unit
 ) {
     val statusText = when {
@@ -766,7 +779,15 @@ private fun MonitorParcelRow(
                     overflow = TextOverflow.Visible
                 )
             }
-            MonitorParcelAttributes(parcel, weightCorrection, printerSelected, onPrintKgtLabel)
+            MonitorParcelAttributes(
+                parcel = parcel,
+                registerType = registerType,
+                weightCorrection = weightCorrection,
+                printerSelected = printerSelected,
+                printerLoading = printerLoading,
+                onPrintKgtLabel = onPrintKgtLabel,
+                onPrintParcelLabel = onPrintParcelLabel
+            )
         }
     }
 }
@@ -778,14 +799,55 @@ private fun isHighlightedMonitorParcel(
     return highlightedParcelId != null && parcel.parcelId == highlightedParcelId
 }
 
+internal data class ParcelLabelAction(
+    val label: ParcelLabel,
+    val displayValue: String
+)
+
+internal fun parcelLabelAction(
+    registerType: Int,
+    parcel: ScanJobMonitorParcel
+): ParcelLabelAction? = when (registerType) {
+    RegisterTypes.WBR_N -> {
+        val displayValue = firstNonBlank(parcel.sticker, parcel.stickerCode) ?: return null
+        ParcelLabelAction(
+            label = ParcelLabel.WbrN(parcel.sticker, parcel.stickerCode),
+            displayValue = displayValue
+        )
+    }
+    RegisterTypes.OZON -> {
+        val displayValue = firstNonBlank(parcel.postingNumber, parcel.barcode, parcel.destinationCity) ?: return null
+        ParcelLabelAction(
+            label = ParcelLabel.Ozon(parcel.postingNumber, parcel.barcode, parcel.destinationCity),
+            displayValue = displayValue
+        )
+    }
+    else -> null
+}
+
+private fun firstNonBlank(vararg values: String?): String? =
+    values.firstNotNullOfOrNull { value -> value?.trim()?.takeIf { it.isNotEmpty() } }
+
 @Composable
 private fun MonitorParcelAttributes(
     parcel: ScanJobMonitorParcel,
+    registerType: Int,
     weightCorrection: MonitorWeightCorrection?,
     printerSelected: Boolean,
-    onPrintKgtLabel: (String) -> Unit
+    printerLoading: Boolean,
+    onPrintKgtLabel: (String) -> Unit,
+    onPrintParcelLabel: (ParcelLabel) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        parcelLabelAction(registerType, parcel)?.let { action ->
+            LabelPrintAttribute(
+                label = stringResource(R.string.printer_parcel_label),
+                value = action.displayValue,
+                printEnabled = printerSelected && !printerLoading,
+                contentDescription = stringResource(R.string.printer_print_parcel_label),
+                onPrint = { onPrintParcelLabel(action.label) }
+            )
+        }
         monitorParcelAttributeSpecs(parcel, weightCorrection).forEach { attribute ->
             val value = attribute.value
             val correctedValue = attribute.correctedValue

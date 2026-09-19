@@ -238,6 +238,11 @@ class MainActivity : ComponentActivity() {
                                         vm.printKgtLabel(code)
                                     }
                                 },
+                                onPrintParcelLabel = { label ->
+                                    runPrinterAction {
+                                        vm.printParcelLabel(label)
+                                    }
+                                },
                                 onPrintTajikistanExportLabel = {
                                     runPrinterAction {
                                         vm.printLastTajikistanExportLabel()

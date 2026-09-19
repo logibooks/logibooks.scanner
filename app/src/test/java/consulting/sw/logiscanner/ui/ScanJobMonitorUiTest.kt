@@ -12,8 +12,10 @@ import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
+import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
+import consulting.sw.logiscanner.printer.ParcelLabel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -66,6 +68,36 @@ class ScanJobMonitorUiTest {
         )
 
         assertEquals("POST-1", parcelPrimaryText(parcel))
+    }
+
+    @Test
+    fun parcelLabelActionSupportsWbrNOnlyAndKeepsPartialData() {
+        val parcel = ScanJobMonitorParcel(sticker = "STICKER-1", stickerCode = "*CODE-1")
+
+        val action = parcelLabelAction(RegisterTypes.WBR_N, parcel)
+
+        assertEquals("STICKER-1", action?.displayValue)
+        assertEquals(ParcelLabel.WbrN("STICKER-1", "*CODE-1"), action?.label)
+        assertNull(parcelLabelAction(RegisterTypes.WBR, parcel))
+        assertEquals(
+            ParcelLabel.WbrN(null, "*CODE-1"),
+            parcelLabelAction(RegisterTypes.WBR_N, parcel.copy(sticker = null))?.label
+        )
+    }
+
+    @Test
+    fun parcelLabelActionMapsOzonDestinationCityAndRejectsEmptyData() {
+        val parcel = ScanJobMonitorParcel(
+            postingNumber = "POST-1",
+            barcode = "BAR-1",
+            destinationCity = "Tashkent"
+        )
+
+        val action = parcelLabelAction(RegisterTypes.OZON, parcel)
+
+        assertEquals("POST-1", action?.displayValue)
+        assertEquals(ParcelLabel.Ozon("POST-1", "BAR-1", "Tashkent"), action?.label)
+        assertNull(parcelLabelAction(RegisterTypes.OZON, ScanJobMonitorParcel()))
     }
 
     @Test
