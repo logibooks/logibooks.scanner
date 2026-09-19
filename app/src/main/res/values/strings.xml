@@ -70,6 +70,11 @@ This file is a part of LogiScanner application
     <string name="printer_invalid_label">Unable to print this label</string>
     <string name="printer_printed">Label printed</string>
     <string name="printer_print_failed">Unable to print label: %1$s</string>
+    <string name="printer_tj_label_order">Order number</string>
+    <string name="printer_repeat_label">Repeat last label</string>
+    <string name="printer_tj_label_missing_data">The Tajikistan label has missing or invalid required data</string>
+    <string name="printer_tj_label_unsupported_barcode">The order number cannot be encoded as a Code128 barcode</string>
+    <string name="printer_tj_label_overflow">The Tajikistan label content does not fit on a 58 × 40 mm label</string>
     <string name="monitor_auto_follow_disable">Auto-follow is on. Tap to turn off</string>
     <string name="monitor_auto_follow_enable">Auto-follow is off. Tap to turn on</string>
     <string name="monitor_jump_label">Go to parcel or box</string>

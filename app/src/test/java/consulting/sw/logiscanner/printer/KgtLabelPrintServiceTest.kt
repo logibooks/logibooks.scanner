@@ -11,8 +11,15 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.io.IOException
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class KgtLabelPrintServiceTest {
 
     @Test
@@ -49,6 +56,19 @@ class KgtLabelPrintServiceTest {
     }
 
     @Test
+    fun printTajikistanExportSendsBitmapAndBarcodePayload() = runTest {
+        val client = RecordingClient()
+        val service = KgtLabelPrintService(TscLabelRenderer(), client)
+
+        val result = service.printTajikistanExport("AA:BB", printableLabel())
+
+        assertEquals(KgtLabelPrintResult.Success, result)
+        assertTrue(client.prints.single().payload.contains("BITMAP 0,0,58,320,0,"))
+        assertTrue(client.prints.single().payload.contains("BARCODE"))
+        assertTrue(client.prints.single().payload.contains("\"40856360164\""))
+    }
+
+    @Test
     fun printMapsKnownFailures() = runTest {
         assertEquals(
             KgtLabelPrintResult.PermissionMissing,
@@ -78,6 +98,20 @@ class KgtLabelPrintServiceTest {
         awaitAll(
             async { service.print("AA:BB", "15") },
             async { service.print("AA:BB", "16") }
+        )
+
+        assertEquals(1, client.maxActiveCalls)
+        assertEquals(2, client.calls)
+    }
+
+    @Test
+    fun printSerializesKgtAndTajikistanCallsThroughOneMutex() = runTest {
+        val client = DelayingClient()
+        val service = KgtLabelPrintService(TscLabelRenderer(), client)
+
+        awaitAll(
+            async { service.print("AA:BB", "15") },
+            async { service.printTajikistanExport("AA:BB", printableLabel()) }
         )
 
         assertEquals(1, client.maxActiveCalls)

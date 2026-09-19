@@ -6,6 +6,7 @@ package consulting.sw.logiscanner.ui
 
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
+import consulting.sw.logiscanner.net.LabelTemplates
 import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScannedItemSources
@@ -230,4 +231,31 @@ fun shouldAutoPrintFullRelabelingLabel(
         && result.scanSource == ScannedItemSources.PARCEL_STICKER
         && !result.hasIssues
         && (result.followTarget.parcelId ?: 0) > 0
+        && result.labelTemplate != LabelTemplates.TAJIKISTAN_EXPORT
 }
+
+fun shouldAutoPrintTajikistanExportLabel(
+    submode: RelabelingSubmode,
+    relabelingMode: Int,
+    printerSelected: Boolean,
+    result: ScanResultItem
+): Boolean {
+    return submode == RelabelingSubmode.FULL
+        && relabelingMode != BulkyItemsModes.OFF
+        && printerSelected
+        && result.labelTemplate == LabelTemplates.TAJIKISTAN_EXPORT
+        && result.count == 1
+        && result.parcelCount == 1
+        && result.scanSource == ScannedItemSources.PARCEL_STICKER
+        && !result.hasIssues
+}
+
+fun canRepeatTajikistanExportLabel(
+    submode: RelabelingSubmode,
+    relabelingMode: Int,
+    printerSelected: Boolean,
+    hasLabel: Boolean
+): Boolean = submode == RelabelingSubmode.FULL
+    && relabelingMode != BulkyItemsModes.OFF
+    && printerSelected
+    && hasLabel

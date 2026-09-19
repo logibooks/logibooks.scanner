@@ -1,4 +1,5 @@
 [![ci](https://github.com/logibooks/logibooks.scanner/actions/workflows/ci.yml/badge.svg)](https://github.com/logibooks/logibooks.scanner/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/logibooks/logibooks.scanner/graph/badge.svg?token=YM32LOJSBZ)](https://codecov.io/gh/logibooks/logibooks.scanner)
 
 # LogiScanner
 

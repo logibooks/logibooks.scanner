@@ -72,6 +72,7 @@ import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import consulting.sw.logiscanner.printer.TajikistanExportLabel
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import kotlinx.coroutines.delay
 
@@ -87,6 +88,8 @@ internal fun ScanJobMonitorPanel(
     lastItemNumbers: List<String>,
     lastExtData: String?,
     lastExtId: String?,
+    lastTajikistanExportLabel: TajikistanExportLabel?,
+    canPrintTajikistanExportLabel: Boolean,
     lastScanTime: String?,
     loading: Boolean,
     detailLoading: Boolean,
@@ -99,6 +102,7 @@ internal fun ScanJobMonitorPanel(
     printerMessage: String?,
     printerError: String?,
     onPrintKgtLabel: (String) -> Unit,
+    onPrintTajikistanExportLabel: () -> Unit,
     jumpNumber: String,
     jumpLoading: Boolean,
     highlightedParcelId: Int?,
@@ -266,12 +270,15 @@ internal fun ScanJobMonitorPanel(
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
                 lastExtId = lastExtId,
+                lastTajikistanExportLabel = lastTajikistanExportLabel,
                 lastScanTime = lastScanTime,
                 printerSelected = printerSelected,
                 printerLoading = printerLoading,
                 printerMessage = printerMessage,
                 printerError = printerError,
-                onPrintKgtLabel = onPrintKgtLabel
+                onPrintKgtLabel = onPrintKgtLabel,
+                onPrintTajikistanExportLabel = onPrintTajikistanExportLabel,
+                canPrintTajikistanExportLabel = canPrintTajikistanExportLabel
             )
 
             if (loading && snapshot == null) {
@@ -946,6 +953,23 @@ private fun KgtPrintAttribute(
     printEnabled: Boolean,
     onPrintKgtLabel: (String) -> Unit
 ) {
+    LabelPrintAttribute(
+        label = label,
+        value = value,
+        printEnabled = printEnabled,
+        contentDescription = stringResource(R.string.printer_print_label),
+        onPrint = { onPrintKgtLabel(value) }
+    )
+}
+
+@Composable
+private fun LabelPrintAttribute(
+    label: String,
+    value: String,
+    printEnabled: Boolean,
+    contentDescription: String,
+    onPrint: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -971,7 +995,7 @@ private fun KgtPrintAttribute(
                 modifier = Modifier.weight(1f)
             )
             IconButton(
-                onClick = { onPrintKgtLabel(value) },
+                onClick = onPrint,
                 enabled = printEnabled,
                 modifier = Modifier
                     .width(32.dp)
@@ -979,7 +1003,7 @@ private fun KgtPrintAttribute(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Print,
-                    contentDescription = stringResource(R.string.printer_print_label),
+                    contentDescription = contentDescription,
                     modifier = Modifier
                         .width(18.dp)
                         .height(18.dp)
@@ -1006,12 +1030,15 @@ private fun LocalScanResult(
     lastItemNumbers: List<String>,
     lastExtData: String?,
     lastExtId: String?,
+    lastTajikistanExportLabel: TajikistanExportLabel?,
     lastScanTime: String?,
     printerSelected: Boolean,
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
-    onPrintKgtLabel: (String) -> Unit
+    onPrintKgtLabel: (String) -> Unit,
+    onPrintTajikistanExportLabel: () -> Unit,
+    canPrintTajikistanExportLabel: Boolean
 ) {
     val display = localScanResultDisplay(
         lastCode = lastCode,
@@ -1097,6 +1124,15 @@ private fun LocalScanResult(
                 value = extId,
                 printEnabled = canManualPrintKgtLabel(extId, printerSelected),
                 onPrintKgtLabel = onPrintKgtLabel
+            )
+        }
+        lastTajikistanExportLabel?.let { label ->
+            LabelPrintAttribute(
+                label = stringResource(R.string.printer_tj_label_order),
+                value = label.orderNumber,
+                printEnabled = canPrintTajikistanExportLabel && !printerLoading,
+                contentDescription = stringResource(R.string.printer_repeat_label),
+                onPrint = onPrintTajikistanExportLabel
             )
         }
         stickerCode?.let { code ->
