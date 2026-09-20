@@ -4,12 +4,7 @@
 
 package consulting.sw.logiscanner.printer
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Typeface
-import java.io.ByteArrayOutputStream
+import java.nio.charset.Charset
 import java.util.Locale
 
 class ParcelStickerRenderer {
@@ -20,33 +15,34 @@ class ParcelStickerRenderer {
     }
 
     private fun renderWbrN(sticker: ParcelSticker.WbrN): ByteArray {
-        val stickerNumber = normalizeText(sticker.sticker)
         val stickerCode = normalizeQr(sticker.stickerCode)
-        require(stickerNumber != null || stickerCode != null) { "WbrN sticker has no printable data" }
+        require(stickerCode != null) { "WbrN sticker has no printable sticker code" }
 
-        val bitmap = blankBitmap()
-        val canvas = Canvas(bitmap)
-        drawRotatedCentered(canvas, WBR_BRAND, 31f, 160f, -90f, brandPaint(42f))
-        stickerNumber?.let { value ->
-            val (first, second) = splitInHalf(value)
-            drawRotatedCentered(canvas, first, 405f, 160f, -90f, textPaint(24f, bold = true))
-            if (second.isNotEmpty()) {
-                drawRotatedCentered(canvas, second, 438f, 160f, -90f, textPaint(24f, bold = true))
-            }
-        }
-
-        val qrCommands = if (stickerCode == null) {
-            emptyList()
-        } else {
-            listOf(
-                qrCommand(169, 94, 6, stickerCode),
-                qrCommand(75, 20, 3, stickerCode),
-                qrCommand(321, 20, 3, stickerCode),
-                qrCommand(75, 226, 3, stickerCode),
-                qrCommand(321, 226, 3, stickerCode)
+        val commands = mutableListOf(
+            verticalTextCommand(
+                value = WBR_BRAND,
+                x = 20,
+                centerY = 160,
+                font = FONT_4,
+                charWidthDots = FONT_4_WIDTH_DOTS,
+                xMultiplier = 2,
+                yMultiplier = 2
             )
+        )
+        val (first, second) = splitWbrStickerNumber(stickerCode)
+        commands += centeredVerticalTextCommand(first, 378, 160, FONT_2)
+        if (second.isNotEmpty()) {
+            commands += centeredVerticalTextCommand(second, 417, 160, FONT_4)
         }
-        return buildPayload(bitmap, qrCommands)
+
+        commands += listOf(
+            qrCommand(CENTRAL_QR_X_DOTS, CENTRAL_QR_Y_DOTS, CENTRAL_QR_CELL_DOTS, stickerCode),
+            qrCommand(20, 18, CORNER_QR_CELL_DOTS, stickerCode),
+            qrCommand(365, 18, CORNER_QR_CELL_DOTS, stickerCode),
+            qrCommand(20, 218, CORNER_QR_CELL_DOTS, stickerCode),
+            qrCommand(365, 218, CORNER_QR_CELL_DOTS, stickerCode)
+        )
+        return buildPayload(commands)
     }
 
     private fun renderOzon(sticker: ParcelSticker.Ozon): ByteArray {
@@ -57,75 +53,66 @@ class ParcelStickerRenderer {
             "Ozon sticker has no printable data"
         }
 
-        val bitmap = blankBitmap()
-        val canvas = Canvas(bitmap)
-        drawRotatedCentered(canvas, OZON_BRAND, 31f, 160f, -90f, brandPaint(36f))
+        val commands = mutableListOf(
+            verticalTextCommand(OZON_BRAND, 31, 160, FONT_4, FONT_4_WIDTH_DOTS)
+        )
         destinationCity?.let { city ->
-            drawRotatedFitted(canvas, city, 435f, 160f, -90f, maxLength = 270f)
+            commands += fittedVerticalTextCommand(city, 435, 160)
         }
         postingNumber?.let { value ->
             val (first, second) = splitPostingNumber(value)
-            drawRotatedCentered(canvas, first, 105f, 160f, -90f, textPaint(20f, bold = true))
+            commands += verticalTextCommand(first, 105, 160, FONT_3, FONT_3_WIDTH_DOTS)
             if (second.isNotEmpty()) {
-                drawRotatedCentered(canvas, second, 350f, 160f, -90f, textPaint(20f, bold = true))
+                commands += verticalTextCommand(second, 350, 160, FONT_3, FONT_3_WIDTH_DOTS)
             }
         }
 
-        val qrCommands = barcode?.let { listOf(qrCommand(169, 94, 6, it)) }.orEmpty()
-        return buildPayload(bitmap, qrCommands)
+        barcode?.let { commands += qrCommand(169, 94, 6, it) }
+        return buildPayload(commands)
     }
 
-    private fun blankBitmap(): Bitmap = Bitmap.createBitmap(
-        STICKER_WIDTH_DOTS,
-        STICKER_HEIGHT_DOTS,
-        Bitmap.Config.ARGB_8888
-    ).also { it.eraseColor(Color.WHITE) }
-
-    private fun drawRotatedFitted(
-        canvas: Canvas,
+    private fun fittedVerticalTextCommand(
         value: String,
-        centerX: Float,
-        centerY: Float,
-        rotation: Float,
-        maxLength: Float
-    ) {
-        var size = 27f
-        var paint = textPaint(size, bold = true)
-        while (size > 14f && paint.measureText(value) > maxLength) {
-            size -= 1f
-            paint = textPaint(size, bold = true)
+        x: Int,
+        centerY: Int
+    ): String {
+        val (font, charWidth) = when {
+            value.length * FONT_3_WIDTH_DOTS <= MAX_VERTICAL_TEXT_LENGTH_DOTS -> FONT_3 to FONT_3_WIDTH_DOTS
+            value.length * FONT_2_WIDTH_DOTS <= MAX_VERTICAL_TEXT_LENGTH_DOTS -> FONT_2 to FONT_2_WIDTH_DOTS
+            else -> FONT_1 to FONT_1_WIDTH_DOTS
         }
-        drawRotatedCentered(canvas, value, centerX, centerY, rotation, paint)
+        return verticalTextCommand(value, x, centerY, font, charWidth)
     }
 
-    private fun drawRotatedCentered(
-        canvas: Canvas,
+    private fun verticalTextCommand(
         value: String,
-        centerX: Float,
-        centerY: Float,
-        rotation: Float,
-        paint: Paint
-    ) {
-        canvas.save()
-        canvas.rotate(rotation, centerX, centerY)
-        val baseline = centerY - (paint.ascent() + paint.descent()) / 2f
-        canvas.drawText(value, centerX - paint.measureText(value) / 2f, baseline, paint)
-        canvas.restore()
+        x: Int,
+        centerY: Int,
+        font: String,
+        charWidthDots: Int,
+        xMultiplier: Int = 1,
+        yMultiplier: Int = 1
+    ): String {
+        val y = centerY + value.length * charWidthDots * xMultiplier / 2
+        return "TEXT $x,$y,\"$font\",270,$xMultiplier,$yMultiplier,\"$value\""
     }
 
-    private fun textPaint(size: Float, bold: Boolean = false): Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK
-        textSize = size
-        typeface = if (bold) Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD) else Typeface.SANS_SERIF
-    }
-
-    private fun brandPaint(size: Float): Paint = textPaint(size, bold = true).apply {
-        letterSpacing = 0.04f
-    }
+    private fun centeredVerticalTextCommand(
+        value: String,
+        x: Int,
+        centerY: Int,
+        font: String
+    ): String = "TEXT $x,$centerY,\"$font\",270,1,1,2,\"$value\""
 
     private fun splitInHalf(value: String): Pair<String, String> {
         val midpoint = (value.length + 1) / 2
         return value.substring(0, midpoint) to value.substring(midpoint)
+    }
+
+    private fun splitWbrStickerNumber(value: String): Pair<String, String> = when {
+        value.length > WBR_NUMBER_SUFFIX_LENGTH ->
+            value.dropLast(WBR_NUMBER_SUFFIX_LENGTH) to value.takeLast(WBR_NUMBER_SUFFIX_LENGTH)
+        else -> splitInHalf(value)
     }
 
     private fun splitPostingNumber(value: String): Pair<String, String> {
@@ -139,58 +126,54 @@ class ParcelStickerRenderer {
 
     private fun normalizeText(value: String?): String? = value
         ?.trim()
-        ?.takeIf { text -> text.isNotEmpty() && text.none { it.code < 0x20 || it.code == 0x7F } }
+        ?.takeIf { text ->
+            text.isNotEmpty()
+                && '"' !in text
+                && text.none { it.code < 0x20 || it.code == 0x7F }
+                && WINDOWS_1251.newEncoder().canEncode(text)
+        }
 
     private fun normalizeQr(value: String?): String? = normalizeText(value)
-        ?.takeIf { '"' !in it && it.all { char -> char.code <= 0x7E } }
+        ?.takeIf { it.all { char -> char.code <= 0x7E } }
 
     private fun qrCommand(x: Int, y: Int, cellDots: Int, value: String): String =
         "QRCODE $x,$y,L,$cellDots,A,0,M2,S7,\"$value\""
 
-    private fun buildPayload(bitmap: Bitmap, commands: List<String>): ByteArray {
-        val raster = encodeMonochrome(bitmap)
-        val output = ByteArrayOutputStream()
-        listOf(
-            "SIZE 58 mm,40 mm",
-            "GAP 2 mm,0 mm",
-            "DENSITY 8",
-            "DIRECTION 1",
-            "REFERENCE 0,0",
-            "CLS"
-        ).forEach { command -> output.write("$command\r\n".toByteArray(Charsets.US_ASCII)) }
-        output.write("BITMAP 0,0,$RASTER_BYTES_PER_ROW,$STICKER_HEIGHT_DOTS,0,".toByteArray(Charsets.US_ASCII))
-        output.write(raster)
-        output.write("\r\n".toByteArray(Charsets.US_ASCII))
-        commands.forEach { command -> output.write("$command\r\n".toByteArray(Charsets.US_ASCII)) }
-        output.write("PRINT 1,1\r\n".toByteArray(Charsets.US_ASCII))
-        return output.toByteArray()
-    }
-
-    private fun encodeMonochrome(bitmap: Bitmap): ByteArray {
-        val pixels = IntArray(STICKER_WIDTH_DOTS)
-        val raster = ByteArray(RASTER_BYTES_PER_ROW * STICKER_HEIGHT_DOTS)
-        for (y in 0 until STICKER_HEIGHT_DOTS) {
-            bitmap.getPixels(pixels, 0, STICKER_WIDTH_DOTS, 0, y, STICKER_WIDTH_DOTS, 1)
-            for (x in 0 until STICKER_WIDTH_DOTS) {
-                val pixel = pixels[x]
-                val luminance = (Color.red(pixel) * 299 + Color.green(pixel) * 587 + Color.blue(pixel) * 114) / 1000
-                if (Color.alpha(pixel) >= 128 && luminance < 128) {
-                    val index = y * RASTER_BYTES_PER_ROW + x / 8
-                    raster[index] = (raster[index].toInt() or (0x80 shr (x % 8))).toByte()
-                }
-            }
-        }
-        return raster
-    }
+    private fun buildPayload(commands: List<String>): ByteArray = buildList {
+        addAll(
+            listOf(
+                "SIZE 58 mm,40 mm",
+                "GAP 2 mm,0 mm",
+                "DENSITY 8",
+                "DIRECTION 1",
+                "REFERENCE 0,0",
+                "CODEPAGE 1251",
+                "CLS"
+            )
+        )
+        addAll(commands)
+        add("PRINT 1,1")
+    }.joinToString("\r\n", postfix = "\r\n").toByteArray(WINDOWS_1251)
 
     companion object {
-        const val STICKER_WIDTH_DOTS = 464
-        const val STICKER_HEIGHT_DOTS = 320
-        const val RASTER_BYTES_PER_ROW = STICKER_WIDTH_DOTS / 8
-        const val RASTER_SIZE_BYTES = RASTER_BYTES_PER_ROW * STICKER_HEIGHT_DOTS
-
         private const val WBR_BRAND = "WB"
         private const val OZON_BRAND = "OZON"
+        private const val FONT_1 = "1"
+        private const val FONT_2 = "2"
+        private const val FONT_3 = "3"
+        private const val FONT_4 = "4"
+        private const val FONT_1_WIDTH_DOTS = 8
+        private const val FONT_2_WIDTH_DOTS = 12
+        private const val FONT_3_WIDTH_DOTS = 16
+        private const val FONT_4_WIDTH_DOTS = 24
+        private const val MAX_VERTICAL_TEXT_LENGTH_DOTS = 270
+        private const val WBR_NUMBER_SUFFIX_LENGTH = 4
+        private const val CENTRAL_QR_CELL_DOTS = 10
+        private const val CENTRAL_QR_SIZE_DOTS = 21 * CENTRAL_QR_CELL_DOTS
+        private const val CENTRAL_QR_X_DOTS = (464 - CENTRAL_QR_SIZE_DOTS) / 2
+        private const val CENTRAL_QR_Y_DOTS = (320 - CENTRAL_QR_SIZE_DOTS) / 2
+        private const val CORNER_QR_CELL_DOTS = 4
+        private val WINDOWS_1251: Charset = Charset.forName("windows-1251")
         private val RUSSIAN_LOCALE = Locale.forLanguageTag("ru-RU")
     }
 }

@@ -27,18 +27,17 @@ class TajikistanExportStickerModelsTest {
               "stickerTemplate": "TJ_EXPORT",
               "exportSticker": {
                 "orderNumber": "40856360164",
-                "accountNumber": "ACC-42",
+                "dcBankID": "ACC-42",
                 "placesCount": 1,
                 "dispatchDate": "19.09.26",
                 "weightKg": 1.25,
-                "declaredValue": 1200.0,
-                "currency": "RUB",
+                "costRub": 1200.0,
                 "senderName": "Sender",
                 "senderAddress": "Moscow",
                 "recipientName": "Recipient",
                 "recipientAddress": "Dushanbe",
                 "recipientPhone": "+992",
-                "items": [{"description":"Books","quantity":2}]
+                "items": [{"productName":"Books","quantity":2}]
               }
             }
             """.trimIndent()
@@ -47,6 +46,9 @@ class TajikistanExportStickerModelsTest {
         assertNotNull(result)
         assertEquals(StickerTemplates.TAJIKISTAN_EXPORT, result!!.stickerTemplate)
         assertEquals("40856360164", result.exportSticker!!.orderNumber)
+        assertEquals("ACC-42", result.exportSticker.dcBankID)
+        assertEquals(1200.0, result.exportSticker.costRub)
+        assertEquals("Books", result.exportSticker.items.single().productName)
         assertEquals(2, result.exportSticker.items.single().quantity)
     }
 
@@ -60,7 +62,7 @@ class TajikistanExportStickerModelsTest {
         )
 
         assertEquals("1", partial!!.exportSticker!!.orderNumber)
-        assertNull(partial.exportSticker.accountNumber)
+        assertNull(partial.exportSticker.dcBankID)
         assertNull(legacy!!.stickerTemplate)
         assertNull(legacy.exportSticker)
     }

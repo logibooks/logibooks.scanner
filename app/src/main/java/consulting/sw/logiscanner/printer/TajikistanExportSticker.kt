@@ -8,12 +8,11 @@ import consulting.sw.logiscanner.net.TajikistanExportStickerPayload
 
 data class TajikistanExportSticker(
     val orderNumber: String,
-    val accountNumber: String,
+    val dcBankID: String,
     val placesCount: Int?,
     val dispatchDate: String,
     val weightKg: Double?,
-    val declaredValue: Double?,
-    val currency: String,
+    val costRub: Double?,
     val senderName: String,
     val senderAddress: String,
     val recipientName: String,
@@ -23,19 +22,18 @@ data class TajikistanExportSticker(
 )
 
 data class TajikistanExportStickerItem(
-    val description: String,
+    val productName: String,
     val quantity: Int?
 )
 
 fun TajikistanExportStickerPayload?.toPrintableSticker(): TajikistanExportSticker {
     return TajikistanExportSticker(
         orderNumber = this?.orderNumber.cleanText(),
-        accountNumber = this?.accountNumber.cleanText(),
+        dcBankID = this?.dcBankID.cleanText(),
         placesCount = this?.placesCount?.takeIf { it > 0 },
         dispatchDate = this?.dispatchDate.cleanText(),
         weightKg = this?.weightKg?.takeIf { it.isFinite() && it > 0.0 },
-        declaredValue = this?.declaredValue?.takeIf { it.isFinite() && it > 0.0 },
-        currency = this?.currency.cleanText(),
+        costRub = this?.costRub?.takeIf { it.isFinite() && it > 0.0 },
         senderName = this?.senderName.cleanText(),
         senderAddress = this?.senderAddress.cleanText(),
         recipientName = this?.recipientName.cleanText(),
@@ -43,7 +41,7 @@ fun TajikistanExportStickerPayload?.toPrintableSticker(): TajikistanExportSticke
         recipientPhone = this?.recipientPhone.cleanText(),
         items = this?.items.orEmpty().map { item ->
             TajikistanExportStickerItem(
-                description = item.description.cleanText(),
+                productName = item.productName.cleanText(),
                 quantity = item.quantity?.takeIf { it > 0 }
             )
         }
@@ -91,7 +89,7 @@ internal fun code128SymbolWidthDots(value: String): Int? {
 
 private fun String?.cleanText(): String = this?.trim().orEmpty()
 
-private const val CODE128_AVAILABLE_WIDTH_DOTS = 456
+private const val CODE128_AVAILABLE_WIDTH_DOTS = 432
 private const val CODE128_NARROW_DOTS = 2
 private const val CODE128_FIXED_MODULES = 35
 private const val CODE128_MODULES_PER_CODEWORD = 11

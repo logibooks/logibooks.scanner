@@ -8,45 +8,45 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
+import java.nio.charset.Charset
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ParcelStickerRendererTest {
     private val renderer = ParcelStickerRenderer()
 
     @Test
-    fun renderWbrNEmitsFiveStickerCodeQrsAndNoLinearBarcode() {
+    fun renderWbrNMatchesReferenceLayoutUsingStickerCode() {
         val rendered = renderer.render(
             ParcelSticker.WbrN(
                 sticker = "54178953272",
-                stickerCode = "*DJ1RODh1"
+                stickerCode = "39639934424"
             )
         )
-        val commands = commandsAfterBitmap(rendered)
+        val commands = rendered.toString(WINDOWS_1251)
 
-        assertRasterContainsInk(rendered)
+        assertFalse(commands.contains("BITMAP"))
+        assertTrue(commands.contains("TEXT"))
         assertEquals(5, commands.countOccurrences("QRCODE"))
-        assertEquals(5, commands.countOccurrences("\"*DJ1RODh1\""))
+        assertEquals(5, commands.countOccurrences("\"39639934424\""))
+        assertTrue(commands.contains("QRCODE 127,55,L,10,A,0,M2,S7,\"39639934424\""))
+        assertTrue(commands.contains("QRCODE 20,18,L,4,A,0,M2,S7,\"39639934424\""))
+        assertTrue(commands.contains("QRCODE 365,18,L,4,A,0,M2,S7,\"39639934424\""))
+        assertTrue(commands.contains("QRCODE 20,218,L,4,A,0,M2,S7,\"39639934424\""))
+        assertTrue(commands.contains("QRCODE 365,218,L,4,A,0,M2,S7,\"39639934424\""))
         assertFalse(commands.contains("BARCODE"))
+        assertFalse(commands.contains("54178953272"))
+        assertTrue(commands.contains("TEXT 378,160,\"2\",270,1,1,2,\"3963993\""))
+        assertTrue(commands.contains("TEXT 417,160,\"4\",270,1,1,2,\"4424\""))
+        assertTrue(commands.contains("TEXT 20,208,\"4\",270,2,2,\"WB\""))
         assertTrue(commands.endsWith("PRINT 1,1\r\n"))
     }
 
-    @Test
-    fun renderWbrNSupportsEitherAvailableField() {
-        val stickerOnly = commandsAfterBitmap(renderer.render(ParcelSticker.WbrN("54178953272", null)))
-        val qrOnly = commandsAfterBitmap(renderer.render(ParcelSticker.WbrN(null, "*DJ1RODh1")))
-
-        assertFalse(stickerOnly.contains("QRCODE"))
-        assertEquals(5, qrOnly.countOccurrences("QRCODE"))
+    @Test(expected = IllegalArgumentException::class)
+    fun renderWbrNRejectsMissingStickerCode() {
+        renderer.render(ParcelSticker.WbrN("54178953272", null))
     }
 
     @Test
-    fun renderOzonEmitsBarcodeQrAndRasterizesDestination() {
+    fun renderOzonEmitsBarcodeQrAndNativeCyrillicDestination() {
         val rendered = renderer.render(
             ParcelSticker.Ozon(
                 postingNumber = "0216094457-0039-1",
@@ -54,20 +54,20 @@ class ParcelStickerRendererTest {
                 destinationCity = "Ташкент"
             )
         )
-        val commands = commandsAfterBitmap(rendered)
+        val commands = rendered.toString(WINDOWS_1251)
 
-        assertRasterContainsInk(rendered)
+        assertFalse(commands.contains("BITMAP"))
+        assertTrue(commands.contains("CODEPAGE 1251"))
         assertEquals(1, commands.countOccurrences("QRCODE"))
         assertTrue(commands.contains("\"ii16065571612\""))
-        assertFalse(commands.contains("Ташкент"))
+        assertTrue(commands.contains("ТАШКЕНТ"))
         assertTrue(commands.endsWith("PRINT 1,1\r\n"))
     }
 
     @Test
     fun renderOzonOmitsInvalidQrAndPrintsRemainingData() {
-        val commands = commandsAfterBitmap(
-            renderer.render(ParcelSticker.Ozon("POST-1", "bad\"barcode", null))
-        )
+        val commands = renderer.render(ParcelSticker.Ozon("POST-1", "bad\"barcode", null))
+            .toString(WINDOWS_1251)
 
         assertFalse(commands.contains("QRCODE"))
         assertTrue(commands.endsWith("PRINT 1,1\r\n"))
@@ -78,38 +78,10 @@ class ParcelStickerRendererTest {
         renderer.render(ParcelSticker.Ozon(" ", null, "\u0001"))
     }
 
-    private fun assertRasterContainsInk(rendered: ByteArray) {
-        val header = "BITMAP 0,0,58,320,0,".toByteArray(Charsets.US_ASCII)
-        val headerIndex = rendered.indexOf(header)
-        val rasterStart = headerIndex + header.size
-        val raster = rendered.copyOfRange(
-            rasterStart,
-            rasterStart + ParcelStickerRenderer.RASTER_SIZE_BYTES
-        )
-
-        assertTrue(headerIndex > 0)
-        assertTrue(raster.any { it.toInt() != 0 })
-    }
-
-    private fun commandsAfterBitmap(rendered: ByteArray): String {
-        val header = "BITMAP 0,0,58,320,0,".toByteArray(Charsets.US_ASCII)
-        val rasterStart = rendered.indexOf(header) + header.size
-        return rendered.copyOfRange(
-            rasterStart + ParcelStickerRenderer.RASTER_SIZE_BYTES,
-            rendered.size
-        ).toString(Charsets.US_ASCII)
-    }
-
     private fun String.countOccurrences(value: String): Int =
         windowed(value.length).count { it == value }
 
-    private fun ByteArray.indexOf(needle: ByteArray): Int {
-        if (needle.isEmpty()) return 0
-        for (index in 0..size - needle.size) {
-            if (needle.indices.all { offset -> this[index + offset] == needle[offset] }) {
-                return index
-            }
-        }
-        return -1
+    private companion object {
+        val WINDOWS_1251: Charset = Charset.forName("windows-1251")
     }
 }
