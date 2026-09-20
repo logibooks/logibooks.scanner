@@ -12,22 +12,22 @@ import android.graphics.Typeface
 import java.io.ByteArrayOutputStream
 import java.util.Locale
 
-class ParcelLabelRenderer {
+class ParcelStickerRenderer {
 
-    fun render(label: ParcelLabel): ByteArray = when (label) {
-        is ParcelLabel.WbrN -> renderWbrN(label)
-        is ParcelLabel.Ozon -> renderOzon(label)
+    fun render(sticker: ParcelSticker): ByteArray = when (sticker) {
+        is ParcelSticker.WbrN -> renderWbrN(sticker)
+        is ParcelSticker.Ozon -> renderOzon(sticker)
     }
 
-    private fun renderWbrN(label: ParcelLabel.WbrN): ByteArray {
-        val sticker = normalizeText(label.sticker)
-        val stickerCode = normalizeQr(label.stickerCode)
-        require(sticker != null || stickerCode != null) { "WbrN label has no printable data" }
+    private fun renderWbrN(sticker: ParcelSticker.WbrN): ByteArray {
+        val stickerNumber = normalizeText(sticker.sticker)
+        val stickerCode = normalizeQr(sticker.stickerCode)
+        require(stickerNumber != null || stickerCode != null) { "WbrN sticker has no printable data" }
 
         val bitmap = blankBitmap()
         val canvas = Canvas(bitmap)
         drawRotatedCentered(canvas, WBR_BRAND, 31f, 160f, -90f, brandPaint(42f))
-        sticker?.let { value ->
+        stickerNumber?.let { value ->
             val (first, second) = splitInHalf(value)
             drawRotatedCentered(canvas, first, 405f, 160f, -90f, textPaint(24f, bold = true))
             if (second.isNotEmpty()) {
@@ -49,12 +49,12 @@ class ParcelLabelRenderer {
         return buildPayload(bitmap, qrCommands)
     }
 
-    private fun renderOzon(label: ParcelLabel.Ozon): ByteArray {
-        val postingNumber = normalizeText(label.postingNumber)
-        val barcode = normalizeQr(label.barcode)
-        val destinationCity = normalizeText(label.destinationCity)?.uppercase(RUSSIAN_LOCALE)
+    private fun renderOzon(sticker: ParcelSticker.Ozon): ByteArray {
+        val postingNumber = normalizeText(sticker.postingNumber)
+        val barcode = normalizeQr(sticker.barcode)
+        val destinationCity = normalizeText(sticker.destinationCity)?.uppercase(RUSSIAN_LOCALE)
         require(postingNumber != null || barcode != null || destinationCity != null) {
-            "Ozon label has no printable data"
+            "Ozon sticker has no printable data"
         }
 
         val bitmap = blankBitmap()
@@ -76,8 +76,8 @@ class ParcelLabelRenderer {
     }
 
     private fun blankBitmap(): Bitmap = Bitmap.createBitmap(
-        LABEL_WIDTH_DOTS,
-        LABEL_HEIGHT_DOTS,
+        STICKER_WIDTH_DOTS,
+        STICKER_HEIGHT_DOTS,
         Bitmap.Config.ARGB_8888
     ).also { it.eraseColor(Color.WHITE) }
 
@@ -158,7 +158,7 @@ class ParcelLabelRenderer {
             "REFERENCE 0,0",
             "CLS"
         ).forEach { command -> output.write("$command\r\n".toByteArray(Charsets.US_ASCII)) }
-        output.write("BITMAP 0,0,$RASTER_BYTES_PER_ROW,$LABEL_HEIGHT_DOTS,0,".toByteArray(Charsets.US_ASCII))
+        output.write("BITMAP 0,0,$RASTER_BYTES_PER_ROW,$STICKER_HEIGHT_DOTS,0,".toByteArray(Charsets.US_ASCII))
         output.write(raster)
         output.write("\r\n".toByteArray(Charsets.US_ASCII))
         commands.forEach { command -> output.write("$command\r\n".toByteArray(Charsets.US_ASCII)) }
@@ -167,11 +167,11 @@ class ParcelLabelRenderer {
     }
 
     private fun encodeMonochrome(bitmap: Bitmap): ByteArray {
-        val pixels = IntArray(LABEL_WIDTH_DOTS)
-        val raster = ByteArray(RASTER_BYTES_PER_ROW * LABEL_HEIGHT_DOTS)
-        for (y in 0 until LABEL_HEIGHT_DOTS) {
-            bitmap.getPixels(pixels, 0, LABEL_WIDTH_DOTS, 0, y, LABEL_WIDTH_DOTS, 1)
-            for (x in 0 until LABEL_WIDTH_DOTS) {
+        val pixels = IntArray(STICKER_WIDTH_DOTS)
+        val raster = ByteArray(RASTER_BYTES_PER_ROW * STICKER_HEIGHT_DOTS)
+        for (y in 0 until STICKER_HEIGHT_DOTS) {
+            bitmap.getPixels(pixels, 0, STICKER_WIDTH_DOTS, 0, y, STICKER_WIDTH_DOTS, 1)
+            for (x in 0 until STICKER_WIDTH_DOTS) {
                 val pixel = pixels[x]
                 val luminance = (Color.red(pixel) * 299 + Color.green(pixel) * 587 + Color.blue(pixel) * 114) / 1000
                 if (Color.alpha(pixel) >= 128 && luminance < 128) {
@@ -184,10 +184,10 @@ class ParcelLabelRenderer {
     }
 
     companion object {
-        const val LABEL_WIDTH_DOTS = 464
-        const val LABEL_HEIGHT_DOTS = 320
-        const val RASTER_BYTES_PER_ROW = LABEL_WIDTH_DOTS / 8
-        const val RASTER_SIZE_BYTES = RASTER_BYTES_PER_ROW * LABEL_HEIGHT_DOTS
+        const val STICKER_WIDTH_DOTS = 464
+        const val STICKER_HEIGHT_DOTS = 320
+        const val RASTER_BYTES_PER_ROW = STICKER_WIDTH_DOTS / 8
+        const val RASTER_SIZE_BYTES = RASTER_BYTES_PER_ROW * STICKER_HEIGHT_DOTS
 
         private const val WBR_BRAND = "WB"
         private const val OZON_BRAND = "OZON"

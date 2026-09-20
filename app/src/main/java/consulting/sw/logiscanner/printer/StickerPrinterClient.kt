@@ -4,7 +4,7 @@
 
 package consulting.sw.logiscanner.printer
 
-interface LabelPrinterClient {
+interface StickerPrinterClient {
     suspend fun listBondedPrinters(): List<BluetoothPrinterDevice>
 
     suspend fun print(address: String, payload: ByteArray)

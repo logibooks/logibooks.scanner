@@ -4,16 +4,16 @@
 
 package consulting.sw.logiscanner.printer
 
-sealed interface ParcelLabel {
+sealed interface ParcelSticker {
     data class WbrN(
         val sticker: String?,
         val stickerCode: String?
-    ) : ParcelLabel
+    ) : ParcelSticker
 
     data class Ozon(
         val postingNumber: String?,
         val barcode: String?,
         val destinationCity: String?
-    ) : ParcelLabel
+    ) : ParcelSticker
 }
 

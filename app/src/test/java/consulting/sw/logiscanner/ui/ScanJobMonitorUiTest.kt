@@ -15,7 +15,7 @@ import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
-import consulting.sw.logiscanner.printer.ParcelLabel
+import consulting.sw.logiscanner.printer.ParcelSticker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -71,33 +71,33 @@ class ScanJobMonitorUiTest {
     }
 
     @Test
-    fun parcelLabelActionSupportsWbrNOnlyAndKeepsPartialData() {
+    fun parcelStickerActionSupportsWbrNOnlyAndKeepsPartialData() {
         val parcel = ScanJobMonitorParcel(sticker = "STICKER-1", stickerCode = "*CODE-1")
 
-        val action = parcelLabelAction(RegisterTypes.WBR_N, parcel)
+        val action = parcelStickerAction(RegisterTypes.WBR_N, parcel)
 
         assertEquals("STICKER-1", action?.displayValue)
-        assertEquals(ParcelLabel.WbrN("STICKER-1", "*CODE-1"), action?.label)
-        assertNull(parcelLabelAction(RegisterTypes.WBR, parcel))
+        assertEquals(ParcelSticker.WbrN("STICKER-1", "*CODE-1"), action?.sticker)
+        assertNull(parcelStickerAction(RegisterTypes.WBR, parcel))
         assertEquals(
-            ParcelLabel.WbrN(null, "*CODE-1"),
-            parcelLabelAction(RegisterTypes.WBR_N, parcel.copy(sticker = null))?.label
+            ParcelSticker.WbrN(null, "*CODE-1"),
+            parcelStickerAction(RegisterTypes.WBR_N, parcel.copy(sticker = null))?.sticker
         )
     }
 
     @Test
-    fun parcelLabelActionMapsOzonDestinationCityAndRejectsEmptyData() {
+    fun parcelStickerActionMapsOzonDestinationCityAndRejectsEmptyData() {
         val parcel = ScanJobMonitorParcel(
             postingNumber = "POST-1",
             barcode = "BAR-1",
             destinationCity = "Tashkent"
         )
 
-        val action = parcelLabelAction(RegisterTypes.OZON, parcel)
+        val action = parcelStickerAction(RegisterTypes.OZON, parcel)
 
         assertEquals("POST-1", action?.displayValue)
-        assertEquals(ParcelLabel.Ozon("POST-1", "BAR-1", "Tashkent"), action?.label)
-        assertNull(parcelLabelAction(RegisterTypes.OZON, ScanJobMonitorParcel()))
+        assertEquals(ParcelSticker.Ozon("POST-1", "BAR-1", "Tashkent"), action?.sticker)
+        assertNull(parcelStickerAction(RegisterTypes.OZON, ScanJobMonitorParcel()))
     }
 
     @Test
@@ -383,7 +383,7 @@ class ScanJobMonitorUiTest {
                 R.string.monitor_parcel_gtc_code,
                 R.string.monitor_parcel_ext_id,
                 R.string.monitor_parcel_shk,
-                R.string.monitor_parcel_sticker,
+                R.string.sticker,
                 R.string.monitor_parcel_wb_sticker,
                 R.string.monitor_parcel_seller_sticker,
                 R.string.monitor_parcel_sticker_code,

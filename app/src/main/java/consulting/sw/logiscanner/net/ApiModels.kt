@@ -73,7 +73,7 @@ object ScannedItemSources {
     const val NOT_IN_REGISTER = 30
 }
 
-object LabelTemplates {
+object StickerTemplates {
     const val TAJIKISTAN_EXPORT = "TJ_EXPORT"
 }
 
@@ -222,12 +222,12 @@ data class ScanResultItem(
     val scanCodeId: Int = 0,
     val scanTime: String? = null,
     val followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget(),
-    val labelTemplate: String? = null,
-    val exportLabel: TajikistanExportLabelPayload? = null
+    val stickerTemplate: String? = null,
+    val exportSticker: TajikistanExportStickerPayload? = null
 )
 
 @JsonClass(generateAdapter = true)
-data class TajikistanExportLabelPayload(
+data class TajikistanExportStickerPayload(
     val orderNumber: String? = null,
     val accountNumber: String? = null,
     val placesCount: Int? = null,
@@ -240,11 +240,11 @@ data class TajikistanExportLabelPayload(
     val recipientName: String? = null,
     val recipientAddress: String? = null,
     val recipientPhone: String? = null,
-    val items: List<TajikistanExportLabelItemPayload> = emptyList()
+    val items: List<TajikistanExportStickerItemPayload> = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
-data class TajikistanExportLabelItemPayload(
+data class TajikistanExportStickerItemPayload(
     val description: String? = null,
     val quantity: Int? = null
 )

@@ -20,7 +20,7 @@ import java.util.UUID
 
 class BluetoothPrinterClient(
     private val context: Context
-) : LabelPrinterClient {
+) : StickerPrinterClient {
     private val mutex = Mutex()
 
     @SuppressLint("MissingPermission")
@@ -70,7 +70,7 @@ class BluetoothPrinterClient(
                         output.flush()
                     }
                 } catch (ex: IOException) {
-                    throw PrinterUnavailableException("Unable to print label", ex)
+                    throw PrinterUnavailableException("Unable to print sticker", ex)
                 } finally {
                     try {
                         socket?.close()

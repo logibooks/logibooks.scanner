@@ -10,7 +10,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.max
 
-class TscLabelRenderer(
+class TscStickerRenderer(
     private val clock: Clock = Clock.systemDefaultZone()
 ) {
 
@@ -25,7 +25,7 @@ class TscLabelRenderer(
         val printedAt = ZonedDateTime.now(clock).format(PRINT_TIME_FORMATTER)
 
         return listOf(
-            "SIZE ${LABEL_WIDTH_MM} mm,${LABEL_HEIGHT_MM} mm",
+            "SIZE ${STICKER_WIDTH_MM} mm,${STICKER_HEIGHT_MM} mm",
             "GAP 2 mm,0 mm",
             "DENSITY 8",
             "DIRECTION 1",
@@ -40,12 +40,12 @@ class TscLabelRenderer(
     }
 
     fun renderFullRelabelingCommands(parcelId: Int, registerId: Int): String {
-        val parcelCode = paddedPositiveId(parcelId, PARCEL_ID_LABEL_LENGTH, "Parcel id")
-        val registerCode = paddedPositiveId(registerId, REGISTER_ID_LABEL_LENGTH, "Register id")
+        val parcelCode = paddedPositiveId(parcelId, PARCEL_ID_STICKER_LENGTH, "Parcel id")
+        val registerCode = paddedPositiveId(registerId, REGISTER_ID_STICKER_LENGTH, "Register id")
         val printedAt = ZonedDateTime.now(clock).format(PRINT_TIME_FORMATTER)
 
         return listOf(
-            "SIZE ${LABEL_WIDTH_MM} mm,${LABEL_HEIGHT_MM} mm",
+            "SIZE ${STICKER_WIDTH_MM} mm,${STICKER_HEIGHT_MM} mm",
             "GAP 2 mm,0 mm",
             "DENSITY 8",
             "DIRECTION 1",
@@ -71,7 +71,7 @@ class TscLabelRenderer(
         charWidthDots: Int,
         scale: Int = 1
     ): String {
-        val x = max(0, (LABEL_WIDTH_DOTS - value.length * charWidthDots) / 2)
+        val x = max(0, (STICKER_WIDTH_DOTS - value.length * charWidthDots) / 2)
         return "TEXT $x,$y,\"3\",0,$scale,$scale,\"$value\""
     }
 
@@ -90,9 +90,9 @@ class TscLabelRenderer(
 
     private fun normalizeCode(code: String): String {
         val value = code.trim()
-        require(value.isNotEmpty()) { "Label code must not be blank" }
+        require(value.isNotEmpty()) { "Sticker code must not be blank" }
         require(value.none { it == '"' || it.code < 0x20 || it.code == 0x7F }) {
-            "Label code must not contain quotes or control characters"
+            "Sticker code must not contain quotes or control characters"
         }
         return value
     }
@@ -103,15 +103,15 @@ class TscLabelRenderer(
     }
 
     private companion object {
-        const val LABEL_WIDTH_MM = 58
-        const val LABEL_HEIGHT_MM = 40
+        const val STICKER_WIDTH_MM = 58
+        const val STICKER_HEIGHT_MM = 40
         val PRINT_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern(
             "dd.MM.yyyy HH:mm",
             Locale.forLanguageTag("ru-RU")
         )
 
-        // RE310/TSPL coordinates are dots; these defaults target 203 dpi label stock.
-        const val LABEL_WIDTH_DOTS = 464
+        // RE310/TSPL coordinates are dots; these defaults target 203 dpi sticker stock.
+        const val STICKER_WIDTH_DOTS = 464
         const val QR_X_DOTS = 148
         const val QR_Y_DOTS = 18
         const val QR_CELL_DOTS = 8
@@ -126,7 +126,7 @@ class TscLabelRenderer(
         const val DATE_TEXT_Y_DOTS = 288
         const val NUMBER_TEXT_SCALE = 2
         const val BRAND_TEXT = "GTC-Express"
-        const val PARCEL_ID_LABEL_LENGTH = 9
-        const val REGISTER_ID_LABEL_LENGTH = 6
+        const val PARCEL_ID_STICKER_LENGTH = 9
+        const val REGISTER_ID_STICKER_LENGTH = 6
     }
 }

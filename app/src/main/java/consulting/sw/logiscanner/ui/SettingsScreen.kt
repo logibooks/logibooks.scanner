@@ -182,7 +182,7 @@ internal fun SettingsScreen(
                 )
                 SettingsCheckboxRow(
                     checked = printerAutoPrintEnabled,
-                    label = stringResource(R.string.kgt_auto_print_label),
+                    label = stringResource(R.string.kgt_auto_print_sticker),
                     enabled = printerSelected,
                     onCheckedChange = onPrinterAutoPrintEnabledChange
                 )

@@ -6,7 +6,7 @@ package consulting.sw.logiscanner.ui
 
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
-import consulting.sw.logiscanner.net.LabelTemplates
+import consulting.sw.logiscanner.net.StickerTemplates
 import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScannedItemSources
@@ -193,13 +193,13 @@ fun backendBulkyItemsMode(
     }
 }
 
-fun kgtLabelCode(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
+fun kgtStickerCode(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
 
-fun canManualPrintKgtLabel(value: String?, printerSelected: Boolean = true): Boolean {
-    return printerSelected && kgtLabelCode(value) != null
+fun canManualPrintKgtSticker(value: String?, printerSelected: Boolean = true): Boolean {
+    return printerSelected && kgtStickerCode(value) != null
 }
 
-fun shouldAutoPrintKgtLabel(
+fun shouldAutoPrintKgtSticker(
     autoPrintEnabled: Boolean,
     job: ScanJob?,
     bulkyItemsMode: Int,
@@ -211,10 +211,10 @@ fun shouldAutoPrintKgtLabel(
         && normalizeBulkyItemsMode(job, bulkyItemsMode) != BulkyItemsModes.OFF
         && result.count > 0
         && !result.hasIssues
-        && kgtLabelCode(result.extId) != null
+        && kgtStickerCode(result.extId) != null
 }
 
-fun shouldAutoPrintFullRelabelingLabel(
+fun shouldAutoPrintFullRelabelingSticker(
     submode: RelabelingSubmode,
     relabelingMode: Int,
     printerSelected: Boolean,
@@ -231,10 +231,10 @@ fun shouldAutoPrintFullRelabelingLabel(
         && result.scanSource == ScannedItemSources.PARCEL_STICKER
         && !result.hasIssues
         && (result.followTarget.parcelId ?: 0) > 0
-        && result.labelTemplate != LabelTemplates.TAJIKISTAN_EXPORT
+        && result.stickerTemplate != StickerTemplates.TAJIKISTAN_EXPORT
 }
 
-fun shouldAutoPrintTajikistanExportLabel(
+fun shouldAutoPrintTajikistanExportSticker(
     submode: RelabelingSubmode,
     relabelingMode: Int,
     printerSelected: Boolean,
@@ -243,19 +243,19 @@ fun shouldAutoPrintTajikistanExportLabel(
     return submode == RelabelingSubmode.FULL
         && relabelingMode != BulkyItemsModes.OFF
         && printerSelected
-        && result.labelTemplate == LabelTemplates.TAJIKISTAN_EXPORT
+        && result.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
         && result.count == 1
         && result.parcelCount == 1
         && result.scanSource == ScannedItemSources.PARCEL_STICKER
         && !result.hasIssues
 }
 
-fun canRepeatTajikistanExportLabel(
+fun canRepeatTajikistanExportSticker(
     submode: RelabelingSubmode,
     relabelingMode: Int,
     printerSelected: Boolean,
-    hasLabel: Boolean
+    hasSticker: Boolean
 ): Boolean = submode == RelabelingSubmode.FULL
     && relabelingMode != BulkyItemsModes.OFF
     && printerSelected
-    && hasLabel
+    && hasSticker

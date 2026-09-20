@@ -4,9 +4,9 @@
 
 package consulting.sw.logiscanner.printer
 
-import consulting.sw.logiscanner.net.TajikistanExportLabelPayload
+import consulting.sw.logiscanner.net.TajikistanExportStickerPayload
 
-data class TajikistanExportLabel(
+data class TajikistanExportSticker(
     val orderNumber: String,
     val accountNumber: String,
     val placesCount: Int?,
@@ -19,16 +19,16 @@ data class TajikistanExportLabel(
     val recipientName: String,
     val recipientAddress: String,
     val recipientPhone: String,
-    val items: List<TajikistanExportLabelItem>
+    val items: List<TajikistanExportStickerItem>
 )
 
-data class TajikistanExportLabelItem(
+data class TajikistanExportStickerItem(
     val description: String,
     val quantity: Int?
 )
 
-fun TajikistanExportLabelPayload?.toPrintableLabel(): TajikistanExportLabel {
-    return TajikistanExportLabel(
+fun TajikistanExportStickerPayload?.toPrintableSticker(): TajikistanExportSticker {
+    return TajikistanExportSticker(
         orderNumber = this?.orderNumber.cleanText(),
         accountNumber = this?.accountNumber.cleanText(),
         placesCount = this?.placesCount?.takeIf { it > 0 },
@@ -42,7 +42,7 @@ fun TajikistanExportLabelPayload?.toPrintableLabel(): TajikistanExportLabel {
         recipientAddress = this?.recipientAddress.cleanText(),
         recipientPhone = this?.recipientPhone.cleanText(),
         items = this?.items.orEmpty().map { item ->
-            TajikistanExportLabelItem(
+            TajikistanExportStickerItem(
                 description = item.description.cleanText(),
                 quantity = item.quantity?.takeIf { it > 0 }
             )
