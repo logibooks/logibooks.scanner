@@ -11,9 +11,9 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
 
-class TscLabelRendererTest {
+class TscStickerRendererTest {
 
-    private val renderer = TscLabelRenderer(
+    private val renderer = TscStickerRenderer(
         Clock.fixed(
             Instant.parse("2026-06-23T10:05:30Z"),
             ZoneId.of("Europe/Moscow")
@@ -21,7 +21,7 @@ class TscLabelRendererTest {
     )
 
     @Test
-    fun renderCommandsBuilds58By40QrLabel() {
+    fun renderCommandsBuilds58By40QrSticker() {
         val commands = renderer.renderCommands("KGT-15")
 
         assertTrue(commands.contains("SIZE 58 mm,40 mm"))
@@ -33,7 +33,7 @@ class TscLabelRendererTest {
     }
 
     @Test
-    fun renderFullRelabelingCommandsBuildsParcelAndRegisterLabel() {
+    fun renderFullRelabelingCommandsBuildsParcelAndRegisterSticker() {
         val commands = renderer.renderFullRelabelingCommands(parcelId = 123, registerId = 45)
 
         assertTrue(commands.contains("SIZE 58 mm,40 mm"))

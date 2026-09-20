@@ -10,11 +10,11 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class TajikistanExportLabelModelsTest {
+class TajikistanExportStickerModelsTest {
     private val adapter = Moshi.Builder().build().adapter(ScanResultItem::class.java)
 
     @Test
-    fun parsesFullTajikistanLabelResponse() {
+    fun parsesFullTajikistanStickerResponse() {
         val result = adapter.fromJson(
             """
             {
@@ -24,8 +24,8 @@ class TajikistanExportLabelModelsTest {
               "scanSource": 10,
               "itemNumbers": ["40856360164"],
               "extData": null,
-              "labelTemplate": "TJ_EXPORT",
-              "exportLabel": {
+              "stickerTemplate": "TJ_EXPORT",
+              "exportSticker": {
                 "orderNumber": "40856360164",
                 "accountNumber": "ACC-42",
                 "placesCount": 1,
@@ -45,23 +45,23 @@ class TajikistanExportLabelModelsTest {
         )
 
         assertNotNull(result)
-        assertEquals(LabelTemplates.TAJIKISTAN_EXPORT, result!!.labelTemplate)
-        assertEquals("40856360164", result.exportLabel!!.orderNumber)
-        assertEquals(2, result.exportLabel.items.single().quantity)
+        assertEquals(StickerTemplates.TAJIKISTAN_EXPORT, result!!.stickerTemplate)
+        assertEquals("40856360164", result.exportSticker!!.orderNumber)
+        assertEquals(2, result.exportSticker.items.single().quantity)
     }
 
     @Test
-    fun acceptsPartialAndLegacyResponses() {
+    fun acceptsPartialAndPreStickerContractResponses() {
         val partial = adapter.fromJson(
-            """{"count":1,"parcelCount":1,"boxCount":0,"scanSource":10,"itemNumbers":[],"extData":null,"labelTemplate":"TJ_EXPORT","exportLabel":{"orderNumber":"1"}}"""
+            """{"count":1,"parcelCount":1,"boxCount":0,"scanSource":10,"itemNumbers":[],"extData":null,"stickerTemplate":"TJ_EXPORT","exportSticker":{"orderNumber":"1"}}"""
         )
         val legacy = adapter.fromJson(
-            """{"count":1,"parcelCount":1,"boxCount":0,"scanSource":10,"itemNumbers":[],"extData":null}"""
+            """{"count":1,"parcelCount":1,"boxCount":0,"scanSource":10,"itemNumbers":[],"extData":null,"labelTemplate":"TJ_EXPORT","exportLabel":{"orderNumber":"legacy"}}"""
         )
 
-        assertEquals("1", partial!!.exportLabel!!.orderNumber)
-        assertNull(partial.exportLabel.accountNumber)
-        assertNull(legacy!!.labelTemplate)
-        assertNull(legacy.exportLabel)
+        assertEquals("1", partial!!.exportSticker!!.orderNumber)
+        assertNull(partial.exportSticker.accountNumber)
+        assertNull(legacy!!.stickerTemplate)
+        assertNull(legacy.exportSticker)
     }
 }

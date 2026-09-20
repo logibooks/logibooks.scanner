@@ -42,8 +42,8 @@ import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
-import consulting.sw.logiscanner.printer.ParcelLabel
-import consulting.sw.logiscanner.printer.TajikistanExportLabel
+import consulting.sw.logiscanner.printer.ParcelSticker
+import consulting.sw.logiscanner.printer.TajikistanExportSticker
 
 @Composable
 internal fun ScanScreen(
@@ -59,8 +59,8 @@ internal fun ScanScreen(
     lastItemNumbers: List<String>,
     lastExtData: String?,
     lastExtId: String?,
-    lastTajikistanExportLabel: TajikistanExportLabel?,
-    canPrintTajikistanExportLabel: Boolean,
+    lastTajikistanExportSticker: TajikistanExportSticker?,
+    canPrintTajikistanExportSticker: Boolean,
     lastScanTime: String?,
     externalScannerEnabled: Boolean,
     monitorSnapshot: ScanJobMonitorSnapshot?,
@@ -86,9 +86,9 @@ internal fun ScanScreen(
     onOpenMonitorBox: (ScanJobMonitorBox) -> Unit,
     onToggleMonitorAutoFollow: () -> Unit,
     onToggleBulkyItemsMode: () -> Unit,
-    onPrintKgtLabel: (String) -> Unit,
-    onPrintParcelLabel: (ParcelLabel) -> Unit,
-    onPrintTajikistanExportLabel: () -> Unit,
+    onPrintKgtSticker: (String) -> Unit,
+    onPrintParcelSticker: (ParcelSticker) -> Unit,
+    onPrintTajikistanExportSticker: () -> Unit,
     onMonitorJumpNumberChange: (String) -> Unit,
     onJumpToMonitorNumber: () -> Unit,
     onBackToJobs: () -> Unit,
@@ -247,8 +247,8 @@ internal fun ScanScreen(
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
                 lastExtId = lastExtId,
-                lastTajikistanExportLabel = lastTajikistanExportLabel,
-                canPrintTajikistanExportLabel = canPrintTajikistanExportLabel,
+                lastTajikistanExportSticker = lastTajikistanExportSticker,
+                canPrintTajikistanExportSticker = canPrintTajikistanExportSticker,
                 lastScanTime = lastScanTime,
                 loading = monitorLoading,
                 detailLoading = monitorDetailLoading,
@@ -260,9 +260,9 @@ internal fun ScanScreen(
                 printerLoading = printerLoading,
                 printerMessage = printerMessage,
                 printerError = printerError,
-                onPrintKgtLabel = onPrintKgtLabel,
-                onPrintParcelLabel = onPrintParcelLabel,
-                onPrintTajikistanExportLabel = onPrintTajikistanExportLabel,
+                onPrintKgtSticker = onPrintKgtSticker,
+                onPrintParcelSticker = onPrintParcelSticker,
+                onPrintTajikistanExportSticker = onPrintTajikistanExportSticker,
                 jumpNumber = monitorJumpNumber,
                 jumpLoading = monitorJumpLoading,
                 highlightedParcelId = monitorHighlightedParcelId,

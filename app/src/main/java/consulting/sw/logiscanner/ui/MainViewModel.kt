@@ -12,7 +12,7 @@ import androidx.lifecycle.viewModelScope
 import consulting.sw.logiscanner.BuildConfig
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
-import consulting.sw.logiscanner.net.LabelTemplates
+import consulting.sw.logiscanner.net.StickerTemplates
 import consulting.sw.logiscanner.net.SCAN_JOB_STATUS_IN_PROGRESS
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
@@ -22,13 +22,13 @@ import consulting.sw.logiscanner.net.ScanJobMonitorTargetKinds
 import consulting.sw.logiscanner.net.ScanResultItem
 import consulting.sw.logiscanner.printer.BluetoothPrinterClient
 import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
-import consulting.sw.logiscanner.printer.KgtLabelPrintResult
-import consulting.sw.logiscanner.printer.KgtLabelPrintService
-import consulting.sw.logiscanner.printer.ParcelLabel
+import consulting.sw.logiscanner.printer.KgtStickerPrintResult
+import consulting.sw.logiscanner.printer.KgtStickerPrintService
+import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.PrinterPermissionMissingException
-import consulting.sw.logiscanner.printer.TscLabelRenderer
-import consulting.sw.logiscanner.printer.TajikistanExportLabel
-import consulting.sw.logiscanner.printer.toPrintableLabel
+import consulting.sw.logiscanner.printer.TscStickerRenderer
+import consulting.sw.logiscanner.printer.TajikistanExportSticker
+import consulting.sw.logiscanner.printer.toPrintableSticker
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
@@ -101,7 +101,7 @@ data class MainState(
     val lastItemNumbers: List<String> = emptyList(),
     val lastExtData: String? = null,
     val lastExtId: String? = null,
-    val lastTajikistanExportLabel: TajikistanExportLabel? = null,
+    val lastTajikistanExportSticker: TajikistanExportSticker? = null,
     val lastScanTime: String? = null,
     val scanResultColor: ScanResultColor = ScanResultColor.NONE,
     val error: String? = null
@@ -121,8 +121,8 @@ internal fun stoppedScanWarningState(state: MainState, message: String): MainSta
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settingsStore = SettingsStore(application)
-    private val labelPrintService = KgtLabelPrintService(
-        renderer = TscLabelRenderer(),
+    private val stickerPrintService = KgtStickerPrintService(
+        renderer = TscStickerRenderer(),
         client = BluetoothPrinterClient(application)
     )
     private val _state = MutableStateFlow(MainState())
@@ -348,7 +348,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
             try {
-                val printers = labelPrintService.listBondedPrinters()
+                val printers = stickerPrintService.listBondedPrinters()
                 val missingPrinterMessage = selectedPrinterMissingMessage(
                     printers,
                     state.value.printerBluetoothAddress
@@ -394,31 +394,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun printKgtLabel(code: String) {
+    fun printKgtSticker(code: String) {
         viewModelScope.launch {
-            printKgtLabelInternal(code)
+            printKgtStickerInternal(code)
         }
     }
 
-    fun printParcelLabel(label: ParcelLabel) {
+    fun printParcelSticker(sticker: ParcelSticker) {
         viewModelScope.launch {
-            printParcelLabelInternal(label)
+            printParcelStickerInternal(sticker)
         }
     }
 
-    fun printLastTajikistanExportLabel() {
-        val label = state.value.lastTajikistanExportLabel
-        if (label == null) {
+    fun printLastTajikistanExportSticker() {
+        val sticker = state.value.lastTajikistanExportSticker
+        if (sticker == null) {
             _state.update {
                 it.copy(
-                    printerError = getApplication<Application>().getString(R.string.printer_tj_label_missing_data),
+                    printerError = getApplication<Application>().getString(R.string.printer_tj_sticker_missing_data),
                     printerMessage = null
                 )
             }
             return
         }
         viewModelScope.launch {
-            printTajikistanExportLabelInternal(label)
+            printTajikistanExportStickerInternal(sticker)
         }
     }
 
@@ -596,7 +596,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastItemNumbers = if (jobChanged) emptyList() else it.lastItemNumbers,
                     lastExtData = if (jobChanged) null else it.lastExtData,
                     lastExtId = if (jobChanged) null else it.lastExtId,
-                    lastTajikistanExportLabel = if (jobChanged) null else it.lastTajikistanExportLabel,
+                    lastTajikistanExportSticker = if (jobChanged) null else it.lastTajikistanExportSticker,
                     lastScanTime = if (jobChanged) null else it.lastScanTime,
                     error = null, 
                     isScanning = false
@@ -1024,10 +1024,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val bulkyItemsMode = backendBulkyItemsMode(job, submode, relabelingMode, voiceEnabled)
                 val result = scanRepo.scan(job.id, code, bulkyItemsMode)
                 val autoPrintEnabled = state.value.printerAutoPrintEnabled
-                val tajikistanLabel = if (
-                    result.labelTemplate == LabelTemplates.TAJIKISTAN_EXPORT
+                val tajikistanSticker = if (
+                    result.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
                 ) {
-                    result.exportLabel.toPrintableLabel()
+                    result.exportSticker.toPrintableSticker()
                 } else {
                     null
                 }
@@ -1040,7 +1040,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastItemNumbers = result.itemNumbers,
                         lastExtData = result.extData,
                         lastExtId = result.extId,
-                        lastTajikistanExportLabel = tajikistanLabel ?: it.lastTajikistanExportLabel,
+                        lastTajikistanExportSticker = tajikistanSticker ?: it.lastTajikistanExportSticker,
                         lastScanTime = result.scanTime?.takeIf { scanTime -> scanTime.isNotBlank() }
                             ?: OffsetDateTime.now().toString(),
                         scanResultColor = determineScanResultColor(result)
@@ -1049,24 +1049,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 followLocalScanResult(result)
 
-                if (shouldAutoPrintKgtLabel(autoPrintEnabled, job, bulkyItemsMode, result, printerSelected)) {
+                if (shouldAutoPrintKgtSticker(autoPrintEnabled, job, bulkyItemsMode, result, printerSelected)) {
                     result.extId?.let { extId ->
                         viewModelScope.launch {
-                            printKgtLabelInternal(extId)
+                            printKgtStickerInternal(extId)
                         }
                     }
                 }
 
-                if (shouldAutoPrintTajikistanExportLabel(submode, relabelingMode, printerSelected, result)) {
-                    tajikistanLabel?.let { label ->
+                if (shouldAutoPrintTajikistanExportSticker(submode, relabelingMode, printerSelected, result)) {
+                    tajikistanSticker?.let { sticker ->
                         viewModelScope.launch {
-                            printTajikistanExportLabelInternal(label)
+                            printTajikistanExportStickerInternal(sticker)
                         }
                     }
-                } else if (shouldAutoPrintFullRelabelingLabel(submode, relabelingMode, printerSelected, job, result)) {
+                } else if (shouldAutoPrintFullRelabelingSticker(submode, relabelingMode, printerSelected, job, result)) {
                     result.followTarget.parcelId?.let { parcelId ->
                         viewModelScope.launch {
-                            printFullRelabelingLabelInternal(parcelId, job.registerId)
+                            printFullRelabelingStickerInternal(parcelId, job.registerId)
                         }
                     }
                 }
@@ -1119,7 +1119,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastItemNumbers = emptyList(),
                             lastExtData = null,
                             lastExtId = null,
-                            lastTajikistanExportLabel = null,
+                            lastTajikistanExportSticker = null,
                             lastScanTime = null,
                             error = getApplication<Application>().getString(R.string.scan_error_job_invalid),
                             scanResultColor = ScanResultColor.NONE
@@ -1190,12 +1190,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun printKgtLabelInternal(code: String) {
-        val labelCode = kgtLabelCode(code)
-        if (labelCode == null) {
+    private suspend fun printKgtStickerInternal(code: String) {
+        val stickerCode = kgtStickerCode(code)
+        if (stickerCode == null) {
             _state.update {
                 it.copy(
-                    printerError = getApplication<Application>().getString(R.string.printer_invalid_label),
+                    printerError = getApplication<Application>().getString(R.string.printer_invalid_sticker),
                     printerMessage = null
                 )
             }
@@ -1204,18 +1204,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
         try {
-            val result = labelPrintService.print(state.value.printerBluetoothAddress, labelCode)
+            val result = stickerPrintService.print(state.value.printerBluetoothAddress, stickerCode)
             applyPrinterResult(result)
         } finally {
             _state.update { it.copy(printerLoading = false) }
         }
     }
 
-    private suspend fun printFullRelabelingLabelInternal(parcelId: Int, registerId: Int) {
+    private suspend fun printFullRelabelingStickerInternal(parcelId: Int, registerId: Int) {
         if (parcelId <= 0 || registerId <= 0) {
             _state.update {
                 it.copy(
-                    printerError = getApplication<Application>().getString(R.string.printer_invalid_label),
+                    printerError = getApplication<Application>().getString(R.string.printer_invalid_sticker),
                     printerMessage = null
                 )
             }
@@ -1224,7 +1224,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
         try {
-            val result = labelPrintService.printFullRelabeling(
+            val result = stickerPrintService.printFullRelabeling(
                 state.value.printerBluetoothAddress,
                 parcelId,
                 registerId
@@ -1235,12 +1235,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun printTajikistanExportLabelInternal(label: TajikistanExportLabel) {
+    private suspend fun printTajikistanExportStickerInternal(sticker: TajikistanExportSticker) {
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
         try {
-            val result = labelPrintService.printTajikistanExport(
+            val result = stickerPrintService.printTajikistanExportSticker(
                 state.value.printerBluetoothAddress,
-                label
+                sticker
             )
             applyPrinterResult(result)
         } finally {
@@ -1248,12 +1248,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun printParcelLabelInternal(label: ParcelLabel) {
+    private suspend fun printParcelStickerInternal(sticker: ParcelSticker) {
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
         try {
-            val result = labelPrintService.printParcelLabel(
+            val result = stickerPrintService.printParcelSticker(
                 state.value.printerBluetoothAddress,
-                label
+                sticker
             )
             applyPrinterResult(result)
         } finally {
@@ -1261,9 +1261,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun applyPrinterResult(result: KgtLabelPrintResult) {
+    private fun applyPrinterResult(result: KgtStickerPrintResult) {
         when (result) {
-            KgtLabelPrintResult.Success -> {
+            KgtStickerPrintResult.Success -> {
                 _state.update {
                     it.copy(
                         printerMessage = getApplication<Application>().getString(R.string.printer_printed),
@@ -1271,7 +1271,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             }
-            KgtLabelPrintResult.MissingPrinter -> {
+            KgtStickerPrintResult.MissingPrinter -> {
                 _state.update {
                     it.copy(
                         printerError = getApplication<Application>().getString(R.string.printer_select_required),
@@ -1279,10 +1279,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             }
-            KgtLabelPrintResult.PermissionMissing -> {
+            KgtStickerPrintResult.PermissionMissing -> {
                 setPrinterPermissionDenied()
             }
-            is KgtLabelPrintResult.PrinterNotFound -> {
+            is KgtStickerPrintResult.PrinterNotFound -> {
                 _state.update {
                     it.copy(
                         printerError = getApplication<Application>().getString(R.string.printer_not_found),
@@ -1290,21 +1290,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             }
-            is KgtLabelPrintResult.InvalidLabel -> {
+            is KgtStickerPrintResult.InvalidSticker -> {
                 _state.update {
                     it.copy(
                         printerError = getApplication<Application>().getString(
                             if (result.contentOverflow) {
-                                R.string.printer_tj_label_overflow
+                                R.string.printer_tj_sticker_overflow
                             } else {
-                                R.string.printer_invalid_label
+                                R.string.printer_invalid_sticker
                             }
                         ),
                         printerMessage = null
                     )
                 }
             }
-            is KgtLabelPrintResult.Failed -> {
+            is KgtStickerPrintResult.Failed -> {
                 _state.update {
                     it.copy(
                         printerError = getApplication<Application>().getString(

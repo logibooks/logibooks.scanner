@@ -242,7 +242,7 @@ fun monitorParcelAttributeSpecs(
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_shk, it)
     }
     parcel.sticker?.takeIf { it.isNotBlank() }?.let {
-        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_sticker, it)
+        specs += MonitorParcelAttributeSpec(R.string.sticker, it)
     }
     parcel.wbSticker?.takeIf { it.isNotBlank() }?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_wb_sticker, it)

@@ -13,40 +13,40 @@ import java.io.ByteArrayOutputStream
 import java.util.Locale
 import kotlin.math.max
 
-class TajikistanExportLabelRenderer {
+class TajikistanExportStickerRenderer {
 
-    fun render(label: TajikistanExportLabel): ByteArray {
-        val bitmap = Bitmap.createBitmap(LABEL_WIDTH_DOTS, LABEL_HEIGHT_DOTS, Bitmap.Config.ARGB_8888)
+    fun render(sticker: TajikistanExportSticker): ByteArray {
+        val bitmap = Bitmap.createBitmap(STICKER_WIDTH_DOTS, STICKER_HEIGHT_DOTS, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         canvas.drawColor(Color.WHITE)
-        drawLabel(canvas, label)
+        drawSticker(canvas, sticker)
 
         val raster = encodeMonochrome(bitmap)
-        val barcode = code128SymbolWidthDots(label.orderNumber)
-            ?.let { width -> barcodeCommand(label.orderNumber, width) }
+        val barcode = code128SymbolWidthDots(sticker.orderNumber)
+            ?.let { width -> barcodeCommand(sticker.orderNumber, width) }
         return buildPayload(raster, barcode)
     }
 
-    private fun drawLabel(canvas: Canvas, label: TajikistanExportLabel) {
+    private fun drawSticker(canvas: Canvas, sticker: TajikistanExportSticker) {
         val titlePaint = textPaint(TITLE_TEXT_DOTS, bold = true)
         val headerPaint = textPaint(HEADER_TEXT_DOTS, bold = true)
         val bodyPaint = textPaint(BODY_TEXT_DOTS)
 
         drawCentered(canvas, TITLE, 16f, titlePaint)
-        drawCentered(canvas, "МЕСТ: ${label.placesCount ?: ""}", 31f, bodyPaint)
+        drawCentered(canvas, "МЕСТ: ${sticker.placesCount ?: ""}", 31f, bodyPaint)
 
-        val orderLine = "№ ЗАКАЗА ${label.orderNumber}"
-        requireFits(orderLine, bodyPaint, LABEL_CONTENT_WIDTH)
+        val orderLine = "№ ЗАКАЗА ${sticker.orderNumber}"
+        requireFits(orderLine, bodyPaint, STICKER_CONTENT_WIDTH)
         drawCentered(canvas, orderLine, 101f, bodyPaint)
         canvas.drawLine(4f, 106f, 460f, 106f, LINE_PAINT)
 
         val metadata = listOf(
-            "ДАТА" to label.dispatchDate,
-            "ВЕС" to label.weightKg?.let { "${decimal(it)} кг" }.orEmpty(),
-            "ЦЕННОСТЬ" to label.declaredValue?.let { value ->
-                listOf(decimal(value), label.currency).filter { it.isNotBlank() }.joinToString(" ")
+            "ДАТА" to sticker.dispatchDate,
+            "ВЕС" to sticker.weightKg?.let { "${decimal(it)} кг" }.orEmpty(),
+            "ЦЕННОСТЬ" to sticker.declaredValue?.let { value ->
+                listOf(decimal(value), sticker.currency).filter { it.isNotBlank() }.joinToString(" ")
             }.orEmpty(),
-            "СЧЁТ" to label.accountNumber
+            "СЧЁТ" to sticker.accountNumber
         )
         metadata.forEachIndexed { index, (header, value) ->
             val x = METADATA_LEFT + index * METADATA_COLUMN_WIDTH
@@ -66,8 +66,8 @@ class TajikistanExportLabelRenderer {
         drawParty(
             canvas,
             header = "ОТПРАВИТЕЛЬ",
-            name = label.senderName,
-            address = label.senderAddress,
+            name = sticker.senderName,
+            address = sticker.senderAddress,
             left = 6f,
             headerPaint = headerPaint,
             bodyPaint = bodyPaint
@@ -75,9 +75,9 @@ class TajikistanExportLabelRenderer {
         drawParty(
             canvas,
             header = "ПОЛУЧАТЕЛЬ",
-            name = label.recipientName,
-            address = label.recipientAddress,
-            phone = label.recipientPhone,
+            name = sticker.recipientName,
+            address = sticker.recipientAddress,
+            phone = sticker.recipientPhone,
             left = 237f,
             headerPaint = headerPaint,
             bodyPaint = bodyPaint
@@ -86,7 +86,7 @@ class TajikistanExportLabelRenderer {
         canvas.drawLine(4f, 241f, 460f, 241f, LINE_PAINT)
 
         canvas.drawText("ТОВАРЫ", 6f, 256f, headerPaint)
-        val itemText = label.items.map { item ->
+        val itemText = sticker.items.map { item ->
             listOfNotNull(
                 item.description.takeIf { it.isNotBlank() },
                 item.quantity?.toString()
@@ -139,7 +139,7 @@ class TajikistanExportLabelRenderer {
     ) {
         val lines = wrap(text, maxWidth, paint)
         if (lines.size > maxLines) {
-            throw TajikistanLabelOverflowException()
+            throw TajikistanStickerOverflowException()
         }
         lines.forEachIndexed { index, line ->
             canvas.drawText(line, x, firstBaseline + index * BODY_LINE_HEIGHT, paint)
@@ -195,13 +195,13 @@ class TajikistanExportLabelRenderer {
 
     private fun requireFits(text: String, paint: Paint, maxWidth: Float) {
         if (paint.measureText(text) > maxWidth) {
-            throw TajikistanLabelOverflowException()
+            throw TajikistanStickerOverflowException()
         }
     }
 
     private fun drawCentered(canvas: Canvas, text: String, baseline: Float, paint: Paint) {
-        requireFits(text, paint, LABEL_CONTENT_WIDTH)
-        val x = (LABEL_WIDTH_DOTS - paint.measureText(text)) / 2f
+        requireFits(text, paint, STICKER_CONTENT_WIDTH)
+        val x = (STICKER_WIDTH_DOTS - paint.measureText(text)) / 2f
         canvas.drawText(text, x, baseline, paint)
     }
 
@@ -214,17 +214,17 @@ class TajikistanExportLabelRenderer {
     private fun decimal(value: Double): String = String.format(RUSSIAN_LOCALE, "%.2f", value)
 
     private fun barcodeCommand(value: String, width: Int): String {
-        val x = (LABEL_WIDTH_DOTS - width) / 2
+        val x = (STICKER_WIDTH_DOTS - width) / 2
         return "BARCODE $x,$BARCODE_Y_DOTS,\"128\",$BARCODE_HEIGHT_DOTS,0,0," +
             "$BARCODE_NARROW_DOTS,$BARCODE_WIDE_DOTS,\"$value\""
     }
 
     private fun encodeMonochrome(bitmap: Bitmap): ByteArray {
-        val pixels = IntArray(LABEL_WIDTH_DOTS)
-        val raster = ByteArray(RASTER_BYTES_PER_ROW * LABEL_HEIGHT_DOTS)
-        for (y in 0 until LABEL_HEIGHT_DOTS) {
-            bitmap.getPixels(pixels, 0, LABEL_WIDTH_DOTS, 0, y, LABEL_WIDTH_DOTS, 1)
-            for (x in 0 until LABEL_WIDTH_DOTS) {
+        val pixels = IntArray(STICKER_WIDTH_DOTS)
+        val raster = ByteArray(RASTER_BYTES_PER_ROW * STICKER_HEIGHT_DOTS)
+        for (y in 0 until STICKER_HEIGHT_DOTS) {
+            bitmap.getPixels(pixels, 0, STICKER_WIDTH_DOTS, 0, y, STICKER_WIDTH_DOTS, 1)
+            for (x in 0 until STICKER_WIDTH_DOTS) {
                 val pixel = pixels[x]
                 val luminance = (
                     Color.red(pixel) * 299
@@ -252,7 +252,7 @@ class TajikistanExportLabelRenderer {
         ).forEach { command ->
             output.write("$command\r\n".toByteArray(Charsets.US_ASCII))
         }
-        output.write("BITMAP 0,0,$RASTER_BYTES_PER_ROW,$LABEL_HEIGHT_DOTS,0,".toByteArray(Charsets.US_ASCII))
+        output.write("BITMAP 0,0,$RASTER_BYTES_PER_ROW,$STICKER_HEIGHT_DOTS,0,".toByteArray(Charsets.US_ASCII))
         output.write(raster)
         output.write("\r\n".toByteArray(Charsets.US_ASCII))
         if (barcode != null) {
@@ -263,17 +263,17 @@ class TajikistanExportLabelRenderer {
     }
 
     companion object {
-        const val LABEL_WIDTH_DOTS = 464
-        const val LABEL_HEIGHT_DOTS = 320
-        const val RASTER_BYTES_PER_ROW = LABEL_WIDTH_DOTS / 8
-        const val RASTER_SIZE_BYTES = RASTER_BYTES_PER_ROW * LABEL_HEIGHT_DOTS
+        const val STICKER_WIDTH_DOTS = 464
+        const val STICKER_HEIGHT_DOTS = 320
+        const val RASTER_BYTES_PER_ROW = STICKER_WIDTH_DOTS / 8
+        const val RASTER_SIZE_BYTES = RASTER_BYTES_PER_ROW * STICKER_HEIGHT_DOTS
 
         private const val TITLE = "МЕЖДУНАРОДНАЯ ТРАНСПОРТНАЯ НАКЛАДНАЯ"
         private const val TITLE_TEXT_DOTS = 15f
         private const val HEADER_TEXT_DOTS = 14f
         private const val BODY_TEXT_DOTS = 12f
         private const val BODY_LINE_HEIGHT = 13f
-        private const val LABEL_CONTENT_WIDTH = 456f
+        private const val STICKER_CONTENT_WIDTH = 456f
         private const val METADATA_LEFT = 5f
         private const val METADATA_COLUMN_WIDTH = 114f
         private const val METADATA_TEXT_WIDTH = 109f
@@ -289,4 +289,4 @@ class TajikistanExportLabelRenderer {
     }
 }
 
-class TajikistanLabelOverflowException : IllegalArgumentException("Label content does not fit")
+class TajikistanStickerOverflowException : IllegalArgumentException("Sticker content does not fit")

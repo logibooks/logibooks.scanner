@@ -6,7 +6,7 @@ package consulting.sw.logiscanner.ui
 
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
-import consulting.sw.logiscanner.net.LabelTemplates
+import consulting.sw.logiscanner.net.StickerTemplates
 import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorFollowTarget
@@ -397,45 +397,45 @@ class ScannerOptionsTest {
     }
 
     @Test
-    fun kgtLabelCodeTrimsAndRejectsBlankValues() {
-        assertEquals("15", kgtLabelCode(" 15 "))
-        assertNull(kgtLabelCode(" "))
-        assertNull(kgtLabelCode(null))
+    fun kgtStickerCodeTrimsAndRejectsBlankValues() {
+        assertEquals("15", kgtStickerCode(" 15 "))
+        assertNull(kgtStickerCode(" "))
+        assertNull(kgtStickerCode(null))
     }
 
     @Test
-    fun canManualPrintKgtLabelRequiresCode() {
-        assertTrue(canManualPrintKgtLabel("15"))
-        assertTrue(canManualPrintKgtLabel("15", printerSelected = true))
-        assertFalse(canManualPrintKgtLabel(" "))
-        assertFalse(canManualPrintKgtLabel("15", printerSelected = false))
+    fun canManualPrintKgtStickerRequiresCode() {
+        assertTrue(canManualPrintKgtSticker("15"))
+        assertTrue(canManualPrintKgtSticker("15", printerSelected = true))
+        assertFalse(canManualPrintKgtSticker(" "))
+        assertFalse(canManualPrintKgtSticker("15", printerSelected = false))
     }
 
     @Test
-    fun shouldAutoPrintKgtLabelRequiresEnabledWbrModeAndGeneratedCode() {
+    fun shouldAutoPrintKgtStickerRequiresEnabledWbrModeAndGeneratedCode() {
         val wbrJob = scanJob(registerType = RegisterTypes.WBR)
         val result = scanResultItem(extId = "15")
 
         assertTrue(
-            shouldAutoPrintKgtLabel(
+            shouldAutoPrintKgtSticker(
                 autoPrintEnabled = true,
                 job = wbrJob,
                 bulkyItemsMode = BulkyItemsModes.SILENT,
                 result = result
             )
         )
-        assertFalse(shouldAutoPrintKgtLabel(false, wbrJob, BulkyItemsModes.SILENT, result))
-        assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.OFF, result))
-        assertFalse(shouldAutoPrintKgtLabel(true, scanJob(registerType = RegisterTypes.WBR_N), BulkyItemsModes.SILENT, result))
-        assertFalse(shouldAutoPrintKgtLabel(true, scanJob(registerType = 1), BulkyItemsModes.SILENT, result))
-        assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, result, printerSelected = false))
-        assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = null)))
-        assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = "15", count = 0)))
-        assertFalse(shouldAutoPrintKgtLabel(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = "15", hasIssues = true)))
+        assertFalse(shouldAutoPrintKgtSticker(false, wbrJob, BulkyItemsModes.SILENT, result))
+        assertFalse(shouldAutoPrintKgtSticker(true, wbrJob, BulkyItemsModes.OFF, result))
+        assertFalse(shouldAutoPrintKgtSticker(true, scanJob(registerType = RegisterTypes.WBR_N), BulkyItemsModes.SILENT, result))
+        assertFalse(shouldAutoPrintKgtSticker(true, scanJob(registerType = 1), BulkyItemsModes.SILENT, result))
+        assertFalse(shouldAutoPrintKgtSticker(true, wbrJob, BulkyItemsModes.SILENT, result, printerSelected = false))
+        assertFalse(shouldAutoPrintKgtSticker(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = null)))
+        assertFalse(shouldAutoPrintKgtSticker(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = "15", count = 0)))
+        assertFalse(shouldAutoPrintKgtSticker(true, wbrJob, BulkyItemsModes.SILENT, scanResultItem(extId = "15", hasIssues = true)))
     }
 
     @Test
-    fun shouldAutoPrintFullRelabelingLabelRequiresFullModePrinterAndResolvedParcel() {
+    fun shouldAutoPrintFullRelabelingStickerRequiresFullModePrinterAndResolvedParcel() {
         val job = scanJob(registerType = 1, registerId = 45)
         val result = scanResultItem(
             extId = null,
@@ -443,7 +443,7 @@ class ScannerOptionsTest {
         )
 
         assertTrue(
-            shouldAutoPrintFullRelabelingLabel(
+            shouldAutoPrintFullRelabelingSticker(
                 submode = RelabelingSubmode.FULL,
                 relabelingMode = BulkyItemsModes.SILENT,
                 printerSelected = true,
@@ -452,7 +452,7 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintFullRelabelingLabel(
+            shouldAutoPrintFullRelabelingSticker(
                 RelabelingSubmode.KGT,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
@@ -461,7 +461,7 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintFullRelabelingLabel(
+            shouldAutoPrintFullRelabelingSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.OFF,
                 printerSelected = true,
@@ -470,7 +470,7 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintFullRelabelingLabel(
+            shouldAutoPrintFullRelabelingSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = false,
@@ -479,7 +479,7 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintFullRelabelingLabel(
+            shouldAutoPrintFullRelabelingSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
@@ -488,7 +488,7 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintFullRelabelingLabel(
+            shouldAutoPrintFullRelabelingSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
@@ -500,7 +500,7 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintFullRelabelingLabel(
+            shouldAutoPrintFullRelabelingSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
@@ -513,7 +513,7 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintFullRelabelingLabel(
+            shouldAutoPrintFullRelabelingSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
@@ -526,14 +526,14 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintFullRelabelingLabel(
+            shouldAutoPrintFullRelabelingSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
                 job = job,
                 result = scanResultItem(
                     extId = null,
-                    labelTemplate = LabelTemplates.TAJIKISTAN_EXPORT,
+                    stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT,
                     followTarget = ScanJobMonitorFollowTarget(parcelId = 123)
                 )
             )
@@ -541,14 +541,14 @@ class ScannerOptionsTest {
     }
 
     @Test
-    fun shouldAutoPrintTajikistanLabelRequiresExactTemplateAndEligibleParcelScan() {
+    fun shouldAutoPrintTajikistanStickerRequiresExactTemplateAndEligibleParcelScan() {
         val result = scanResultItem(
             extId = null,
-            labelTemplate = LabelTemplates.TAJIKISTAN_EXPORT
+            stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT
         )
 
         assertTrue(
-            shouldAutoPrintTajikistanExportLabel(
+            shouldAutoPrintTajikistanExportSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
@@ -556,7 +556,7 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintTajikistanExportLabel(
+            shouldAutoPrintTajikistanExportSticker(
                 RelabelingSubmode.KGT,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
@@ -564,7 +564,7 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintTajikistanExportLabel(
+            shouldAutoPrintTajikistanExportSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.OFF,
                 printerSelected = true,
@@ -572,7 +572,7 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintTajikistanExportLabel(
+            shouldAutoPrintTajikistanExportSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = false,
@@ -580,53 +580,53 @@ class ScannerOptionsTest {
             )
         )
         assertFalse(
-            shouldAutoPrintTajikistanExportLabel(
+            shouldAutoPrintTajikistanExportSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
-                result = scanResultItem(extId = null, labelTemplate = "UNKNOWN")
+                result = scanResultItem(extId = null, stickerTemplate = "UNKNOWN")
             )
         )
         assertFalse(
-            shouldAutoPrintTajikistanExportLabel(
+            shouldAutoPrintTajikistanExportSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
                 result = scanResultItem(
                     extId = null,
                     count = 2,
-                    labelTemplate = LabelTemplates.TAJIKISTAN_EXPORT
+                    stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT
                 )
             )
         )
         assertFalse(
-            shouldAutoPrintTajikistanExportLabel(
+            shouldAutoPrintTajikistanExportSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
                 result = scanResultItem(
                     extId = null,
                     hasIssues = true,
-                    labelTemplate = LabelTemplates.TAJIKISTAN_EXPORT
+                    stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT
                 )
             )
         )
     }
 
     @Test
-    fun repeatTajikistanLabelRequiresActiveFullModePrinterAndStoredLabel() {
+    fun repeatTajikistanStickerRequiresActiveFullModePrinterAndStoredSticker() {
         assertTrue(
-            canRepeatTajikistanExportLabel(
+            canRepeatTajikistanExportSticker(
                 RelabelingSubmode.FULL,
                 BulkyItemsModes.SILENT,
                 printerSelected = true,
-                hasLabel = true
+                hasSticker = true
             )
         )
-        assertFalse(canRepeatTajikistanExportLabel(RelabelingSubmode.KGT, BulkyItemsModes.SILENT, true, true))
-        assertFalse(canRepeatTajikistanExportLabel(RelabelingSubmode.FULL, BulkyItemsModes.OFF, true, true))
-        assertFalse(canRepeatTajikistanExportLabel(RelabelingSubmode.FULL, BulkyItemsModes.SILENT, false, true))
-        assertFalse(canRepeatTajikistanExportLabel(RelabelingSubmode.FULL, BulkyItemsModes.SILENT, true, false))
+        assertFalse(canRepeatTajikistanExportSticker(RelabelingSubmode.KGT, BulkyItemsModes.SILENT, true, true))
+        assertFalse(canRepeatTajikistanExportSticker(RelabelingSubmode.FULL, BulkyItemsModes.OFF, true, true))
+        assertFalse(canRepeatTajikistanExportSticker(RelabelingSubmode.FULL, BulkyItemsModes.SILENT, false, true))
+        assertFalse(canRepeatTajikistanExportSticker(RelabelingSubmode.FULL, BulkyItemsModes.SILENT, true, false))
     }
 
     private fun scanJob(registerType: Int, registerId: Int = 10): ScanJob {
@@ -647,7 +647,7 @@ class ScannerOptionsTest {
         hasIssues: Boolean = false,
         scanSource: Int = ScannedItemSources.PARCEL_STICKER,
         followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget(),
-        labelTemplate: String? = null
+        stickerTemplate: String? = null
     ): ScanResultItem {
         return ScanResultItem(
             count = count,
@@ -659,7 +659,7 @@ class ScannerOptionsTest {
             extId = extId,
             hasIssues = hasIssues,
             followTarget = followTarget,
-            labelTemplate = labelTemplate
+            stickerTemplate = stickerTemplate
         )
     }
 }

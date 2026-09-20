@@ -16,13 +16,13 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class ParcelLabelRendererTest {
-    private val renderer = ParcelLabelRenderer()
+class ParcelStickerRendererTest {
+    private val renderer = ParcelStickerRenderer()
 
     @Test
     fun renderWbrNEmitsFiveStickerCodeQrsAndNoLinearBarcode() {
         val rendered = renderer.render(
-            ParcelLabel.WbrN(
+            ParcelSticker.WbrN(
                 sticker = "54178953272",
                 stickerCode = "*DJ1RODh1"
             )
@@ -38,8 +38,8 @@ class ParcelLabelRendererTest {
 
     @Test
     fun renderWbrNSupportsEitherAvailableField() {
-        val stickerOnly = commandsAfterBitmap(renderer.render(ParcelLabel.WbrN("54178953272", null)))
-        val qrOnly = commandsAfterBitmap(renderer.render(ParcelLabel.WbrN(null, "*DJ1RODh1")))
+        val stickerOnly = commandsAfterBitmap(renderer.render(ParcelSticker.WbrN("54178953272", null)))
+        val qrOnly = commandsAfterBitmap(renderer.render(ParcelSticker.WbrN(null, "*DJ1RODh1")))
 
         assertFalse(stickerOnly.contains("QRCODE"))
         assertEquals(5, qrOnly.countOccurrences("QRCODE"))
@@ -48,7 +48,7 @@ class ParcelLabelRendererTest {
     @Test
     fun renderOzonEmitsBarcodeQrAndRasterizesDestination() {
         val rendered = renderer.render(
-            ParcelLabel.Ozon(
+            ParcelSticker.Ozon(
                 postingNumber = "0216094457-0039-1",
                 barcode = "ii16065571612",
                 destinationCity = "Ташкент"
@@ -66,7 +66,7 @@ class ParcelLabelRendererTest {
     @Test
     fun renderOzonOmitsInvalidQrAndPrintsRemainingData() {
         val commands = commandsAfterBitmap(
-            renderer.render(ParcelLabel.Ozon("POST-1", "bad\"barcode", null))
+            renderer.render(ParcelSticker.Ozon("POST-1", "bad\"barcode", null))
         )
 
         assertFalse(commands.contains("QRCODE"))
@@ -74,8 +74,8 @@ class ParcelLabelRendererTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun renderRejectsLabelWithoutPrintableData() {
-        renderer.render(ParcelLabel.Ozon(" ", null, "\u0001"))
+    fun renderRejectsStickerWithoutPrintableData() {
+        renderer.render(ParcelSticker.Ozon(" ", null, "\u0001"))
     }
 
     private fun assertRasterContainsInk(rendered: ByteArray) {
@@ -84,7 +84,7 @@ class ParcelLabelRendererTest {
         val rasterStart = headerIndex + header.size
         val raster = rendered.copyOfRange(
             rasterStart,
-            rasterStart + ParcelLabelRenderer.RASTER_SIZE_BYTES
+            rasterStart + ParcelStickerRenderer.RASTER_SIZE_BYTES
         )
 
         assertTrue(headerIndex > 0)
@@ -95,7 +95,7 @@ class ParcelLabelRendererTest {
         val header = "BITMAP 0,0,58,320,0,".toByteArray(Charsets.US_ASCII)
         val rasterStart = rendered.indexOf(header) + header.size
         return rendered.copyOfRange(
-            rasterStart + ParcelLabelRenderer.RASTER_SIZE_BYTES,
+            rasterStart + ParcelStickerRenderer.RASTER_SIZE_BYTES,
             rendered.size
         ).toString(Charsets.US_ASCII)
     }

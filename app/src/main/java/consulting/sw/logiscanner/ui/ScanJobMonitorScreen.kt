@@ -73,8 +73,8 @@ import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
-import consulting.sw.logiscanner.printer.ParcelLabel
-import consulting.sw.logiscanner.printer.TajikistanExportLabel
+import consulting.sw.logiscanner.printer.ParcelSticker
+import consulting.sw.logiscanner.printer.TajikistanExportSticker
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import kotlinx.coroutines.delay
 
@@ -90,8 +90,8 @@ internal fun ScanJobMonitorPanel(
     lastItemNumbers: List<String>,
     lastExtData: String?,
     lastExtId: String?,
-    lastTajikistanExportLabel: TajikistanExportLabel?,
-    canPrintTajikistanExportLabel: Boolean,
+    lastTajikistanExportSticker: TajikistanExportSticker?,
+    canPrintTajikistanExportSticker: Boolean,
     lastScanTime: String?,
     loading: Boolean,
     detailLoading: Boolean,
@@ -103,9 +103,9 @@ internal fun ScanJobMonitorPanel(
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
-    onPrintKgtLabel: (String) -> Unit,
-    onPrintParcelLabel: (ParcelLabel) -> Unit,
-    onPrintTajikistanExportLabel: () -> Unit,
+    onPrintKgtSticker: (String) -> Unit,
+    onPrintParcelSticker: (ParcelSticker) -> Unit,
+    onPrintTajikistanExportSticker: () -> Unit,
     jumpNumber: String,
     jumpLoading: Boolean,
     highlightedParcelId: Int?,
@@ -273,15 +273,15 @@ internal fun ScanJobMonitorPanel(
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
                 lastExtId = lastExtId,
-                lastTajikistanExportLabel = lastTajikistanExportLabel,
+                lastTajikistanExportSticker = lastTajikistanExportSticker,
                 lastScanTime = lastScanTime,
                 printerSelected = printerSelected,
                 printerLoading = printerLoading,
                 printerMessage = printerMessage,
                 printerError = printerError,
-                onPrintKgtLabel = onPrintKgtLabel,
-                onPrintTajikistanExportLabel = onPrintTajikistanExportLabel,
-                canPrintTajikistanExportLabel = canPrintTajikistanExportLabel
+                onPrintKgtSticker = onPrintKgtSticker,
+                onPrintTajikistanExportSticker = onPrintTajikistanExportSticker,
+                canPrintTajikistanExportSticker = canPrintTajikistanExportSticker
             )
 
             if (loading && snapshot == null) {
@@ -327,8 +327,8 @@ internal fun ScanJobMonitorPanel(
                         highlightedParcelId = highlightedParcelId,
                         printerSelected = printerSelected,
                         printerLoading = printerLoading,
-                        onPrintKgtLabel = onPrintKgtLabel,
-                        onPrintParcelLabel = onPrintParcelLabel,
+                        onPrintKgtSticker = onPrintKgtSticker,
+                        onPrintParcelSticker = onPrintParcelSticker,
                         onOpenRegister = onOpenRegister
                     )
                 }
@@ -491,8 +491,8 @@ private fun MonitorBoxDetail(
     highlightedParcelId: Int?,
     printerSelected: Boolean,
     printerLoading: Boolean,
-    onPrintKgtLabel: (String) -> Unit,
-    onPrintParcelLabel: (ParcelLabel) -> Unit,
+    onPrintKgtSticker: (String) -> Unit,
+    onPrintParcelSticker: (ParcelSticker) -> Unit,
     onOpenRegister: () -> Unit
 ) {
     val context = LocalContext.current
@@ -655,8 +655,8 @@ private fun MonitorBoxDetail(
                         highlighted = highlighted,
                         printerSelected = printerSelected,
                         printerLoading = printerLoading,
-                        onPrintKgtLabel = onPrintKgtLabel,
-                        onPrintParcelLabel = onPrintParcelLabel,
+                        onPrintKgtSticker = onPrintKgtSticker,
+                        onPrintParcelSticker = onPrintParcelSticker,
                         onToggleExpanded = {
                             expandedParcelKey = if (expandedParcelKey == parcelKey) null else parcelKey
                         }
@@ -676,8 +676,8 @@ private fun MonitorParcelRow(
     highlighted: Boolean,
     printerSelected: Boolean,
     printerLoading: Boolean,
-    onPrintKgtLabel: (String) -> Unit,
-    onPrintParcelLabel: (ParcelLabel) -> Unit,
+    onPrintKgtSticker: (String) -> Unit,
+    onPrintParcelSticker: (ParcelSticker) -> Unit,
     onToggleExpanded: () -> Unit
 ) {
     val statusText = when {
@@ -785,8 +785,8 @@ private fun MonitorParcelRow(
                 weightCorrection = weightCorrection,
                 printerSelected = printerSelected,
                 printerLoading = printerLoading,
-                onPrintKgtLabel = onPrintKgtLabel,
-                onPrintParcelLabel = onPrintParcelLabel
+                onPrintKgtSticker = onPrintKgtSticker,
+                onPrintParcelSticker = onPrintParcelSticker
             )
         }
     }
@@ -799,26 +799,26 @@ private fun isHighlightedMonitorParcel(
     return highlightedParcelId != null && parcel.parcelId == highlightedParcelId
 }
 
-internal data class ParcelLabelAction(
-    val label: ParcelLabel,
+internal data class ParcelStickerAction(
+    val sticker: ParcelSticker,
     val displayValue: String
 )
 
-internal fun parcelLabelAction(
+internal fun parcelStickerAction(
     registerType: Int,
     parcel: ScanJobMonitorParcel
-): ParcelLabelAction? = when (registerType) {
+): ParcelStickerAction? = when (registerType) {
     RegisterTypes.WBR_N -> {
         val displayValue = firstNonBlank(parcel.sticker, parcel.stickerCode) ?: return null
-        ParcelLabelAction(
-            label = ParcelLabel.WbrN(parcel.sticker, parcel.stickerCode),
+        ParcelStickerAction(
+            sticker = ParcelSticker.WbrN(parcel.sticker, parcel.stickerCode),
             displayValue = displayValue
         )
     }
     RegisterTypes.OZON -> {
         val displayValue = firstNonBlank(parcel.postingNumber, parcel.barcode, parcel.destinationCity) ?: return null
-        ParcelLabelAction(
-            label = ParcelLabel.Ozon(parcel.postingNumber, parcel.barcode, parcel.destinationCity),
+        ParcelStickerAction(
+            sticker = ParcelSticker.Ozon(parcel.postingNumber, parcel.barcode, parcel.destinationCity),
             displayValue = displayValue
         )
     }
@@ -835,17 +835,17 @@ private fun MonitorParcelAttributes(
     weightCorrection: MonitorWeightCorrection?,
     printerSelected: Boolean,
     printerLoading: Boolean,
-    onPrintKgtLabel: (String) -> Unit,
-    onPrintParcelLabel: (ParcelLabel) -> Unit
+    onPrintKgtSticker: (String) -> Unit,
+    onPrintParcelSticker: (ParcelSticker) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        parcelLabelAction(registerType, parcel)?.let { action ->
-            LabelPrintAttribute(
-                label = stringResource(R.string.printer_parcel_label),
+        parcelStickerAction(registerType, parcel)?.let { action ->
+            StickerPrintAttribute(
+                label = stringResource(R.string.sticker),
                 value = action.displayValue,
                 printEnabled = printerSelected && !printerLoading,
-                contentDescription = stringResource(R.string.printer_print_parcel_label),
-                onPrint = { onPrintParcelLabel(action.label) }
+                contentDescription = stringResource(R.string.printer_print_sticker),
+                onPrint = { onPrintParcelSticker(action.sticker) }
             )
         }
         monitorParcelAttributeSpecs(parcel, weightCorrection).forEach { attribute ->
@@ -859,12 +859,12 @@ private fun MonitorParcelAttributes(
                     value = value,
                     correctedValue = correctedValue
                 )
-            } else if (attribute.labelResId == R.string.monitor_parcel_ext_id && kgtLabelCode(value) != null) {
+            } else if (attribute.labelResId == R.string.monitor_parcel_ext_id && kgtStickerCode(value) != null) {
                 KgtPrintAttribute(
                     label = stringResource(attribute.labelResId),
                     value = value.orEmpty(),
-                    printEnabled = canManualPrintKgtLabel(value, printerSelected),
-                    onPrintKgtLabel = onPrintKgtLabel
+                    printEnabled = canManualPrintKgtSticker(value, printerSelected),
+                    onPrintKgtSticker = onPrintKgtSticker
                 )
             } else if (!value.isNullOrBlank()) {
                 MonitorAttribute(stringResource(attribute.labelResId), value)
@@ -1013,19 +1013,19 @@ private fun KgtPrintAttribute(
     label: String,
     value: String,
     printEnabled: Boolean,
-    onPrintKgtLabel: (String) -> Unit
+    onPrintKgtSticker: (String) -> Unit
 ) {
-    LabelPrintAttribute(
+    StickerPrintAttribute(
         label = label,
         value = value,
         printEnabled = printEnabled,
-        contentDescription = stringResource(R.string.printer_print_label),
-        onPrint = { onPrintKgtLabel(value) }
+        contentDescription = stringResource(R.string.printer_print_sticker),
+        onPrint = { onPrintKgtSticker(value) }
     )
 }
 
 @Composable
-private fun LabelPrintAttribute(
+private fun StickerPrintAttribute(
     label: String,
     value: String,
     printEnabled: Boolean,
@@ -1092,15 +1092,15 @@ private fun LocalScanResult(
     lastItemNumbers: List<String>,
     lastExtData: String?,
     lastExtId: String?,
-    lastTajikistanExportLabel: TajikistanExportLabel?,
+    lastTajikistanExportSticker: TajikistanExportSticker?,
     lastScanTime: String?,
     printerSelected: Boolean,
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
-    onPrintKgtLabel: (String) -> Unit,
-    onPrintTajikistanExportLabel: () -> Unit,
-    canPrintTajikistanExportLabel: Boolean
+    onPrintKgtSticker: (String) -> Unit,
+    onPrintTajikistanExportSticker: () -> Unit,
+    canPrintTajikistanExportSticker: Boolean
 ) {
     val display = localScanResultDisplay(
         lastCode = lastCode,
@@ -1180,26 +1180,26 @@ private fun LocalScanResult(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        display.extId?.takeIf { kgtLabelCode(it) != null }?.let { extId ->
+        display.extId?.takeIf { kgtStickerCode(it) != null }?.let { extId ->
             KgtPrintAttribute(
                 label = stringResource(R.string.monitor_parcel_ext_id),
                 value = extId,
-                printEnabled = canManualPrintKgtLabel(extId, printerSelected),
-                onPrintKgtLabel = onPrintKgtLabel
+                printEnabled = canManualPrintKgtSticker(extId, printerSelected),
+                onPrintKgtSticker = onPrintKgtSticker
             )
         }
-        lastTajikistanExportLabel?.let { label ->
-            LabelPrintAttribute(
-                label = stringResource(R.string.printer_tj_label_order),
-                value = label.orderNumber,
-                printEnabled = canPrintTajikistanExportLabel && !printerLoading,
-                contentDescription = stringResource(R.string.printer_repeat_label),
-                onPrint = onPrintTajikistanExportLabel
+        lastTajikistanExportSticker?.let { sticker ->
+            StickerPrintAttribute(
+                label = stringResource(R.string.printer_tj_sticker_order),
+                value = sticker.orderNumber,
+                printEnabled = canPrintTajikistanExportSticker && !printerLoading,
+                contentDescription = stringResource(R.string.printer_repeat_sticker),
+                onPrint = onPrintTajikistanExportSticker
             )
         }
         stickerCode?.let { code ->
             MonitorAttribute(
-                label = stringResource(R.string.monitor_local_scan_result_sticker_label),
+                label = stringResource(R.string.sticker),
                 value = code
             )
         }

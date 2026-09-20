@@ -16,23 +16,23 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class TajikistanExportLabelRendererTest {
-    private val renderer = TajikistanExportLabelRenderer()
+class TajikistanExportStickerRendererTest {
+    private val renderer = TajikistanExportStickerRenderer()
 
     @Test
     fun renderEmitsFixedBitmapAndNativeCode128Barcode() {
-        val label = printableLabel()
-        val rendered = renderer.render(label)
+        val sticker = printableSticker()
+        val rendered = renderer.render(sticker)
         val bitmapHeader = "BITMAP 0,0,58,320,0,".toByteArray(Charsets.US_ASCII)
         val bitmapHeaderIndex = rendered.indexOf(bitmapHeader)
         val rasterStart = bitmapHeaderIndex + bitmapHeader.size
         val raster = rendered.copyOfRange(
             rasterStart,
-            rasterStart + TajikistanExportLabelRenderer.RASTER_SIZE_BYTES
+            rasterStart + TajikistanExportStickerRenderer.RASTER_SIZE_BYTES
         )
         val commandsBeforeBitmap = rendered.copyOfRange(0, bitmapHeaderIndex).toString(Charsets.US_ASCII)
         val commandsAfterBitmap = rendered.copyOfRange(
-            rasterStart + TajikistanExportLabelRenderer.RASTER_SIZE_BYTES,
+            rasterStart + TajikistanExportStickerRenderer.RASTER_SIZE_BYTES,
             rendered.size
         ).toString(Charsets.US_ASCII)
 
@@ -42,7 +42,7 @@ class TajikistanExportLabelRendererTest {
         assertTrue(commandsBeforeBitmap.contains("SIZE 58 mm,40 mm\r\n"))
         assertTrue(commandsBeforeBitmap.contains("DENSITY 8\r\n"))
         assertTrue(commandsAfterBitmap.contains("BARCODE"))
-        assertTrue(commandsAfterBitmap.contains("\"${label.orderNumber}\""))
+        assertTrue(commandsAfterBitmap.contains("\"${sticker.orderNumber}\""))
         assertTrue(commandsAfterBitmap.endsWith("PRINT 1,1\r\n"))
         assertFalse(commandsBeforeBitmap.contains("TEXT"))
         assertFalse(commandsAfterBitmap.contains("Иванов"))
@@ -50,23 +50,23 @@ class TajikistanExportLabelRendererTest {
 
     @Test
     fun renderSupportsMultipleItemsAndWrappedCyrillic() {
-        val label = printableLabel().copy(
+        val sticker = printableSticker().copy(
             senderAddress = "Российская Федерация, город Москва, очень длинная улица, дом 1",
             recipientAddress = "Республика Таджикистан, город Душанбе, длинная улица Рудаки, дом 100",
             items = listOf(
-                TajikistanExportLabelItem("Детские книги", 2),
-                TajikistanExportLabelItem("Тетради", 3)
+                TajikistanExportStickerItem("Детские книги", 2),
+                TajikistanExportStickerItem("Тетради", 3)
             )
         )
 
-        val rendered = renderer.render(label)
+        val rendered = renderer.render(sticker)
 
-        assertTrue(rendered.size > TajikistanExportLabelRenderer.RASTER_SIZE_BYTES)
+        assertTrue(rendered.size > TajikistanExportStickerRenderer.RASTER_SIZE_BYTES)
     }
 
     @Test
-    fun renderPrintsIncompleteLabelAndOmitsUnavailableBarcode() {
-        val rendered = renderer.render(null.toPrintableLabel())
+    fun renderPrintsIncompleteStickerAndOmitsUnavailableBarcode() {
+        val rendered = renderer.render(null.toPrintableSticker())
         val payloadText = rendered.toString(Charsets.ISO_8859_1)
 
         assertTrue(payloadText.contains("BITMAP 0,0,58,320,0,"))
@@ -77,18 +77,18 @@ class TajikistanExportLabelRendererTest {
     @Test
     fun renderEmitsBarcodeForLongNumericOrderNumberThatFitsCode128C() {
         val orderNumber = "123456789012345678901234567890"
-        val rendered = renderer.render(printableLabel().copy(orderNumber = orderNumber))
+        val rendered = renderer.render(printableSticker().copy(orderNumber = orderNumber))
         val payloadText = rendered.toString(Charsets.ISO_8859_1)
 
         assertTrue(payloadText.contains("BARCODE"))
         assertTrue(payloadText.contains("\"$orderNumber\""))
     }
 
-    @Test(expected = TajikistanLabelOverflowException::class)
+    @Test(expected = TajikistanStickerOverflowException::class)
     fun renderRejectsContentThatCannotFit() {
         renderer.render(
-            printableLabel().copy(
-                items = listOf(TajikistanExportLabelItem("Очень длинное описание ".repeat(100), 1))
+            printableSticker().copy(
+                items = listOf(TajikistanExportStickerItem("Очень длинное описание ".repeat(100), 1))
             )
         )
     }

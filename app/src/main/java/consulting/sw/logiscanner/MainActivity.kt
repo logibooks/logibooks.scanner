@@ -37,7 +37,7 @@ import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.ScanScreen
 import consulting.sw.logiscanner.ui.SettingsScreen
-import consulting.sw.logiscanner.ui.canRepeatTajikistanExportLabel
+import consulting.sw.logiscanner.ui.canRepeatTajikistanExportSticker
 import consulting.sw.logiscanner.ui.hasSelectedPrinter
 import consulting.sw.logiscanner.ui.relabelingModeAvailable
 import consulting.sw.logiscanner.ui.scanReceiverEnabled
@@ -197,12 +197,12 @@ class MainActivity : ComponentActivity() {
                                 lastItemNumbers = state.lastItemNumbers,
                                 lastExtData = state.lastExtData,
                                 lastExtId = state.lastExtId,
-                                lastTajikistanExportLabel = state.lastTajikistanExportLabel,
-                                canPrintTajikistanExportLabel = canRepeatTajikistanExportLabel(
+                                lastTajikistanExportSticker = state.lastTajikistanExportSticker,
+                                canPrintTajikistanExportSticker = canRepeatTajikistanExportSticker(
                                     submode = state.relabelingSubmode,
                                     relabelingMode = state.bulkyItemsMode,
                                     printerSelected = printerSelected,
-                                    hasLabel = state.lastTajikistanExportLabel != null
+                                    hasSticker = state.lastTajikistanExportSticker != null
                                 ),
                                 lastScanTime = state.lastScanTime,
                                 externalScannerEnabled = state.externalScannerEnabled,
@@ -233,19 +233,19 @@ class MainActivity : ComponentActivity() {
                                 onOpenMonitorBox = vm::openMonitorBox,
                                 onToggleMonitorAutoFollow = vm::toggleMonitorAutoFollow,
                                 onToggleBulkyItemsMode = vm::toggleBulkyItemsMode,
-                                onPrintKgtLabel = { code ->
+                                onPrintKgtSticker = { code ->
                                     runPrinterAction {
-                                        vm.printKgtLabel(code)
+                                        vm.printKgtSticker(code)
                                     }
                                 },
-                                onPrintParcelLabel = { label ->
+                                onPrintParcelSticker = { sticker ->
                                     runPrinterAction {
-                                        vm.printParcelLabel(label)
+                                        vm.printParcelSticker(sticker)
                                     }
                                 },
-                                onPrintTajikistanExportLabel = {
+                                onPrintTajikistanExportSticker = {
                                     runPrinterAction {
-                                        vm.printLastTajikistanExportLabel()
+                                        vm.printLastTajikistanExportSticker()
                                     }
                                 },
                                 onMonitorJumpNumberChange = vm::setMonitorJumpNumber,
