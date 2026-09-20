@@ -24,12 +24,12 @@ class TajikistanExportStickerValidationTest {
     @Test
     fun missingPayloadOrRequiredFieldBuildsIncompletePrintableSticker() {
         val empty = null.toPrintableSticker()
-        val partial = payload().copy(accountNumber = null, items = emptyList()).toPrintableSticker()
+        val partial = payload().copy(dcBankID = null, items = emptyList()).toPrintableSticker()
 
         assertEquals("", empty.orderNumber)
-        assertEquals("", empty.accountNumber)
+        assertEquals("", empty.dcBankID)
         assertEquals(null, empty.weightKg)
-        assertEquals("", partial.accountNumber)
+        assertEquals("", partial.dcBankID)
         assertEquals(emptyList<TajikistanExportStickerItem>(), partial.items)
     }
 
@@ -38,19 +38,19 @@ class TajikistanExportStickerValidationTest {
         val sticker = payload().copy(
             placesCount = 0,
             weightKg = Double.NaN,
-            declaredValue = 0.0,
+            costRub = 0.0,
             items = listOf(TajikistanExportStickerItemPayload(null, 0))
         ).toPrintableSticker()
 
         assertEquals(null, sticker.placesCount)
         assertEquals(null, sticker.weightKg)
-        assertEquals(null, sticker.declaredValue)
-        assertEquals("", sticker.items.single().description)
+        assertEquals(null, sticker.costRub)
+        assertEquals("", sticker.items.single().productName)
         assertEquals(null, sticker.items.single().quantity)
     }
 
     @Test
-    fun unsupportedCode128OrderNumberIsKeptForRasterTextButNotBarcode() {
+    fun unsupportedCode128OrderNumberIsKeptForNativeTextButNotBarcode() {
         listOf("Заказ", "bad\"value", "ABCDEFGHIJKLMNOP").forEach { orderNumber ->
             val sticker = payload().copy(orderNumber = orderNumber).toPrintableSticker()
             assertEquals(orderNumber, sticker.orderNumber)
@@ -60,19 +60,18 @@ class TajikistanExportStickerValidationTest {
 
     @Test
     fun code128WidthUsesNumericCompactionAndPreservesQuietZones() {
-        assertTrue(isSupportedCode128Value("123456789012345678901234567890"))
-        assertFalse(isSupportedCode128Value("1234567890123456789012345678901"))
+        assertTrue(isSupportedCode128Value("1234567890123456789012345678"))
+        assertFalse(isSupportedCode128Value("123456789012345678901234567890"))
     }
 }
 
 internal fun payload() = TajikistanExportStickerPayload(
     orderNumber = "40856360164",
-    accountNumber = "ACC-42",
+    dcBankID = "ACC-42",
     placesCount = 1,
     dispatchDate = "19.09.26",
     weightKg = 1.25,
-    declaredValue = 1200.0,
-    currency = "RUB",
+    costRub = 1200.0,
     senderName = "Sender",
     senderAddress = "123456, Moscow, Tverskaya 1",
     recipientName = "Иванов Иван",

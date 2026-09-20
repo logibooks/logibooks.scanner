@@ -4,166 +4,131 @@
 
 package consulting.sw.logiscanner.printer
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Typeface
-import java.io.ByteArrayOutputStream
+import java.nio.charset.Charset
 import java.util.Locale
-import kotlin.math.max
 
 class TajikistanExportStickerRenderer {
 
     fun render(sticker: TajikistanExportSticker): ByteArray {
-        val bitmap = Bitmap.createBitmap(STICKER_WIDTH_DOTS, STICKER_HEIGHT_DOTS, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        canvas.drawColor(Color.WHITE)
-        drawSticker(canvas, sticker)
+        val commands = mutableListOf<String>()
 
-        val raster = encodeMonochrome(bitmap)
-        val barcode = code128SymbolWidthDots(sticker.orderNumber)
-            ?.let { width -> barcodeCommand(sticker.orderNumber, width) }
-        return buildPayload(raster, barcode)
-    }
+        commands += text(CONTENT_LEFT_DOTS, TITLE_Y_DOTS, TITLE)
+        commands += rightAlignedText("МЕСТ:${sticker.placesCount ?: ""}", TITLE_Y_DOTS)
+        commands += centeredText(
+            fitSingleLine("Номер лицевого счёта ${sticker.dcBankID}", FULL_LINE_MAX_CHARS),
+            ACCOUNT_Y_DOTS,
+        )
 
-    private fun drawSticker(canvas: Canvas, sticker: TajikistanExportSticker) {
-        val titlePaint = textPaint(TITLE_TEXT_DOTS, bold = true)
-        val headerPaint = textPaint(HEADER_TEXT_DOTS, bold = true)
-        val bodyPaint = textPaint(BODY_TEXT_DOTS)
-
-        drawCentered(canvas, TITLE, 16f, titlePaint)
-        drawCentered(canvas, "МЕСТ: ${sticker.placesCount ?: ""}", 31f, bodyPaint)
-
-        val orderLine = "№ ЗАКАЗА ${sticker.orderNumber}"
-        requireFits(orderLine, bodyPaint, STICKER_CONTENT_WIDTH)
-        drawCentered(canvas, orderLine, 101f, bodyPaint)
-        canvas.drawLine(4f, 106f, 460f, 106f, LINE_PAINT)
+        code128SymbolWidthDots(sticker.orderNumber)?.let { width ->
+            commands += barcodeCommand(sticker.orderNumber, width)
+        }
+        commands += centeredText(
+            fitSingleLine("Номер заказа ${sticker.orderNumber}", FULL_LINE_MAX_CHARS),
+            ORDER_Y_DOTS
+        )
+        commands += horizontalLine(ORDER_SEPARATOR_Y_DOTS)
 
         val metadata = listOf(
-            "ДАТА" to sticker.dispatchDate,
-            "ВЕС" to sticker.weightKg?.let { "${decimal(it)} кг" }.orEmpty(),
-            "ЦЕННОСТЬ" to sticker.declaredValue?.let { value ->
-                listOf(decimal(value), sticker.currency).filter { it.isNotBlank() }.joinToString(" ")
-            }.orEmpty(),
-            "СЧЁТ" to sticker.accountNumber
+            "Дата отгрузки" to sticker.dispatchDate,
+            "Вес груза" to sticker.weightKg?.let { "${decimal(it)} кг" }.orEmpty(),
+            "Стоимость товаров" to sticker.costRub?.let { value -> "${decimal(value)} руб." }.orEmpty()
         )
         metadata.forEachIndexed { index, (header, value) ->
-            val x = METADATA_LEFT + index * METADATA_COLUMN_WIDTH
-            canvas.drawText(header, x, 120f, bodyPaint)
-            drawWrapped(
-                canvas = canvas,
-                text = value,
+            val x = METADATA_LEFT_DOTS + index * METADATA_COLUMN_WIDTH_DOTS -
+                if (index == COST_COLUMN_INDEX) COST_COLUMN_LEFT_SHIFT_DOTS else 0
+            commands += text(x, METADATA_HEADER_Y_DOTS, header)
+            commands += wrappedText(
+                value = value,
                 x = x,
-                firstBaseline = 134f,
-                maxWidth = METADATA_TEXT_WIDTH,
-                maxLines = 2,
-                paint = bodyPaint
+                firstY = METADATA_VALUE_Y_DOTS,
+                maxChars = METADATA_MAX_CHARS,
+                maxLines = 2
             )
         }
-        canvas.drawLine(4f, 150f, 460f, 150f, LINE_PAINT)
+        commands += horizontalLine(METADATA_SEPARATOR_Y_DOTS)
 
-        drawParty(
-            canvas,
-            header = "ОТПРАВИТЕЛЬ",
-            name = sticker.senderName,
-            address = sticker.senderAddress,
-            left = 6f,
-            headerPaint = headerPaint,
-            bodyPaint = bodyPaint
+        commands += text(CONTENT_LEFT_DOTS, SENDER_HEADER_Y_DOTS, "Грузоотправитель")
+        commands += wrappedText(
+            value = listOf(sticker.senderName, sticker.senderAddress).joinToString("\n"),
+            x = CONTENT_LEFT_DOTS,
+            firstY = SENDER_VALUE_Y_DOTS,
+            maxChars = PARTY_MAX_CHARS,
+            maxLines = SENDER_MAX_LINES
         )
-        drawParty(
-            canvas,
-            header = "ПОЛУЧАТЕЛЬ",
-            name = sticker.recipientName,
-            address = sticker.recipientAddress,
-            phone = sticker.recipientPhone,
-            left = 237f,
-            headerPaint = headerPaint,
-            bodyPaint = bodyPaint
-        )
-        canvas.drawLine(232f, 153f, 232f, 238f, LINE_PAINT)
-        canvas.drawLine(4f, 241f, 460f, 241f, LINE_PAINT)
+        commands += horizontalLine(SENDER_SEPARATOR_Y_DOTS)
 
-        canvas.drawText("ТОВАРЫ", 6f, 256f, headerPaint)
-        val itemText = sticker.items.map { item ->
-            listOfNotNull(
-                item.description.takeIf { it.isNotBlank() },
-                item.quantity?.toString()
-            ).joinToString(" — ")
-        }.filter { it.isNotBlank() }.joinToString("\n")
-        drawWrapped(
-            canvas = canvas,
-            text = itemText,
-            x = 6f,
-            firstBaseline = 271f,
-            maxWidth = 452f,
-            maxLines = 4,
-            paint = bodyPaint
+        commands += text(CONTENT_LEFT_DOTS, RECIPIENT_HEADER_Y_DOTS, "Грузополучатель")
+        commands += wrappedText(
+            value = listOf(sticker.recipientName, sticker.recipientAddress).joinToString("\n"),
+            x = CONTENT_LEFT_DOTS,
+            firstY = RECIPIENT_VALUE_Y_DOTS,
+            maxChars = PARTY_MAX_CHARS,
+            maxLines = RECIPIENT_MAX_LINES
         )
-    }
-
-    private fun drawParty(
-        canvas: Canvas,
-        header: String,
-        name: String,
-        address: String,
-        phone: String? = null,
-        left: Float,
-        headerPaint: Paint,
-        bodyPaint: Paint
-    ) {
-        canvas.drawText(header, left, 166f, headerPaint)
-        val text = listOfNotNull(name, address, phone)
-            .filter { it.isNotBlank() }
-            .joinToString("\n")
-        drawWrapped(
-            canvas = canvas,
-            text = text,
-            x = left,
-            firstBaseline = 181f,
-            maxWidth = 219f,
-            maxLines = 5,
-            paint = bodyPaint
-        )
-    }
-
-    private fun drawWrapped(
-        canvas: Canvas,
-        text: String,
-        x: Float,
-        firstBaseline: Float,
-        maxWidth: Float,
-        maxLines: Int,
-        paint: Paint
-    ) {
-        val lines = wrap(text, maxWidth, paint)
-        if (lines.size > maxLines) {
-            throw TajikistanStickerOverflowException()
+        if (sticker.recipientPhone.isNotBlank()) {
+            commands += text(
+                CONTENT_LEFT_DOTS,
+                RECIPIENT_PHONE_Y_DOTS,
+                fitSingleLine(sticker.recipientPhone, PARTY_MAX_CHARS)
+            )
         }
-        lines.forEachIndexed { index, line ->
-            canvas.drawText(line, x, firstBaseline + index * BODY_LINE_HEIGHT, paint)
+        commands += horizontalLine(PARTY_SEPARATOR_Y_DOTS)
+
+        commands += text(
+            CONTENT_LEFT_DOTS,
+            ITEMS_HEADER_Y_DOTS,
+            "Описание содержимого (товаров) и количество"
+        )
+        itemLines(sticker.items).forEachIndexed { index, line ->
+            commands += text(CONTENT_LEFT_DOTS, ITEMS_VALUE_Y_DOTS + index * LINE_HEIGHT_DOTS, line)
+        }
+
+        return buildPayload(commands)
+    }
+
+    private fun centeredText(value: String, y: Int): String =
+        "TEXT $STICKER_CENTER_X_DOTS,$y,\"1\",0,1,1,2,\"${escape(value)}\""
+
+    private fun rightAlignedText(value: String, y: Int): String =
+        "TEXT $CONTENT_RIGHT_DOTS,$y,\"1\",0,1,1,3,\"${escape(value)}\""
+
+    private fun text(x: Int, y: Int, value: String): String =
+        "TEXT $x,$y,\"1\",0,1,1,\"${escape(value)}\""
+
+    private fun wrappedText(
+        value: String,
+        x: Int,
+        firstY: Int,
+        maxChars: Int,
+        maxLines: Int
+    ): List<String> = wrapAndTruncate(value, maxChars, maxLines).mapIndexed { index, line ->
+        text(x, firstY + index * LINE_HEIGHT_DOTS, line)
+    }
+
+    private fun wrapAndTruncate(value: String, maxChars: Int, maxLines: Int): List<String> {
+        val lines = wrap(value, maxChars)
+        if (lines.size <= maxLines) {
+            return lines
+        }
+        return lines.take(maxLines).toMutableList().also { fitted ->
+            fitted[fitted.lastIndex] = indicateTruncation(fitted.last(), maxChars)
         }
     }
 
-    private fun wrap(text: String, maxWidth: Float, paint: Paint): List<String> {
+    private fun wrap(value: String, maxChars: Int): List<String> {
         val lines = mutableListOf<String>()
-        text.lines().forEach { paragraph ->
+        sanitize(value).lines().forEach { paragraph ->
             if (paragraph.isBlank()) {
-                lines += ""
                 return@forEach
             }
             var current = ""
             paragraph.split(Regex("\\s+")).forEach { word ->
-                val pieces = splitToFit(word, maxWidth, paint)
-                pieces.forEach { piece ->
+                word.chunked(maxChars).forEach { piece ->
                     val candidate = if (current.isEmpty()) piece else "$current $piece"
-                    if (paint.measureText(candidate) <= maxWidth) {
+                    if (candidate.length <= maxChars) {
                         current = candidate
                     } else {
-                        if (current.isNotEmpty()) {
-                            lines += current
-                        }
+                        lines += current
                         current = piece
                     }
                 }
@@ -175,43 +140,77 @@ class TajikistanExportStickerRenderer {
         return lines
     }
 
-    private fun splitToFit(word: String, maxWidth: Float, paint: Paint): List<String> {
-        if (paint.measureText(word) <= maxWidth) {
-            return listOf(word)
-        }
-        val result = mutableListOf<String>()
-        var start = 0
-        while (start < word.length) {
-            var end = start + 1
-            while (end <= word.length && paint.measureText(word.substring(start, end)) <= maxWidth) {
-                end += 1
+    private fun itemLines(items: List<TajikistanExportStickerItem>): List<String> {
+        val printableItems = items.filter { item -> item.productName.isNotBlank() || item.quantity != null }
+        val lines = mutableListOf<String>()
+        printableItems.forEachIndexed { itemIndex, item ->
+            if (lines.size >= ITEMS_MAX_LINES) {
+                return@forEachIndexed
             }
-            val fittedEnd = max(start + 1, end - 1)
-            result += word.substring(start, fittedEnd)
-            start = fittedEnd
+            val quantitySuffix = item.quantity?.let { " - $it" }.orEmpty()
+            val productNameLines = wrap(item.productName, ITEMS_MAX_CHARS).ifEmpty { listOf("") }
+            val availableLines = ITEMS_MAX_LINES - lines.size
+            val fittedProductName = productNameLines.take(availableLines).toMutableList()
+            val contentWasTruncated = productNameLines.size > availableLines ||
+                (productNameLines.size == availableLines && itemIndex < printableItems.lastIndex)
+            var finalLine = fittedProductName.last()
+            if (contentWasTruncated) {
+                finalLine = indicateTruncation(
+                    finalLine,
+                    (ITEMS_MAX_CHARS - quantitySuffix.length).coerceAtLeast(1)
+                )
+            }
+            if (quantitySuffix.isNotEmpty()) {
+                val productNameLimit = (ITEMS_MAX_CHARS - quantitySuffix.length).coerceAtLeast(1)
+                finalLine = fitSingleLine(finalLine, productNameLimit) + quantitySuffix
+            }
+            fittedProductName[fittedProductName.lastIndex] = finalLine.take(ITEMS_MAX_CHARS)
+            lines += fittedProductName
         }
-        return result
+        return lines.take(ITEMS_MAX_LINES)
     }
 
-    private fun requireFits(text: String, paint: Paint, maxWidth: Float) {
-        if (paint.measureText(text) > maxWidth) {
-            throw TajikistanStickerOverflowException()
+    private fun fitSingleLine(value: String, maxChars: Int): String {
+        val normalized = sanitize(value).replace(Regex("\\s+"), " ").trim()
+        return if (normalized.length <= maxChars) normalized else ellipsize(normalized, maxChars)
+    }
+
+    private fun ellipsize(value: String, maxChars: Int): String {
+        if (value.length <= maxChars) {
+            return value
         }
+        if (maxChars <= ELLIPSIS.length) {
+            return ELLIPSIS.take(maxChars)
+        }
+        return value.take(maxChars - ELLIPSIS.length).trimEnd() + ELLIPSIS
     }
 
-    private fun drawCentered(canvas: Canvas, text: String, baseline: Float, paint: Paint) {
-        requireFits(text, paint, STICKER_CONTENT_WIDTH)
-        val x = (STICKER_WIDTH_DOTS - paint.measureText(text)) / 2f
-        canvas.drawText(text, x, baseline, paint)
+    private fun indicateTruncation(value: String, maxChars: Int): String {
+        if (maxChars <= ELLIPSIS.length) {
+            return ELLIPSIS.take(maxChars)
+        }
+        return value.removeSuffix(ELLIPSIS)
+            .take(maxChars - ELLIPSIS.length)
+            .trimEnd() + ELLIPSIS
     }
 
-    private fun textPaint(size: Float, bold: Boolean = false): Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK
-        textSize = size
-        typeface = if (bold) Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD) else Typeface.SANS_SERIF
-    }
+    private fun sanitize(value: String): String = value
+        .replace('"', '\'')
+        .map { character ->
+            when {
+                character == '\n' -> '\n'
+                character == '\r' || character == '\t' -> ' '
+                character.code < 0x20 || character.code == 0x7F -> ' '
+                else -> character
+            }
+        }
+        .joinToString("")
+
+    private fun escape(value: String): String = sanitize(value).replace("\n", " ")
 
     private fun decimal(value: Double): String = String.format(RUSSIAN_LOCALE, "%.2f", value)
+
+    private fun horizontalLine(y: Int): String = "BAR $CONTENT_LEFT_DOTS,$y,$CONTENT_WIDTH_DOTS,1"
 
     private fun barcodeCommand(value: String, width: Int): String {
         val x = (STICKER_WIDTH_DOTS - width) / 2
@@ -219,73 +218,69 @@ class TajikistanExportStickerRenderer {
             "$BARCODE_NARROW_DOTS,$BARCODE_WIDE_DOTS,\"$value\""
     }
 
-    private fun encodeMonochrome(bitmap: Bitmap): ByteArray {
-        val pixels = IntArray(STICKER_WIDTH_DOTS)
-        val raster = ByteArray(RASTER_BYTES_PER_ROW * STICKER_HEIGHT_DOTS)
-        for (y in 0 until STICKER_HEIGHT_DOTS) {
-            bitmap.getPixels(pixels, 0, STICKER_WIDTH_DOTS, 0, y, STICKER_WIDTH_DOTS, 1)
-            for (x in 0 until STICKER_WIDTH_DOTS) {
-                val pixel = pixels[x]
-                val luminance = (
-                    Color.red(pixel) * 299
-                        + Color.green(pixel) * 587
-                        + Color.blue(pixel) * 114
-                    ) / 1000
-                if (Color.alpha(pixel) >= 128 && luminance < 128) {
-                    val index = y * RASTER_BYTES_PER_ROW + x / 8
-                    raster[index] = (raster[index].toInt() or (0x80 shr (x % 8))).toByte()
-                }
-            }
-        }
-        return raster
-    }
+    private fun buildPayload(commands: List<String>): ByteArray = buildList {
+        addAll(
+            listOf(
+                "SIZE 58 mm,40 mm",
+                "GAP 2 mm,0 mm",
+                "DENSITY 8",
+                "DIRECTION 1",
+                "REFERENCE 0,0",
+                "CODEPAGE 1251",
+                "CLS"
+            )
+        )
+        addAll(commands)
+        add("PRINT 1,1")
+    }.joinToString("\r\n", postfix = "\r\n").toByteArray(WINDOWS_1251)
 
-    private fun buildPayload(raster: ByteArray, barcode: String?): ByteArray {
-        val output = ByteArrayOutputStream()
-        listOf(
-            "SIZE 58 mm,40 mm",
-            "GAP 2 mm,0 mm",
-            "DENSITY 8",
-            "DIRECTION 1",
-            "REFERENCE 0,0",
-            "CLS"
-        ).forEach { command ->
-            output.write("$command\r\n".toByteArray(Charsets.US_ASCII))
-        }
-        output.write("BITMAP 0,0,$RASTER_BYTES_PER_ROW,$STICKER_HEIGHT_DOTS,0,".toByteArray(Charsets.US_ASCII))
-        output.write(raster)
-        output.write("\r\n".toByteArray(Charsets.US_ASCII))
-        if (barcode != null) {
-            output.write("$barcode\r\n".toByteArray(Charsets.US_ASCII))
-        }
-        output.write("PRINT 1,1\r\n".toByteArray(Charsets.US_ASCII))
-        return output.toByteArray()
-    }
-
-    companion object {
+    private companion object {
         const val STICKER_WIDTH_DOTS = 464
-        const val STICKER_HEIGHT_DOTS = 320
-        const val RASTER_BYTES_PER_ROW = STICKER_WIDTH_DOTS / 8
-        const val RASTER_SIZE_BYTES = RASTER_BYTES_PER_ROW * STICKER_HEIGHT_DOTS
+        const val STICKER_CENTER_X_DOTS = STICKER_WIDTH_DOTS / 2
+        const val CONTENT_LEFT_DOTS = 16
+        const val CONTENT_WIDTH_DOTS = 432
+        const val CONTENT_RIGHT_DOTS = CONTENT_LEFT_DOTS + CONTENT_WIDTH_DOTS
+        const val LINE_HEIGHT_DOTS = 12
 
-        private const val TITLE = "МЕЖДУНАРОДНАЯ ТРАНСПОРТНАЯ НАКЛАДНАЯ"
-        private const val TITLE_TEXT_DOTS = 15f
-        private const val HEADER_TEXT_DOTS = 14f
-        private const val BODY_TEXT_DOTS = 12f
-        private const val BODY_LINE_HEIGHT = 13f
-        private const val STICKER_CONTENT_WIDTH = 456f
-        private const val METADATA_LEFT = 5f
-        private const val METADATA_COLUMN_WIDTH = 114f
-        private const val METADATA_TEXT_WIDTH = 109f
-        private const val BARCODE_Y_DOTS = 37
-        private const val BARCODE_HEIGHT_DOTS = 48
-        private const val BARCODE_NARROW_DOTS = 2
-        private const val BARCODE_WIDE_DOTS = 2
-        private val RUSSIAN_LOCALE = Locale.forLanguageTag("ru-RU")
-        private val LINE_PAINT = Paint().apply {
-            color = Color.BLACK
-            strokeWidth = 1f
-        }
+        const val TITLE_Y_DOTS = 2
+        const val ACCOUNT_Y_DOTS = 16
+        const val BARCODE_Y_DOTS = 34
+        const val BARCODE_HEIGHT_DOTS = 44
+        const val BARCODE_NARROW_DOTS = 2
+        const val BARCODE_WIDE_DOTS = 2
+        const val ORDER_Y_DOTS = 82
+        const val ORDER_SEPARATOR_Y_DOTS = 98
+        const val FULL_LINE_MAX_CHARS = CONTENT_WIDTH_DOTS / 8
+
+        const val METADATA_LEFT_DOTS = CONTENT_LEFT_DOTS
+        const val METADATA_COLUMN_WIDTH_DOTS = CONTENT_WIDTH_DOTS / 3
+        const val METADATA_MAX_CHARS = 17
+        const val METADATA_HEADER_Y_DOTS = 104
+        const val METADATA_VALUE_Y_DOTS = 118
+        const val METADATA_SEPARATOR_Y_DOTS = 136
+
+        const val PARTY_MAX_CHARS = 50
+        const val SENDER_MAX_LINES = 3
+        const val RECIPIENT_MAX_LINES = 2
+        const val SENDER_HEADER_Y_DOTS = 141
+        const val SENDER_VALUE_Y_DOTS = 155
+        const val SENDER_SEPARATOR_Y_DOTS = 193
+        const val RECIPIENT_HEADER_Y_DOTS = 198
+        const val RECIPIENT_VALUE_Y_DOTS = 212
+        const val RECIPIENT_PHONE_Y_DOTS = 244
+        const val PARTY_SEPARATOR_Y_DOTS = 258
+
+        const val ITEMS_HEADER_Y_DOTS = 263
+        const val ITEMS_VALUE_Y_DOTS = 277
+        const val ITEMS_MAX_CHARS = CONTENT_WIDTH_DOTS / 8
+        const val ITEMS_MAX_LINES = 3
+        const val ELLIPSIS = "..."
+        const val COST_COLUMN_INDEX = 2
+        const val COST_COLUMN_LEFT_SHIFT_DOTS = 24
+
+        const val TITLE = "МЕЖДУНАРОДНАЯ ТРАНСПОРТНАЯ НАКЛАДНАЯ"
+        val WINDOWS_1251: Charset = Charset.forName("windows-1251")
+        val RUSSIAN_LOCALE: Locale = Locale.forLanguageTag("ru-RU")
     }
 }
 

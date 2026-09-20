@@ -809,16 +809,10 @@ internal fun parcelStickerAction(
     parcel: ScanJobMonitorParcel
 ): ParcelStickerAction? = when (registerType) {
     RegisterTypes.WBR_N -> {
+        val stickerCode = parcel.stickerCode?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         val displayValue = firstNonBlank(parcel.sticker, parcel.stickerCode) ?: return null
         ParcelStickerAction(
-            sticker = ParcelSticker.WbrN(parcel.sticker, parcel.stickerCode),
-            displayValue = displayValue
-        )
-    }
-    RegisterTypes.OZON -> {
-        val displayValue = firstNonBlank(parcel.postingNumber, parcel.barcode, parcel.destinationCity) ?: return null
-        ParcelStickerAction(
-            sticker = ParcelSticker.Ozon(parcel.postingNumber, parcel.barcode, parcel.destinationCity),
+            sticker = ParcelSticker.WbrN(parcel.sticker, stickerCode),
             displayValue = displayValue
         )
     }

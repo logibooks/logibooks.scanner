@@ -71,7 +71,7 @@ class ScanJobMonitorUiTest {
     }
 
     @Test
-    fun parcelStickerActionSupportsWbrNOnlyAndKeepsPartialData() {
+    fun parcelStickerActionSupportsWbrNOnlyAndRequiresStickerCode() {
         val parcel = ScanJobMonitorParcel(sticker = "STICKER-1", stickerCode = "*CODE-1")
 
         val action = parcelStickerAction(RegisterTypes.WBR_N, parcel)
@@ -83,20 +83,18 @@ class ScanJobMonitorUiTest {
             ParcelSticker.WbrN(null, "*CODE-1"),
             parcelStickerAction(RegisterTypes.WBR_N, parcel.copy(sticker = null))?.sticker
         )
+        assertNull(parcelStickerAction(RegisterTypes.WBR_N, parcel.copy(stickerCode = null)))
     }
 
     @Test
-    fun parcelStickerActionMapsOzonDestinationCityAndRejectsEmptyData() {
+    fun parcelStickerActionRejectsOzon() {
         val parcel = ScanJobMonitorParcel(
             postingNumber = "POST-1",
             barcode = "BAR-1",
             destinationCity = "Tashkent"
         )
 
-        val action = parcelStickerAction(RegisterTypes.OZON, parcel)
-
-        assertEquals("POST-1", action?.displayValue)
-        assertEquals(ParcelSticker.Ozon("POST-1", "BAR-1", "Tashkent"), action?.sticker)
+        assertNull(parcelStickerAction(RegisterTypes.OZON, parcel))
         assertNull(parcelStickerAction(RegisterTypes.OZON, ScanJobMonitorParcel()))
     }
 

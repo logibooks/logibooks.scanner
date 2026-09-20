@@ -56,20 +56,39 @@ class KgtStickerPrintServiceTest {
     }
 
     @Test
-    fun printTajikistanExportStickerSendsBitmapAndBarcodePayload() = runTest {
+    fun printTajikistanExportStickerSendsVectorAndBarcodePayload() = runTest {
         val client = RecordingClient()
         val service = KgtStickerPrintService(TscStickerRenderer(), client)
 
         val result = service.printTajikistanExportSticker("AA:BB", printableSticker())
 
         assertEquals(KgtStickerPrintResult.Success, result)
-        assertTrue(client.prints.single().payload.contains("BITMAP 0,0,58,320,0,"))
+        assertTrue(!client.prints.single().payload.contains("BITMAP"))
+        assertTrue(client.prints.single().payload.contains("CODEPAGE 1251"))
+        assertTrue(client.prints.single().payload.contains("TEXT "))
         assertTrue(client.prints.single().payload.contains("BARCODE"))
         assertTrue(client.prints.single().payload.contains("\"40856360164\""))
     }
 
     @Test
-    fun printParcelStickerSendsMarketplacePayload() = runTest {
+    fun printParcelStickerSendsWbrNPayload() = runTest {
+        val client = RecordingClient()
+        val service = KgtStickerPrintService(TscStickerRenderer(), client)
+
+        val result = service.printParcelSticker(
+            "AA:BB",
+            ParcelSticker.WbrN("STICKER-1", "39639934424")
+        )
+
+        assertEquals(KgtStickerPrintResult.Success, result)
+        assertTrue(!client.prints.single().payload.contains("BITMAP"))
+        assertTrue(client.prints.single().payload.contains("CODEPAGE 1251"))
+        assertTrue(client.prints.single().payload.contains("QRCODE"))
+        assertTrue(client.prints.single().payload.contains("\"39639934424\""))
+    }
+
+    @Test
+    fun printParcelStickerRejectsOzonWithoutCallingPrinter() = runTest {
         val client = RecordingClient()
         val service = KgtStickerPrintService(TscStickerRenderer(), client)
 
@@ -78,10 +97,8 @@ class KgtStickerPrintServiceTest {
             ParcelSticker.Ozon("POST-1", "OZON-BARCODE", "Ташкент")
         )
 
-        assertEquals(KgtStickerPrintResult.Success, result)
-        assertTrue(client.prints.single().payload.contains("BITMAP 0,0,58,320,0,"))
-        assertTrue(client.prints.single().payload.contains("QRCODE"))
-        assertTrue(client.prints.single().payload.contains("\"OZON-BARCODE\""))
+        assertTrue(result is KgtStickerPrintResult.InvalidSticker)
+        assertTrue(client.prints.isEmpty())
     }
 
     @Test

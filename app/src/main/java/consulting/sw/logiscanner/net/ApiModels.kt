@@ -229,12 +229,11 @@ data class ScanResultItem(
 @JsonClass(generateAdapter = true)
 data class TajikistanExportStickerPayload(
     val orderNumber: String? = null,
-    val accountNumber: String? = null,
+    val dcBankID: String? = null,
     val placesCount: Int? = null,
     val dispatchDate: String? = null,
     val weightKg: Double? = null,
-    val declaredValue: Double? = null,
-    val currency: String? = null,
+    val costRub: Double? = null,
     val senderName: String? = null,
     val senderAddress: String? = null,
     val recipientName: String? = null,
@@ -245,7 +244,7 @@ data class TajikistanExportStickerPayload(
 
 @JsonClass(generateAdapter = true)
 data class TajikistanExportStickerItemPayload(
-    val description: String? = null,
+    val productName: String? = null,
     val quantity: Int? = null
 )
 

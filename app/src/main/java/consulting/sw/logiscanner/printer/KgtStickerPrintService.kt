@@ -52,6 +52,9 @@ class KgtStickerPrintService(
     }
 
     suspend fun printParcelSticker(address: String?, sticker: ParcelSticker): KgtStickerPrintResult {
+        if (sticker !is ParcelSticker.WbrN) {
+            return KgtStickerPrintResult.InvalidSticker("Parcel sticker printing is available for WbrN only")
+        }
         return printRendered(address) {
             parcelStickerRenderer.render(sticker)
         }
