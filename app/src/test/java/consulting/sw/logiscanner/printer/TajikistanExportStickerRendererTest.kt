@@ -60,16 +60,6 @@ class TajikistanExportStickerRendererTest {
     }
 
     @Test
-    fun renderPrintsIncompleteStickerAndOmitsUnavailableBarcode() {
-        val payload = renderer.render(null.toPrintableSticker()).toString(WINDOWS_1251)
-
-        assertFalse(payload.contains("BITMAP"))
-        assertFalse(payload.contains("BARCODE"))
-        assertTrue(payload.contains("TEXT "))
-        assertTrue(payload.endsWith("PRINT 1,1\r\n"))
-    }
-
-    @Test
     fun renderEmitsBarcodeForLongNumericOrderNumberThatFitsCode128C() {
         val orderNumber = "1234567890123456789012345678"
         val payload = renderer.render(printableSticker().copy(orderNumber = orderNumber))

@@ -26,25 +26,39 @@ data class TajikistanExportStickerItem(
     val quantity: Int?
 )
 
-fun TajikistanExportStickerPayload?.toPrintableSticker(): TajikistanExportSticker {
+fun TajikistanExportStickerPayload?.toPrintableSticker(): TajikistanExportSticker? {
+    val payload = this ?: return null
+    val orderNumber = payload.orderNumber.requiredText() ?: return null
+    val dcBankID = payload.dcBankID.requiredText() ?: return null
+    val placesCount = payload.placesCount?.takeIf { it > 0 } ?: return null
+    val dispatchDate = payload.dispatchDate.requiredText() ?: return null
+    val weightKg = payload.weightKg?.takeIf { it.isFinite() && it > 0.0 } ?: return null
+    val costRub = payload.costRub?.takeIf { it.isFinite() && it > 0.0 } ?: return null
+    val senderName = payload.senderName.requiredText() ?: return null
+    val senderAddress = payload.senderAddress.requiredText() ?: return null
+    val recipientName = payload.recipientName.requiredText() ?: return null
+    val recipientAddress = payload.recipientAddress.requiredText() ?: return null
+    val recipientPhone = payload.recipientPhone.requiredText() ?: return null
+    val items = payload.items.map { item ->
+        TajikistanExportStickerItem(
+            productName = item.productName.requiredText() ?: return null,
+            quantity = item.quantity?.takeIf { it > 0 } ?: return null
+        )
+    }.takeIf { it.isNotEmpty() } ?: return null
+
     return TajikistanExportSticker(
-        orderNumber = this?.orderNumber.cleanText(),
-        dcBankID = this?.dcBankID.cleanText(),
-        placesCount = this?.placesCount?.takeIf { it > 0 },
-        dispatchDate = this?.dispatchDate.cleanText(),
-        weightKg = this?.weightKg?.takeIf { it.isFinite() && it > 0.0 },
-        costRub = this?.costRub?.takeIf { it.isFinite() && it > 0.0 },
-        senderName = this?.senderName.cleanText(),
-        senderAddress = this?.senderAddress.cleanText(),
-        recipientName = this?.recipientName.cleanText(),
-        recipientAddress = this?.recipientAddress.cleanText(),
-        recipientPhone = this?.recipientPhone.cleanText(),
-        items = this?.items.orEmpty().map { item ->
-            TajikistanExportStickerItem(
-                productName = item.productName.cleanText(),
-                quantity = item.quantity?.takeIf { it > 0 }
-            )
-        }
+        orderNumber = orderNumber,
+        dcBankID = dcBankID,
+        placesCount = placesCount,
+        dispatchDate = dispatchDate,
+        weightKg = weightKg,
+        costRub = costRub,
+        senderName = senderName,
+        senderAddress = senderAddress,
+        recipientName = recipientName,
+        recipientAddress = recipientAddress,
+        recipientPhone = recipientPhone,
+        items = items
     )
 }
 
@@ -87,7 +101,7 @@ internal fun code128SymbolWidthDots(value: String): Int? {
     return symbolWidth.takeIf { requiredWidth <= CODE128_AVAILABLE_WIDTH_DOTS }
 }
 
-private fun String?.cleanText(): String = this?.trim().orEmpty()
+private fun String?.requiredText(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
 
 private const val CODE128_AVAILABLE_WIDTH_DOTS = 432
 private const val CODE128_NARROW_DOTS = 2

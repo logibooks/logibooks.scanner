@@ -832,8 +832,9 @@ private fun MonitorParcelAttributes(
     onPrintKgtSticker: (String) -> Unit,
     onPrintParcelSticker: (ParcelSticker) -> Unit
 ) {
+    val stickerAction = parcelStickerAction(registerType, parcel)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        parcelStickerAction(registerType, parcel)?.let { action ->
+        stickerAction?.let { action ->
             StickerPrintAttribute(
                 label = stringResource(R.string.sticker),
                 value = action.displayValue,
@@ -842,7 +843,12 @@ private fun MonitorParcelAttributes(
                 onPrint = { onPrintParcelSticker(action.sticker) }
             )
         }
-        monitorParcelAttributeSpecs(parcel, weightCorrection).forEach { attribute ->
+        monitorParcelAttributeSpecs(
+            parcel,
+            weightCorrection,
+            includeSticker = stickerAction?.displayValue != parcel.sticker?.trim(),
+            includeStickerCode = stickerAction?.displayValue != parcel.stickerCode?.trim()
+        ).forEach { attribute ->
             val value = attribute.value
             val correctedValue = attribute.correctedValue
             if (attribute.checkStatusProjection != null) {
