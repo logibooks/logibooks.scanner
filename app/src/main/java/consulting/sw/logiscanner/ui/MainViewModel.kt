@@ -1065,25 +1065,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 
-                val fullRelabelingVoiceDisabled = submode == RelabelingSubmode.FULL
-                    && relabelingMode != BulkyItemsModes.OFF
-                val extIdSpeechText = if (
-                    !fullRelabelingVoiceDisabled
-                    && relabelingModeNotifies(submode, relabelingMode, voiceEnabled)
-                    && !result.extId.isNullOrBlank()
-                ) {
+                val extIdSpeechText = if (!result.extId.isNullOrBlank()) {
                     getApplication<Application>().getString(R.string.bulky_items_number_speech, result.extId)
                 } else {
                     null
                 }
-                val speechText = if (fullRelabelingVoiceDisabled) {
-                    ""
-                } else {
-                    listOfNotNull(
-                        extIdSpeechText,
-                        result.extData?.takeIf { it.isNotBlank() }
-                    ).joinToString(". ")
-                }
+                val speechText = scanResultSpeechText(
+                    submode,
+                    relabelingMode,
+                    voiceEnabled,
+                    extIdSpeechText,
+                    result.extData
+                )
                 if (speechText.isNotEmpty() && ttsReady) {
                     tts?.speak(speechText, TextToSpeech.QUEUE_FLUSH, null, "scan_result_${System.currentTimeMillis()}")
                 }

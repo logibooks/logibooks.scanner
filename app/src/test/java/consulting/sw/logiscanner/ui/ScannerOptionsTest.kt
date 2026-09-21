@@ -273,7 +273,7 @@ class ScannerOptionsTest {
     }
 
     @Test
-    fun normalizeRelabelingModeRejectsUnavailableModesAndDisablesFullVoice() {
+    fun normalizeRelabelingModeRejectsUnavailableModesAndUsesSilentBackendModeForFull() {
         val wbrJob = scanJob(registerType = RegisterTypes.WBR)
         val otherJob = scanJob(registerType = 1)
         val tajikistanJob = scanJob(
@@ -329,6 +329,68 @@ class ScannerOptionsTest {
                 BulkyItemsModes.SILENT,
                 voiceEnabled = true,
                 printerSelected = false
+            )
+        )
+    }
+
+    @Test
+    fun scanResultSpeechTextKeepsExtendedDataInFullRelabelingMode() {
+        assertEquals(
+            "Посылка принята",
+            scanResultSpeechText(
+                submode = RelabelingSubmode.FULL,
+                relabelingMode = BulkyItemsModes.SILENT,
+                voiceEnabled = false,
+                extIdSpeechText = "Номер КГТ: 15",
+                extData = "Посылка принята"
+            )
+        )
+    }
+
+    @Test
+    fun scanResultSpeechTextAddsKgtNumberOnlyWhenKgtVoiceIsEnabled() {
+        assertEquals(
+            "Номер КГТ: 15. Посылка принята",
+            scanResultSpeechText(
+                submode = RelabelingSubmode.KGT,
+                relabelingMode = BulkyItemsModes.NOTIFY,
+                voiceEnabled = true,
+                extIdSpeechText = "Номер КГТ: 15",
+                extData = "Посылка принята"
+            )
+        )
+        assertEquals(
+            "Посылка принята",
+            scanResultSpeechText(
+                submode = RelabelingSubmode.KGT,
+                relabelingMode = BulkyItemsModes.SILENT,
+                voiceEnabled = false,
+                extIdSpeechText = "Номер КГТ: 15",
+                extData = "Посылка принята"
+            )
+        )
+        assertEquals(
+            "Посылка принята",
+            scanResultSpeechText(
+                submode = RelabelingSubmode.KGT,
+                relabelingMode = BulkyItemsModes.OFF,
+                voiceEnabled = true,
+                extIdSpeechText = "Номер КГТ: 15",
+                extData = "Посылка принята"
+            )
+        )
+    }
+
+    @Test
+    fun scanResultSpeechTextRejectsBlankSpeechParts() {
+        assertEquals(
+            "",
+            scanResultSpeechText(
+                submode = RelabelingSubmode.FULL,
+                relabelingMode = BulkyItemsModes.SILENT,
+                voiceEnabled = false,
+                extIdSpeechText = " ",
+                extData = null
             )
         )
     }
