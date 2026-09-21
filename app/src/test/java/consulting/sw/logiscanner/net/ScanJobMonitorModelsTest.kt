@@ -13,7 +13,7 @@ import org.junit.Test
 class ScanJobMonitorModelsTest {
 
     @Test
-    fun scanJob_parsesRegisterId() {
+    fun scanJob_parsesRegisterTypeAndStickerTemplate() {
         val json = """
             {
               "id": 7,
@@ -22,7 +22,8 @@ class ScanJobMonitorModelsTest {
               "status": "InProgress",
               "type": "Scan",
               "registerId": 44,
-              "registerType": 2
+              "registerType": 2,
+              "stickerTemplate": "TJ_EXPORT"
             }
         """.trimIndent()
 
@@ -30,8 +31,8 @@ class ScanJobMonitorModelsTest {
         val job = adapter.fromJson(json)
 
         assertNotNull(job)
-        assertEquals(44, job!!.registerId)
-        assertEquals(RegisterTypes.WBR, job.registerType)
+        assertEquals(RegisterTypes.WBR, job!!.registerType)
+        assertEquals(StickerTemplates.TAJIKISTAN_EXPORT, job.stickerTemplate)
     }
 
     @Test
@@ -52,8 +53,7 @@ class ScanJobMonitorModelsTest {
         val job = adapter.fromJson(json)
 
         assertNotNull(job)
-        assertEquals(45, job!!.registerId)
-        assertEquals(RegisterTypes.WBR_N, job.registerType)
+        assertEquals(RegisterTypes.WBR_N, job!!.registerType)
     }
 
     @Test

@@ -202,6 +202,7 @@ class MainActivity : ComponentActivity() {
                                     submode = state.relabelingSubmode,
                                     relabelingMode = state.bulkyItemsMode,
                                     printerSelected = printerSelected,
+                                    job = state.selectedScanJob,
                                     hasSticker = state.lastTajikistanExportSticker != null
                                 ),
                                 lastScanTime = state.lastScanTime,

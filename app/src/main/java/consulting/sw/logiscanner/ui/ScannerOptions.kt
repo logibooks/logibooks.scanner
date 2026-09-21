@@ -107,7 +107,8 @@ fun relabelingModeAvailable(
 ): Boolean {
     return when (submode) {
         RelabelingSubmode.KGT -> bulkyItemsModeEnabled(job)
-        RelabelingSubmode.FULL -> job != null && printerSelected
+        RelabelingSubmode.FULL -> printerSelected
+            && job?.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
     }
 }
 
@@ -214,33 +215,15 @@ fun shouldAutoPrintKgtSticker(
         && kgtStickerCode(result.extId) != null
 }
 
-fun shouldAutoPrintFullRelabelingSticker(
+fun shouldAutoPrintTajikistanExportSticker(
     submode: RelabelingSubmode,
     relabelingMode: Int,
     printerSelected: Boolean,
     job: ScanJob?,
     result: ScanResultItem
 ): Boolean {
-    return submode == RelabelingSubmode.FULL
-        && relabelingMode != BulkyItemsModes.OFF
-        && printerSelected
-        && job != null
-        && job.registerId > 0
-        && result.count == 1
-        && result.parcelCount == 1
-        && result.scanSource == ScannedItemSources.PARCEL_STICKER
-        && !result.hasIssues
-        && (result.followTarget.parcelId ?: 0) > 0
-        && result.stickerTemplate != StickerTemplates.TAJIKISTAN_EXPORT
-}
-
-fun shouldAutoPrintTajikistanExportSticker(
-    submode: RelabelingSubmode,
-    relabelingMode: Int,
-    printerSelected: Boolean,
-    result: ScanResultItem
-): Boolean {
-    return submode == RelabelingSubmode.FULL
+    return relabelingModeAvailable(job, submode, printerSelected)
+        && submode == RelabelingSubmode.FULL
         && relabelingMode != BulkyItemsModes.OFF
         && printerSelected
         && result.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
@@ -254,8 +237,10 @@ fun canRepeatTajikistanExportSticker(
     submode: RelabelingSubmode,
     relabelingMode: Int,
     printerSelected: Boolean,
+    job: ScanJob?,
     hasSticker: Boolean
-): Boolean = submode == RelabelingSubmode.FULL
+): Boolean = relabelingModeAvailable(job, submode, printerSelected)
+    && submode == RelabelingSubmode.FULL
     && relabelingMode != BulkyItemsModes.OFF
     && printerSelected
     && hasSticker

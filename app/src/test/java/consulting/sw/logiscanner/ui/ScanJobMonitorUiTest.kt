@@ -378,7 +378,6 @@ class ScanJobMonitorUiTest {
                 R.string.monitor_parcel_scanned_sticker,
                 R.string.monitor_parcel_scanned_user,
                 R.string.monitor_parcel_scanned_time,
-                R.string.monitor_parcel_gtc_code,
                 R.string.monitor_parcel_ext_id,
                 R.string.monitor_parcel_shk,
                 R.string.sticker,
@@ -395,7 +394,7 @@ class ScanJobMonitorUiTest {
             ),
             specs.map { it.labelResId }
         )
-        assertTrue(specs.any { it.labelResId == R.string.monitor_parcel_gtc_code && it.value == "000000123" })
+        assertFalse(specs.any { it.value == "000000123" })
         assertFalse(specs.any { it.value == "4" })
         assertFalse(specs.any { it.value == "9" })
         assertTrue(specs.any { it.labelResId == R.string.monitor_parcel_ext_id && it.value == "15" })

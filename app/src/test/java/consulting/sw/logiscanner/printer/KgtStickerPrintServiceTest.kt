@@ -43,19 +43,6 @@ class KgtStickerPrintServiceTest {
     }
 
     @Test
-    fun printFullRelabelingRendersPaddedParcelAndRegisterIds() = runTest {
-        val client = RecordingClient()
-        val service = KgtStickerPrintService(TscStickerRenderer(), client)
-
-        val result = service.printFullRelabeling("AA:BB", parcelId = 123, registerId = 45)
-
-        assertEquals(KgtStickerPrintResult.Success, result)
-        assertEquals("AA:BB", client.prints.single().address)
-        assertTrue(client.prints.single().payload.contains("\"000000123\""))
-        assertTrue(client.prints.single().payload.contains("\"000045\""))
-    }
-
-    @Test
     fun printTajikistanExportStickerSendsVectorAndBarcodePayload() = runTest {
         val client = RecordingClient()
         val service = KgtStickerPrintService(TscStickerRenderer(), client)
