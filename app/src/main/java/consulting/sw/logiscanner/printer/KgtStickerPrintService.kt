@@ -36,12 +36,6 @@ class KgtStickerPrintService(
         }
     }
 
-    suspend fun printFullRelabeling(address: String?, parcelId: Int, registerId: Int): KgtStickerPrintResult {
-        return printRendered(address) {
-            renderer.renderFullRelabeling(parcelId, registerId)
-        }
-    }
-
     suspend fun printTajikistanExportSticker(
         address: String?,
         sticker: TajikistanExportSticker

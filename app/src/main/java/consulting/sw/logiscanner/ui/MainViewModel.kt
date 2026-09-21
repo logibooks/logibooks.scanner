@@ -1057,16 +1057,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
-                if (shouldAutoPrintTajikistanExportSticker(submode, relabelingMode, printerSelected, result)) {
+                if (shouldAutoPrintTajikistanExportSticker(submode, relabelingMode, printerSelected, job, result)) {
                     tajikistanSticker?.let { sticker ->
                         viewModelScope.launch {
                             printTajikistanExportStickerInternal(sticker)
-                        }
-                    }
-                } else if (shouldAutoPrintFullRelabelingSticker(submode, relabelingMode, printerSelected, job, result)) {
-                    result.followTarget.parcelId?.let { parcelId ->
-                        viewModelScope.launch {
-                            printFullRelabelingStickerInternal(parcelId, job.registerId)
                         }
                     }
                 }
@@ -1205,30 +1199,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
         try {
             val result = stickerPrintService.print(state.value.printerBluetoothAddress, stickerCode)
-            applyPrinterResult(result)
-        } finally {
-            _state.update { it.copy(printerLoading = false) }
-        }
-    }
-
-    private suspend fun printFullRelabelingStickerInternal(parcelId: Int, registerId: Int) {
-        if (parcelId <= 0 || registerId <= 0) {
-            _state.update {
-                it.copy(
-                    printerError = getApplication<Application>().getString(R.string.printer_invalid_sticker),
-                    printerMessage = null
-                )
-            }
-            return
-        }
-
-        _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
-        try {
-            val result = stickerPrintService.printFullRelabeling(
-                state.value.printerBluetoothAddress,
-                parcelId,
-                registerId
-            )
             applyPrinterResult(result)
         } finally {
             _state.update { it.copy(printerLoading = false) }

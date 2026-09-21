@@ -60,7 +60,6 @@ class StickerResourcesTest {
             R.string.printer_repeat_sticker,
             R.string.printer_tj_sticker_missing_data,
             R.string.printer_tj_sticker_overflow,
-            R.string.monitor_parcel_gtc_code,
             R.string.monitor_parcel_scanned_sticker,
             R.string.monitor_parcel_wb_sticker,
             R.string.monitor_parcel_seller_sticker,

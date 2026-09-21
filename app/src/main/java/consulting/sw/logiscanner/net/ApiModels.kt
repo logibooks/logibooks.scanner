@@ -35,8 +35,8 @@ data class ScanJob(
     val description: String?,
     val status: String,
     val type: String,
-    val registerId: Int = 0,
-    val registerType: Int = 0
+    val registerType: Int = 0,
+    val stickerTemplate: String? = null
 )
 
 /** Register type ids used by scanner-only feature gates. */
