@@ -809,18 +809,14 @@ internal fun parcelStickerAction(
     parcel: ScanJobMonitorParcel
 ): ParcelStickerAction? = when (registerType) {
     RegisterTypes.WBR_N -> {
-        val stickerCode = parcel.stickerCode?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        val displayValue = firstNonBlank(parcel.sticker, parcel.stickerCode) ?: return null
+        val sticker = parcel.sticker?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         ParcelStickerAction(
-            sticker = ParcelSticker.WbrN(parcel.sticker, stickerCode),
-            displayValue = displayValue
+            sticker = ParcelSticker.WbrN(sticker),
+            displayValue = sticker
         )
     }
     else -> null
 }
-
-private fun firstNonBlank(vararg values: String?): String? =
-    values.firstNotNullOfOrNull { value -> value?.trim()?.takeIf { it.isNotEmpty() } }
 
 @Composable
 private fun MonitorParcelAttributes(

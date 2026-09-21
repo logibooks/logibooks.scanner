@@ -14,11 +14,10 @@ class ParcelStickerRendererTest {
     private val renderer = ParcelStickerRenderer()
 
     @Test
-    fun renderWbrNMatchesReferenceLayoutUsingStickerCode() {
+    fun renderWbrNMatchesReferenceLayoutUsingSticker() {
         val rendered = renderer.render(
             ParcelSticker.WbrN(
-                sticker = "54178953272",
-                stickerCode = "39639934424"
+                sticker = "39639934424"
             )
         )
         val commands = rendered.toString(WINDOWS_1251)
@@ -33,7 +32,6 @@ class ParcelStickerRendererTest {
         assertTrue(commands.contains("QRCODE 20,218,L,4,A,0,M2,S7,\"39639934424\""))
         assertTrue(commands.contains("QRCODE 365,218,L,4,A,0,M2,S7,\"39639934424\""))
         assertFalse(commands.contains("BARCODE"))
-        assertFalse(commands.contains("54178953272"))
         assertTrue(commands.contains("TEXT 378,160,\"2\",270,1,1,2,\"3963993\""))
         assertTrue(commands.contains("TEXT 417,160,\"4\",270,1,1,2,\"4424\""))
         assertTrue(commands.contains("TEXT 20,208,\"4\",270,2,2,\"WB\""))
@@ -41,8 +39,8 @@ class ParcelStickerRendererTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun renderWbrNRejectsMissingStickerCode() {
-        renderer.render(ParcelSticker.WbrN("54178953272", null))
+    fun renderWbrNRejectsMissingSticker() {
+        renderer.render(ParcelSticker.WbrN(null))
     }
 
     @Test
