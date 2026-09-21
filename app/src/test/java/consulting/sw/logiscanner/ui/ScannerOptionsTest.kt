@@ -623,6 +623,52 @@ class ScannerOptionsTest {
     }
 
     @Test
+    fun tajikistanAutoPrintActionReportsMissingPrintablePayload() {
+        val job = scanJob(
+            registerType = RegisterTypes.WBR_N,
+            stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT
+        )
+        val result = scanResultItem(
+            extId = null,
+            stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT
+        )
+
+        assertEquals(
+            TajikistanExportStickerAutoPrintAction.PRINT,
+            tajikistanExportStickerAutoPrintAction(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                job = job,
+                result = result,
+                hasPrintableSticker = true
+            )
+        )
+        assertEquals(
+            TajikistanExportStickerAutoPrintAction.MISSING_DATA,
+            tajikistanExportStickerAutoPrintAction(
+                RelabelingSubmode.FULL,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                job = job,
+                result = result,
+                hasPrintableSticker = false
+            )
+        )
+        assertEquals(
+            TajikistanExportStickerAutoPrintAction.NONE,
+            tajikistanExportStickerAutoPrintAction(
+                RelabelingSubmode.KGT,
+                BulkyItemsModes.SILENT,
+                printerSelected = true,
+                job = job,
+                result = result,
+                hasPrintableSticker = false
+            )
+        )
+    }
+
+    @Test
     fun repeatTajikistanStickerRequiresActiveFullModePrinterAndStoredSticker() {
         val job = scanJob(
             registerType = RegisterTypes.WBR_N,

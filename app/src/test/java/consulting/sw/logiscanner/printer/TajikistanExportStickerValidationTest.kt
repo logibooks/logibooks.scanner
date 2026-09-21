@@ -27,9 +27,14 @@ class TajikistanExportStickerValidationTest {
     @Test
     fun missingPayloadOrRequiredFieldIsRejected() {
         assertNull(null.toPrintableSticker())
-        assertNull(payload().copy(dcBankID = null).toPrintableSticker())
         assertNull(payload().copy(senderAddress = " ").toPrintableSticker())
         assertNull(payload().copy(items = emptyList()).toPrintableSticker())
+    }
+
+    @Test
+    fun missingOrBlankDcBankIdUsesDefaultValue() {
+        assertEquals(DEFAULT_DC_BANK_ID, payload().copy(dcBankID = null).toPrintableSticker()?.dcBankID)
+        assertEquals(DEFAULT_DC_BANK_ID, payload().copy(dcBankID = " ").toPrintableSticker()?.dcBankID)
     }
 
     @Test

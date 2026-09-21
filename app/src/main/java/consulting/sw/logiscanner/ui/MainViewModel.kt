@@ -1031,6 +1031,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     null
                 }
+                val tajikistanAutoPrintAction = tajikistanExportStickerAutoPrintAction(
+                    submode,
+                    relabelingMode,
+                    printerSelected,
+                    job,
+                    result,
+                    hasPrintableSticker = tajikistanSticker != null
+                )
+                val tajikistanMissingData =
+                    tajikistanAutoPrintAction == TajikistanExportStickerAutoPrintAction.MISSING_DATA
                 _state.update { 
                     it.copy(
                         lastCode = code, 
@@ -1040,10 +1050,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastItemNumbers = result.itemNumbers,
                         lastExtData = result.extData,
                         lastExtId = result.extId,
-                        lastTajikistanExportSticker = tajikistanSticker ?: it.lastTajikistanExportSticker,
+                        lastTajikistanExportSticker = if (tajikistanMissingData) {
+                            null
+                        } else {
+                            tajikistanSticker ?: it.lastTajikistanExportSticker
+                        },
                         lastScanTime = result.scanTime?.takeIf { scanTime -> scanTime.isNotBlank() }
                             ?: OffsetDateTime.now().toString(),
-                        scanResultColor = determineScanResultColor(result)
+                        scanResultColor = determineScanResultColor(result),
+                        printerError = if (tajikistanMissingData) {
+                            getApplication<Application>().getString(R.string.printer_tj_sticker_missing_data)
+                        } else {
+                            it.printerError
+                        },
+                        printerMessage = if (tajikistanMissingData) null else it.printerMessage
                     ) 
                 }
 
@@ -1057,8 +1077,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
-                if (shouldAutoPrintTajikistanExportSticker(submode, relabelingMode, printerSelected, job, result)) {
-                    tajikistanSticker?.let { sticker ->
+                if (tajikistanAutoPrintAction == TajikistanExportStickerAutoPrintAction.PRINT) {
+                    requireNotNull(tajikistanSticker).let { sticker ->
                         viewModelScope.launch {
                             printTajikistanExportStickerInternal(sticker)
                         }
