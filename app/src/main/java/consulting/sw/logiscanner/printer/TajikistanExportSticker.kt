@@ -29,7 +29,7 @@ data class TajikistanExportStickerItem(
 fun TajikistanExportStickerPayload?.toPrintableSticker(): TajikistanExportSticker? {
     val payload = this ?: return null
     val orderNumber = payload.orderNumber.requiredText() ?: return null
-    val dcBankID = payload.dcBankID.requiredText() ?: return null
+    val dcBankID = payload.dcBankID.requiredText() ?: DEFAULT_DC_BANK_ID
     val placesCount = payload.placesCount?.takeIf { it > 0 } ?: return null
     val dispatchDate = payload.dispatchDate.requiredText() ?: return null
     val weightKg = payload.weightKg?.takeIf { it.isFinite() && it > 0.0 } ?: return null
@@ -103,6 +103,7 @@ internal fun code128SymbolWidthDots(value: String): Int? {
 
 private fun String?.requiredText(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
 
+internal const val DEFAULT_DC_BANK_ID = "DCB_990000000000"
 private const val CODE128_AVAILABLE_WIDTH_DOTS = 432
 private const val CODE128_NARROW_DOTS = 2
 private const val CODE128_FIXED_MODULES = 35

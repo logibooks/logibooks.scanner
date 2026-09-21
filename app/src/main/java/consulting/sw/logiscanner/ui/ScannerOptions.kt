@@ -249,6 +249,37 @@ fun shouldAutoPrintTajikistanExportSticker(
         && !result.hasIssues
 }
 
+enum class TajikistanExportStickerAutoPrintAction {
+    NONE,
+    PRINT,
+    MISSING_DATA
+}
+
+fun tajikistanExportStickerAutoPrintAction(
+    submode: RelabelingSubmode,
+    relabelingMode: Int,
+    printerSelected: Boolean,
+    job: ScanJob?,
+    result: ScanResultItem,
+    hasPrintableSticker: Boolean
+): TajikistanExportStickerAutoPrintAction {
+    if (!shouldAutoPrintTajikistanExportSticker(
+            submode,
+            relabelingMode,
+            printerSelected,
+            job,
+            result
+        )
+    ) {
+        return TajikistanExportStickerAutoPrintAction.NONE
+    }
+    return if (hasPrintableSticker) {
+        TajikistanExportStickerAutoPrintAction.PRINT
+    } else {
+        TajikistanExportStickerAutoPrintAction.MISSING_DATA
+    }
+}
+
 fun canRepeatTajikistanExportSticker(
     submode: RelabelingSubmode,
     relabelingMode: Int,
