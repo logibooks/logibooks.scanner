@@ -15,8 +15,8 @@ class ParcelStickerRenderer {
     }
 
     private fun renderWbrN(sticker: ParcelSticker.WbrN): ByteArray {
-        val stickerCode = normalizeQr(sticker.stickerCode)
-        require(stickerCode != null) { "WbrN sticker has no printable sticker code" }
+        val stickerValue = normalizeQr(sticker.sticker)
+        require(stickerValue != null) { "WbrN sticker has no printable sticker" }
 
         val commands = mutableListOf(
             verticalTextCommand(
@@ -29,18 +29,18 @@ class ParcelStickerRenderer {
                 yMultiplier = 2
             )
         )
-        val (first, second) = splitWbrStickerNumber(stickerCode)
+        val (first, second) = splitWbrStickerNumber(stickerValue)
         commands += centeredVerticalTextCommand(first, 378, 160, FONT_2)
         if (second.isNotEmpty()) {
             commands += centeredVerticalTextCommand(second, 417, 160, FONT_4)
         }
 
         commands += listOf(
-            qrCommand(CENTRAL_QR_X_DOTS, CENTRAL_QR_Y_DOTS, CENTRAL_QR_CELL_DOTS, stickerCode),
-            qrCommand(20, 18, CORNER_QR_CELL_DOTS, stickerCode),
-            qrCommand(365, 18, CORNER_QR_CELL_DOTS, stickerCode),
-            qrCommand(20, 218, CORNER_QR_CELL_DOTS, stickerCode),
-            qrCommand(365, 218, CORNER_QR_CELL_DOTS, stickerCode)
+            qrCommand(CENTRAL_QR_X_DOTS, CENTRAL_QR_Y_DOTS, CENTRAL_QR_CELL_DOTS, stickerValue),
+            qrCommand(20, 18, CORNER_QR_CELL_DOTS, stickerValue),
+            qrCommand(365, 18, CORNER_QR_CELL_DOTS, stickerValue),
+            qrCommand(20, 218, CORNER_QR_CELL_DOTS, stickerValue),
+            qrCommand(365, 218, CORNER_QR_CELL_DOTS, stickerValue)
         )
         return buildPayload(commands)
     }

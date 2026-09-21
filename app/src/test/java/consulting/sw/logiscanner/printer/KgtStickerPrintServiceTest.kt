@@ -64,7 +64,7 @@ class KgtStickerPrintServiceTest {
 
         val result = service.printParcelSticker(
             "AA:BB",
-            ParcelSticker.WbrN("STICKER-1", "39639934424")
+            ParcelSticker.WbrN("39639934424")
         )
 
         assertEquals(KgtStickerPrintResult.Success, result)

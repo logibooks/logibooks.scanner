@@ -71,19 +71,19 @@ class ScanJobMonitorUiTest {
     }
 
     @Test
-    fun parcelStickerActionSupportsWbrNOnlyAndRequiresStickerCode() {
+    fun parcelStickerActionSupportsWbrNOnlyAndRequiresSticker() {
         val parcel = ScanJobMonitorParcel(sticker = "STICKER-1", stickerCode = "*CODE-1")
 
         val action = parcelStickerAction(RegisterTypes.WBR_N, parcel)
 
         assertEquals("STICKER-1", action?.displayValue)
-        assertEquals(ParcelSticker.WbrN("STICKER-1", "*CODE-1"), action?.sticker)
+        assertEquals(ParcelSticker.WbrN("STICKER-1"), action?.sticker)
         assertNull(parcelStickerAction(RegisterTypes.WBR, parcel))
+        assertNull(parcelStickerAction(RegisterTypes.WBR_N, parcel.copy(sticker = null)))
         assertEquals(
-            ParcelSticker.WbrN(null, "*CODE-1"),
-            parcelStickerAction(RegisterTypes.WBR_N, parcel.copy(sticker = null))?.sticker
+            ParcelSticker.WbrN("STICKER-1"),
+            parcelStickerAction(RegisterTypes.WBR_N, parcel.copy(stickerCode = null))?.sticker
         )
-        assertNull(parcelStickerAction(RegisterTypes.WBR_N, parcel.copy(stickerCode = null)))
     }
 
     @Test
