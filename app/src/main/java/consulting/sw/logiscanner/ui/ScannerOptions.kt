@@ -120,6 +120,22 @@ fun relabelingModeNotifies(
     return submode == RelabelingSubmode.KGT && bulkyItemsModeNotifies(mode, voiceEnabled)
 }
 
+fun scanResultSpeechText(
+    submode: RelabelingSubmode,
+    relabelingMode: Int,
+    voiceEnabled: Boolean,
+    extIdSpeechText: String?,
+    extData: String?
+): String {
+    val kgtSpeechText = extIdSpeechText
+        ?.takeIf { it.isNotBlank() }
+        ?.takeIf { relabelingModeNotifies(submode, relabelingMode, voiceEnabled) }
+    return listOfNotNull(
+        kgtSpeechText,
+        extData?.takeIf { it.isNotBlank() }
+    ).joinToString(". ")
+}
+
 fun applyRelabelingVoiceSetting(
     submode: RelabelingSubmode,
     mode: Int,
