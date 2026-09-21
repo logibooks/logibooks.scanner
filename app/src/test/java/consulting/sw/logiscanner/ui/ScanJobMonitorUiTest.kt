@@ -449,4 +449,27 @@ class ScanJobMonitorUiTest {
         assertFalse(specs.any { it.labelResId == R.string.monitor_parcel_barcode && it.value == "BAR-1" })
     }
 
+    @Test
+    fun monitorParcelAttributeSpecs_canExcludeStickerRepresentedByPrintableAction() {
+        val parcel = ScanJobMonitorParcel(sticker = "STICKER-1", stickerCode = "CODE-1")
+
+        val specs = monitorParcelAttributeSpecs(parcel, includeSticker = false)
+
+        assertFalse(specs.any { it.labelResId == R.string.sticker })
+        assertTrue(
+            specs.any {
+                it.labelResId == R.string.monitor_parcel_sticker_code && it.value == "CODE-1"
+            }
+        )
+    }
+
+    @Test
+    fun monitorParcelAttributeSpecs_canExcludeStickerCodeUsedAsPrintableFallback() {
+        val parcel = ScanJobMonitorParcel(stickerCode = "CODE-1")
+
+        val specs = monitorParcelAttributeSpecs(parcel, includeStickerCode = false)
+
+        assertFalse(specs.any { it.labelResId == R.string.monitor_parcel_sticker_code })
+    }
+
 }

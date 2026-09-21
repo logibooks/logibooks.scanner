@@ -220,7 +220,9 @@ fun localScanResultDisplay(
 
 fun monitorParcelAttributeSpecs(
     parcel: ScanJobMonitorParcel,
-    weightCorrection: MonitorWeightCorrection? = null
+    weightCorrection: MonitorWeightCorrection? = null,
+    includeSticker: Boolean = true,
+    includeStickerCode: Boolean = true
 ): List<MonitorParcelAttributeSpec> {
     val specs = mutableListOf<MonitorParcelAttributeSpec>()
     parcel.scannedSticker?.takeIf { it.isNotBlank() }?.let {
@@ -238,8 +240,10 @@ fun monitorParcelAttributeSpecs(
     parcel.shk?.takeIf { it.isNotBlank() }?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_shk, it)
     }
-    parcel.sticker?.takeIf { it.isNotBlank() }?.let {
-        specs += MonitorParcelAttributeSpec(R.string.sticker, it)
+    if (includeSticker) {
+        parcel.sticker?.takeIf { it.isNotBlank() }?.let {
+            specs += MonitorParcelAttributeSpec(R.string.sticker, it)
+        }
     }
     parcel.wbSticker?.takeIf { it.isNotBlank() }?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_wb_sticker, it)
@@ -247,8 +251,10 @@ fun monitorParcelAttributeSpecs(
     parcel.sellerSticker?.takeIf { it.isNotBlank() }?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_seller_sticker, it)
     }
-    parcel.stickerCode?.takeIf { it.isNotBlank() }?.let {
-        specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_sticker_code, it)
+    if (includeStickerCode) {
+        parcel.stickerCode?.takeIf { it.isNotBlank() }?.let {
+            specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_sticker_code, it)
+        }
     }
     parcel.postingNumber?.takeIf { it.isNotBlank() }?.let {
         specs += MonitorParcelAttributeSpec(R.string.monitor_parcel_posting_number, it)

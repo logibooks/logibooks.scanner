@@ -8,6 +8,8 @@ import consulting.sw.logiscanner.net.TajikistanExportStickerItemPayload
 import consulting.sw.logiscanner.net.TajikistanExportStickerPayload
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -17,44 +19,43 @@ class TajikistanExportStickerValidationTest {
     fun validPayloadBuildsPrintableStickerAndTrimsText() {
         val sticker = payload().copy(orderNumber = " 40856360164 ").toPrintableSticker()
 
-        assertEquals("40856360164", sticker.orderNumber)
-        assertEquals(2, sticker.items.single().quantity)
+        assertNotNull(sticker)
+        assertEquals("40856360164", sticker?.orderNumber)
+        assertEquals(2, sticker?.items?.single()?.quantity)
     }
 
     @Test
-    fun missingPayloadOrRequiredFieldBuildsIncompletePrintableSticker() {
-        val empty = null.toPrintableSticker()
-        val partial = payload().copy(dcBankID = null, items = emptyList()).toPrintableSticker()
-
-        assertEquals("", empty.orderNumber)
-        assertEquals("", empty.dcBankID)
-        assertEquals(null, empty.weightKg)
-        assertEquals("", partial.dcBankID)
-        assertEquals(emptyList<TajikistanExportStickerItem>(), partial.items)
+    fun missingPayloadOrRequiredFieldIsRejected() {
+        assertNull(null.toPrintableSticker())
+        assertNull(payload().copy(dcBankID = null).toPrintableSticker())
+        assertNull(payload().copy(senderAddress = " ").toPrintableSticker())
+        assertNull(payload().copy(items = emptyList()).toPrintableSticker())
     }
 
     @Test
-    fun invalidNumericValuesBecomeBlankWithoutBlockingPrint() {
-        val sticker = payload().copy(
-            placesCount = 0,
-            weightKg = Double.NaN,
-            costRub = 0.0,
-            items = listOf(TajikistanExportStickerItemPayload(null, 0))
-        ).toPrintableSticker()
-
-        assertEquals(null, sticker.placesCount)
-        assertEquals(null, sticker.weightKg)
-        assertEquals(null, sticker.costRub)
-        assertEquals("", sticker.items.single().productName)
-        assertEquals(null, sticker.items.single().quantity)
+    fun invalidNumericOrItemValuesAreRejected() {
+        assertNull(payload().copy(placesCount = 0).toPrintableSticker())
+        assertNull(payload().copy(weightKg = Double.NaN).toPrintableSticker())
+        assertNull(payload().copy(costRub = 0.0).toPrintableSticker())
+        assertNull(
+            payload().copy(
+                items = listOf(TajikistanExportStickerItemPayload(null, 1))
+            ).toPrintableSticker()
+        )
+        assertNull(
+            payload().copy(
+                items = listOf(TajikistanExportStickerItemPayload("Книги", 0))
+            ).toPrintableSticker()
+        )
     }
 
     @Test
     fun unsupportedCode128OrderNumberIsKeptForNativeTextButNotBarcode() {
         listOf("Заказ", "bad\"value", "ABCDEFGHIJKLMNOP").forEach { orderNumber ->
             val sticker = payload().copy(orderNumber = orderNumber).toPrintableSticker()
-            assertEquals(orderNumber, sticker.orderNumber)
-            assertFalse(isSupportedCode128Value(sticker.orderNumber))
+            assertNotNull(sticker)
+            assertEquals(orderNumber, sticker?.orderNumber)
+            assertFalse(isSupportedCode128Value(sticker?.orderNumber.orEmpty()))
         }
     }
 
@@ -81,4 +82,4 @@ internal fun payload() = TajikistanExportStickerPayload(
 )
 
 internal fun printableSticker(): TajikistanExportSticker =
-    payload().toPrintableSticker()
+    requireNotNull(payload().toPrintableSticker())
