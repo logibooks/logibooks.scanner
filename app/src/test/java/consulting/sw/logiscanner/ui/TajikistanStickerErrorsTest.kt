@@ -69,9 +69,35 @@ class TajikistanStickerErrorsTest {
         val issues = payload().copy(dispatchDate = null, weightKg = 0.0, costRub = -1.0).validateForPrinting().issues
         assertEquals(
             "Не удалось напечатать стикер. Не указаны данные: дата общей накладной. " +
-                "Некорректные значения: вес груза, стоимость товаров. Укажите числа больше нуля.",
+                "Некорректные значения: вес груза, сумма в рублях. Укажите числа больше нуля.",
             tajikistanStickerDataError(context("ru"), issues)
         )
+    }
+
+    @Test
+    fun missingAndNonPositiveRubleTotalsBlockPrintingWithSpecificCurrencyMessage() {
+        val missing = payload().copy(costRub = null).validateForPrinting()
+        assertNull(missing.sticker)
+        assertEquals(
+            "Не удалось напечатать стикер. Не указаны данные: сумма в рублях.",
+            tajikistanStickerDataError(context("ru"), missing.issues)
+        )
+        assertEquals(
+            "Unable to print sticker. Missing data: amount in rubles.",
+            tajikistanStickerDataError(context("en"), missing.issues)
+        )
+        listOf(0.0, -1.0).forEach { amount ->
+            val invalid = payload().copy(costRub = amount).validateForPrinting()
+            assertNull(invalid.sticker)
+            assertEquals(
+                "Не удалось напечатать стикер. Некорректные значения: сумма в рублях. Укажите числа больше нуля.",
+                tajikistanStickerDataError(context("ru"), invalid.issues)
+            )
+            assertEquals(
+                "Unable to print sticker. Invalid values: amount in rubles. Enter numbers greater than zero.",
+                tajikistanStickerDataError(context("en"), invalid.issues)
+            )
+        }
     }
 
     @Test

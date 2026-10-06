@@ -13,6 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TajikistanExportStickerModelsTest {
@@ -71,6 +72,21 @@ class TajikistanExportStickerModelsTest {
         val tspl = TajikistanExportStickerRenderer().render(requireNotNull(older.sticker))
             .toString(Charset.forName("windows-1251"))
         assertFalse(tspl.contains("Иванов"))
+        assertFalse(tspl.contains("TEXT 16,212,"))
+    }
+
+    @Test
+    fun parsesAndPrintsRubleParcelTotalWithoutMultiplyingByQuantity() {
+        val stickerAdapter = Moshi.Builder().build().adapter(TajikistanExportStickerPayload::class.java)
+        val json = stickerAdapter.toJson(payload().copy(costRub = 1234.50))
+        val validation = stickerAdapter.fromJson(json).validateForPrinting()
+        val sticker = requireNotNull(validation.sticker)
+        val tspl = TajikistanExportStickerRenderer().render(sticker).toString(Charset.forName("windows-1251"))
+
+        assertEquals(2, sticker.items.single().quantity)
+        assertEquals(1234.50, sticker.costRub)
+        assertTrue(tspl.contains("TEXT 280,118,\"1\",0,1,1,\"1234,50 руб.\""))
+        assertFalse(tspl.contains("2469,00 руб."))
         assertFalse(tspl.contains("TEXT 16,212,"))
     }
 

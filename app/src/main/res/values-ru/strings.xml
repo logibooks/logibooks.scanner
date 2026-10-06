@@ -83,7 +83,7 @@ This file is a part of LogiScanner application
     <string name="printer_tj_sticker_field_places_count">количество мест</string>
     <string name="printer_tj_sticker_field_dispatch_date">дата общей накладной</string>
     <string name="printer_tj_sticker_field_weight">вес груза</string>
-    <string name="printer_tj_sticker_field_cost">стоимость товаров</string>
+    <string name="printer_tj_sticker_field_cost">сумма в рублях</string>
     <string name="printer_tj_sticker_field_sender_name">грузоотправитель</string>
     <string name="printer_tj_sticker_field_sender_address">адрес грузоотправителя</string>
     <string name="printer_tj_sticker_field_recipient_address">адрес грузополучателя</string>

@@ -83,7 +83,7 @@ This file is a part of LogiScanner application
     <string name="printer_tj_sticker_field_places_count">number of places</string>
     <string name="printer_tj_sticker_field_dispatch_date">consolidated invoice date</string>
     <string name="printer_tj_sticker_field_weight">cargo weight</string>
-    <string name="printer_tj_sticker_field_cost">value of goods</string>
+    <string name="printer_tj_sticker_field_cost">amount in rubles</string>
     <string name="printer_tj_sticker_field_sender_name">sender</string>
     <string name="printer_tj_sticker_field_sender_address">sender address</string>
     <string name="printer_tj_sticker_field_recipient_address">recipient address</string>
