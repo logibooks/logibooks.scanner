@@ -26,40 +26,104 @@ data class TajikistanExportStickerItem(
     val quantity: Int?
 )
 
-fun TajikistanExportStickerPayload?.toPrintableSticker(): TajikistanExportSticker? {
-    val payload = this ?: return null
-    val orderNumber = payload.orderNumber.requiredText() ?: return null
-    val dcBankID = payload.dcBankID.requiredText() ?: DEFAULT_DC_BANK_ID
-    val placesCount = payload.placesCount?.takeIf { it > 0 } ?: return null
-    val dispatchDate = payload.dispatchDate.requiredText() ?: return null
-    val weightKg = payload.weightKg?.takeIf { it.isFinite() && it > 0.0 } ?: return null
-    val costRub = payload.costRub?.takeIf { it.isFinite() && it > 0.0 } ?: return null
-    val senderName = payload.senderName.requiredText() ?: return null
-    val senderAddress = payload.senderAddress.requiredText() ?: return null
-    val recipientName = payload.recipientName.requiredText() ?: return null
-    val recipientAddress = payload.recipientAddress.requiredText() ?: return null
-    val recipientPhone = payload.recipientPhone.requiredText() ?: return null
-    val items = payload.items.map { item ->
-        TajikistanExportStickerItem(
-            productName = item.productName.requiredText() ?: return null,
-            quantity = item.quantity?.takeIf { it > 0 } ?: return null
-        )
-    }.takeIf { it.isNotEmpty() } ?: return null
+enum class TajikistanStickerField {
+    PAYLOAD,
+    ORDER_NUMBER,
+    PLACES_COUNT,
+    DISPATCH_DATE,
+    WEIGHT,
+    COST,
+    SENDER_NAME,
+    SENDER_ADDRESS,
+    RECIPIENT_NAME,
+    RECIPIENT_ADDRESS,
+    RECIPIENT_PHONE,
+    ITEMS,
+    PRODUCT_NAME,
+    QUANTITY
+}
 
-    return TajikistanExportSticker(
-        orderNumber = orderNumber,
+enum class TajikistanStickerIssueReason { MISSING, INVALID }
+
+data class TajikistanStickerDataIssue(
+    val field: TajikistanStickerField,
+    val reason: TajikistanStickerIssueReason,
+    val itemNumber: Int? = null
+)
+
+data class TajikistanStickerValidationResult(
+    val sticker: TajikistanExportSticker?,
+    val issues: List<TajikistanStickerDataIssue>
+)
+
+fun TajikistanExportStickerPayload?.toPrintableSticker(): TajikistanExportSticker? =
+    validateForPrinting().sticker
+
+fun TajikistanExportStickerPayload?.validateForPrinting(): TajikistanStickerValidationResult {
+    val payload = this ?: return TajikistanStickerValidationResult(
+        sticker = null,
+        issues = listOf(
+            TajikistanStickerDataIssue(TajikistanStickerField.PAYLOAD, TajikistanStickerIssueReason.MISSING)
+        )
+    )
+    val issues = mutableListOf<TajikistanStickerDataIssue>()
+
+    fun requiredText(value: String?, field: TajikistanStickerField, itemNumber: Int? = null): String? {
+        return value.requiredText().also { text ->
+            if (text == null) {
+                issues += TajikistanStickerDataIssue(field, TajikistanStickerIssueReason.MISSING, itemNumber)
+            }
+        }
+    }
+
+    fun positiveNumber(value: Number?, field: TajikistanStickerField, itemNumber: Int? = null) {
+        val reason = when {
+            value == null -> TajikistanStickerIssueReason.MISSING
+            !value.toDouble().isFinite() || value.toDouble() <= 0.0 -> TajikistanStickerIssueReason.INVALID
+            else -> return
+        }
+        issues += TajikistanStickerDataIssue(field, reason, itemNumber)
+    }
+
+    val orderNumber = requiredText(payload.orderNumber, TajikistanStickerField.ORDER_NUMBER)
+    val dcBankID = payload.dcBankID.requiredText() ?: DEFAULT_DC_BANK_ID
+    positiveNumber(payload.placesCount, TajikistanStickerField.PLACES_COUNT)
+    val dispatchDate = requiredText(payload.dispatchDate, TajikistanStickerField.DISPATCH_DATE)
+    positiveNumber(payload.weightKg, TajikistanStickerField.WEIGHT)
+    positiveNumber(payload.costRub, TajikistanStickerField.COST)
+    val senderName = requiredText(payload.senderName, TajikistanStickerField.SENDER_NAME)
+    val senderAddress = requiredText(payload.senderAddress, TajikistanStickerField.SENDER_ADDRESS)
+    val recipientName = requiredText(payload.recipientName, TajikistanStickerField.RECIPIENT_NAME)
+    val recipientAddress = requiredText(payload.recipientAddress, TajikistanStickerField.RECIPIENT_ADDRESS)
+    val recipientPhone = requiredText(payload.recipientPhone, TajikistanStickerField.RECIPIENT_PHONE)
+    if (payload.items.isEmpty()) {
+        issues += TajikistanStickerDataIssue(TajikistanStickerField.ITEMS, TajikistanStickerIssueReason.MISSING)
+    }
+    val items = payload.items.mapIndexedNotNull { index, item ->
+        val itemNumber = (index + 1).takeIf { payload.items.size > 1 }
+        val productName = requiredText(item.productName, TajikistanStickerField.PRODUCT_NAME, itemNumber)
+        positiveNumber(item.quantity, TajikistanStickerField.QUANTITY, itemNumber)
+        productName?.let { TajikistanExportStickerItem(it, item.quantity) }
+    }
+    if (issues.isNotEmpty()) {
+        return TajikistanStickerValidationResult(sticker = null, issues = issues)
+    }
+
+    val sticker = TajikistanExportSticker(
+        orderNumber = requireNotNull(orderNumber),
         dcBankID = dcBankID,
-        placesCount = placesCount,
-        dispatchDate = dispatchDate,
-        weightKg = weightKg,
-        costRub = costRub,
-        senderName = senderName,
-        senderAddress = senderAddress,
-        recipientName = recipientName,
-        recipientAddress = recipientAddress,
-        recipientPhone = recipientPhone,
+        placesCount = payload.placesCount,
+        dispatchDate = requireNotNull(dispatchDate),
+        weightKg = payload.weightKg,
+        costRub = payload.costRub,
+        senderName = requireNotNull(senderName),
+        senderAddress = requireNotNull(senderAddress),
+        recipientName = requireNotNull(recipientName),
+        recipientAddress = requireNotNull(recipientAddress),
+        recipientPhone = requireNotNull(recipientPhone),
         items = items
     )
+    return TajikistanStickerValidationResult(sticker = sticker, issues = emptyList())
 }
 
 internal fun isSupportedCode128Value(value: String): Boolean {

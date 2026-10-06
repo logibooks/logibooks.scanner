@@ -28,7 +28,7 @@ import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.PrinterPermissionMissingException
 import consulting.sw.logiscanner.printer.TscStickerRenderer
 import consulting.sw.logiscanner.printer.TajikistanExportSticker
-import consulting.sw.logiscanner.printer.toPrintableSticker
+import consulting.sw.logiscanner.printer.validateForPrinting
 import consulting.sw.logiscanner.repo.LoginRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorRepository
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
@@ -411,7 +411,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (sticker == null) {
             _state.update {
                 it.copy(
-                    printerError = getApplication<Application>().getString(R.string.printer_tj_sticker_missing_data),
+                    printerError = getApplication<Application>().getString(R.string.printer_tj_sticker_no_last),
                     printerMessage = null
                 )
             }
@@ -1024,13 +1024,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val bulkyItemsMode = backendBulkyItemsMode(job, submode, relabelingMode, voiceEnabled)
                 val result = scanRepo.scan(job.id, code, bulkyItemsMode)
                 val autoPrintEnabled = state.value.printerAutoPrintEnabled
-                val tajikistanSticker = if (
+                val tajikistanValidation = if (
                     result.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
                 ) {
-                    result.exportSticker.toPrintableSticker()
+                    result.exportSticker.validateForPrinting()
                 } else {
                     null
                 }
+                val tajikistanSticker = tajikistanValidation?.sticker
                 val tajikistanAutoPrintAction = tajikistanExportStickerAutoPrintAction(
                     submode,
                     relabelingMode,
@@ -1059,7 +1060,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             ?: OffsetDateTime.now().toString(),
                         scanResultColor = determineScanResultColor(result),
                         printerError = if (tajikistanMissingData) {
-                            getApplication<Application>().getString(R.string.printer_tj_sticker_missing_data)
+                            tajikistanStickerDataError(
+                                getApplication<Application>(),
+                                requireNotNull(tajikistanValidation).issues
+                            )
                         } else {
                             it.printerError
                         },
