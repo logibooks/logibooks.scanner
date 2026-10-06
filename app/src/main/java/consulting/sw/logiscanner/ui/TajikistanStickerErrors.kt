@@ -37,7 +37,6 @@ private fun List<TajikistanStickerDataIssue>.fieldNames(context: Context): Strin
                 TajikistanStickerField.COST -> R.string.printer_tj_sticker_field_cost
                 TajikistanStickerField.SENDER_NAME -> R.string.printer_tj_sticker_field_sender_name
                 TajikistanStickerField.SENDER_ADDRESS -> R.string.printer_tj_sticker_field_sender_address
-                TajikistanStickerField.RECIPIENT_NAME -> R.string.printer_tj_sticker_field_recipient_name
                 TajikistanStickerField.RECIPIENT_ADDRESS -> R.string.printer_tj_sticker_field_recipient_address
                 TajikistanStickerField.RECIPIENT_PHONE -> R.string.printer_tj_sticker_field_recipient_phone
                 TajikistanStickerField.ITEMS -> R.string.printer_tj_sticker_field_items

@@ -236,7 +236,6 @@ data class TajikistanExportStickerPayload(
     val costRub: Double? = null,
     val senderName: String? = null,
     val senderAddress: String? = null,
-    val recipientName: String? = null,
     val recipientAddress: String? = null,
     val recipientPhone: String? = null,
     val items: List<TajikistanExportStickerItemPayload> = emptyList()

@@ -57,9 +57,9 @@ class TajikistanStickerErrorsTest {
 
     @Test
     fun missingFieldsUseApprovedShipmentAndPartyNames() {
-        val issues = payload().copy(orderNumber = " ", senderName = null, recipientName = "").validateForPrinting().issues
+        val issues = payload().copy(orderNumber = " ", senderName = null).validateForPrinting().issues
         assertEquals(
-            "Не удалось напечатать стикер. Не указаны данные: номер отправления, грузоотправитель, грузополучатель.",
+            "Не удалось напечатать стикер. Не указаны данные: номер отправления, грузоотправитель.",
             tajikistanStickerDataError(context("ru"), issues)
         )
     }
