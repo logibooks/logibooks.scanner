@@ -48,22 +48,16 @@ class TajikistanExportStickerRenderer {
         commands += horizontalLine(METADATA_SEPARATOR_Y_DOTS)
 
         commands += text(CONTENT_LEFT_DOTS, SENDER_HEADER_Y_DOTS, "Грузоотправитель")
-        commands += wrappedText(
-            value = listOf(sticker.senderName, sticker.senderAddress).joinToString("\n"),
-            x = CONTENT_LEFT_DOTS,
-            firstY = SENDER_VALUE_Y_DOTS,
-            maxChars = PARTY_MAX_CHARS,
-            maxLines = SENDER_MAX_LINES
-        )
+        commands += senderText(sticker)
         commands += horizontalLine(SENDER_SEPARATOR_Y_DOTS)
 
         commands += text(CONTENT_LEFT_DOTS, RECIPIENT_HEADER_Y_DOTS, "Грузополучатель")
         commands += wrappedText(
-            value = listOf(sticker.recipientName, sticker.recipientAddress).joinToString("\n"),
+            value = sticker.recipientAddress,
             x = CONTENT_LEFT_DOTS,
-            firstY = RECIPIENT_VALUE_Y_DOTS,
-            maxChars = PARTY_MAX_CHARS,
-            maxLines = RECIPIENT_MAX_LINES
+            firstY = RECIPIENT_ADDRESS_Y_DOTS,
+            maxChars = TJ_STICKER_TEXT_LINE_MAX_CHARS,
+            maxLines = 1
         )
         if (sticker.recipientPhone.isNotBlank()) {
             commands += text(
@@ -94,6 +88,20 @@ class TajikistanExportStickerRenderer {
 
     private fun text(x: Int, y: Int, value: String): String =
         "TEXT $x,$y,\"1\",0,1,1,\"${escape(value)}\""
+
+    private fun senderText(sticker: TajikistanExportSticker): List<String> {
+        val lines = wrap(sticker.senderName, PARTY_MAX_CHARS).map { it to PARTY_MAX_CHARS } +
+            wrap(sticker.senderAddress, TJ_STICKER_TEXT_LINE_MAX_CHARS)
+                .map { it to TJ_STICKER_TEXT_LINE_MAX_CHARS }
+        val visible = lines.take(SENDER_MAX_LINES).toMutableList()
+        if (lines.size > SENDER_MAX_LINES) {
+            val (value, limit) = visible.last()
+            visible[visible.lastIndex] = indicateTruncation(value, limit) to limit
+        }
+        return visible.mapIndexed { index, (value, _) ->
+            text(CONTENT_LEFT_DOTS, SENDER_VALUE_Y_DOTS + index * LINE_HEIGHT_DOTS, value)
+        }
+    }
 
     private fun wrappedText(
         value: String,
@@ -148,7 +156,7 @@ class TajikistanExportStickerRenderer {
                 return@forEachIndexed
             }
             val quantitySuffix = item.quantity?.let { " - $it" }.orEmpty()
-            val productNameLines = wrap(item.productName, ITEMS_MAX_CHARS).ifEmpty { listOf("") }
+            val productNameLines = wrap(item.productName, TJ_STICKER_TEXT_LINE_MAX_CHARS).ifEmpty { listOf("") }
             val availableLines = ITEMS_MAX_LINES - lines.size
             val fittedProductName = productNameLines.take(availableLines).toMutableList()
             val contentWasTruncated = productNameLines.size > availableLines ||
@@ -157,14 +165,14 @@ class TajikistanExportStickerRenderer {
             if (contentWasTruncated) {
                 finalLine = indicateTruncation(
                     finalLine,
-                    (ITEMS_MAX_CHARS - quantitySuffix.length).coerceAtLeast(1)
+                    (TJ_STICKER_TEXT_LINE_MAX_CHARS - quantitySuffix.length).coerceAtLeast(1)
                 )
             }
             if (quantitySuffix.isNotEmpty()) {
-                val productNameLimit = (ITEMS_MAX_CHARS - quantitySuffix.length).coerceAtLeast(1)
+                val productNameLimit = (TJ_STICKER_TEXT_LINE_MAX_CHARS - quantitySuffix.length).coerceAtLeast(1)
                 finalLine = fitSingleLine(finalLine, productNameLimit) + quantitySuffix
             }
-            fittedProductName[fittedProductName.lastIndex] = finalLine.take(ITEMS_MAX_CHARS)
+            fittedProductName[fittedProductName.lastIndex] = finalLine.take(TJ_STICKER_TEXT_LINE_MAX_CHARS)
             lines += fittedProductName
         }
         return lines.take(ITEMS_MAX_LINES)
@@ -261,18 +269,16 @@ class TajikistanExportStickerRenderer {
 
         const val PARTY_MAX_CHARS = 50
         const val SENDER_MAX_LINES = 3
-        const val RECIPIENT_MAX_LINES = 2
         const val SENDER_HEADER_Y_DOTS = 141
         const val SENDER_VALUE_Y_DOTS = 155
         const val SENDER_SEPARATOR_Y_DOTS = 193
         const val RECIPIENT_HEADER_Y_DOTS = 198
-        const val RECIPIENT_VALUE_Y_DOTS = 212
+        const val RECIPIENT_ADDRESS_Y_DOTS = 224
         const val RECIPIENT_PHONE_Y_DOTS = 244
         const val PARTY_SEPARATOR_Y_DOTS = 258
 
         const val ITEMS_HEADER_Y_DOTS = 263
         const val ITEMS_VALUE_Y_DOTS = 277
-        const val ITEMS_MAX_CHARS = 42
         const val ITEMS_MAX_LINES = 3
         const val ELLIPSIS = "..."
         const val COST_COLUMN_INDEX = 2

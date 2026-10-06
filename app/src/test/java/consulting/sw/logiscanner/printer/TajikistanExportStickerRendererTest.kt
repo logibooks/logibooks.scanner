@@ -25,7 +25,10 @@ class TajikistanExportStickerRendererTest {
         assertTrue(payload.contains("BAR "))
         assertTrue(payload.contains("BARCODE"))
         assertTrue(payload.contains("\"${sticker.orderNumber}\""))
-        assertTrue(payload.contains("Иванов"))
+        assertTrue(payload.contains("TEXT 16,198,\"1\",0,1,1,\"Грузополучатель\""))
+        assertFalse(payload.contains("TEXT 16,212,"))
+        assertTrue(payload.contains("TEXT 16,224,\"1\",0,1,1,\"${sticker.recipientAddress}\""))
+        assertTrue(payload.contains("TEXT 16,244,\"1\",0,1,1,\"${sticker.recipientPhone}\""))
         assertTrue(payload.contains("Стоимость товаров"))
         assertTrue(payload.contains("1200,00 руб."))
         assertFalse(payload.contains("ЦЕННОСТЬ"))
@@ -101,7 +104,6 @@ class TajikistanExportStickerRendererTest {
             printableSticker().copy(
                 senderName = "Sender",
                 senderAddress = longWord,
-                recipientName = "Recipient",
                 recipientAddress = longWord,
                 recipientPhone = "+992 900 00 00 00"
             )
@@ -115,23 +117,92 @@ class TajikistanExportStickerRendererTest {
 
         assertTrue(senderHeaderIndex >= 0)
         assertTrue(recipientHeaderIndex > senderHeaderIndex)
-        assertEquals(6, partyLines.size)
+        assertEquals(5, partyLines.size)
         assertTrue(partyLines.all { textValue(it).length <= PARTY_MAX_CHARS })
-        assertEquals(PARTY_MAX_CHARS, textValue(partyLines[1]).length)
-        assertEquals(PARTY_MAX_CHARS, textValue(partyLines[4]).length)
+        assertEquals(TJ_STICKER_TEXT_LINE_MAX_CHARS, textValue(partyLines[1]).length)
+        assertEquals(TJ_STICKER_TEXT_LINE_MAX_CHARS, textValue(partyLines[3]).length)
         assertTrue(partyLines[2].contains("..."))
-        assertTrue(partyLines[4].contains("..."))
-        assertTrue(partyLines[5].contains("+992 900 00 00 00"))
+        assertTrue(partyLines[3].contains("..."))
+        assertTrue(partyLines[4].contains("+992 900 00 00 00"))
         assertTrue(payloadLines.contains("BAR 16,136,432,1"))
         assertTrue(payloadLines.contains("BAR 16,193,432,1"))
         assertTrue(payloadLines.contains("BAR 16,258,432,1"))
     }
 
+    @Test
+    fun addressesWrapAt42AndRecipientOverflowIncludesEllipsisWithin42Characters() {
+        listOf('A', 'А').forEach { character ->
+            listOf(42, 43).forEach { length ->
+                val address = character.toString().repeat(length)
+                val sticker = printableSticker().copy(senderName = "Sender", senderAddress = address, recipientAddress = address)
+                val sender = valuesAt(sticker, listOf(155, 167, 179))
+                assertEquals(listOf("Sender") + address.chunked(42), sender)
+                val recipient = valuesAt(sticker, listOf(224)).single()
+                assertEquals(if (length == 42) address else address.take(39) + "...", recipient)
+                assertEquals(42, recipient.length)
+            }
+        }
+        val address = "Республика Таджикистан, город Душанбе, улица Рудаки, дом 100"
+        val recipient = valuesAt(printableSticker().copy(recipientAddress = address), listOf(224)).single()
+        assertTrue(recipient.endsWith("..."))
+        assertTrue(recipient.length <= 42)
+    }
+
+    @Test
+    fun senderKeepsFieldLimitsAndAllocatesThreeRowsInNameThenAddressOrder() {
+        val address = "А".repeat(85)
+        val sticker = printableSticker().copy(senderName = "И".repeat(51), senderAddress = address)
+        assertEquals(
+            listOf("И".repeat(50), "И", "А".repeat(39) + "..."),
+            valuesAt(sticker, listOf(155, 167, 179))
+        )
+        assertEquals(
+            listOf("И".repeat(50), "И".repeat(50), "И".repeat(47) + "..."),
+            valuesAt(sticker.copy(senderName = "И".repeat(150)), listOf(155, 167, 179))
+        )
+        assertEquals(
+            listOf("И".repeat(50), "А".repeat(42), "А".repeat(39) + "..."),
+            valuesAt(sticker.copy(senderName = "И".repeat(50)), listOf(155, 167, 179))
+        )
+        listOf(50, 51).forEach { length ->
+            val phone = "1".repeat(length)
+            assertEquals(
+                if (length == 50) phone else "1".repeat(47) + "...",
+                valuesAt(sticker.copy(recipientPhone = phone), listOf(244)).single()
+            )
+        }
+    }
+
+    @Test
+    fun productBoundaryLinesStayWithin42CharactersAndKeepQuantities() {
+        listOf('A', 'А').forEach { character ->
+            listOf(42, 43).forEach { length ->
+                val name = character.toString().repeat(length)
+                val lines = valuesAt(
+                    printableSticker().copy(items = listOf(TajikistanExportStickerItem(name, 7))),
+                    listOf(277, 289, 301)
+                )
+                assertTrue(lines.all { it.length <= 42 })
+                assertTrue(lines.last().endsWith(" - 7"))
+                if (length == 42) {
+                    assertEquals(listOf(name.take(35) + "... - 7"), lines)
+                } else {
+                    assertEquals(listOf(name.take(42), "$character - 7"), lines)
+                }
+            }
+        }
+    }
+
+    private fun valuesAt(sticker: TajikistanExportSticker, ys: List<Int>): List<String> =
+        renderer.render(sticker).toString(WINDOWS_1251).lineSequence()
+            .filter { command -> ys.any { command.startsWith("TEXT 16,$it,") } }
+            .map(::textValue).toList()
+
     private fun textValue(command: String): String = command.substringAfterLast(",\"").removeSuffix("\"")
 
     private companion object {
         const val PARTY_MAX_CHARS = 50
-        val PARTY_TEXT_Y_DOTS = listOf(155, 167, 179, 212, 224, 244)
+        val PARTY_TEXT_Y_DOTS = listOf(155, 167, 179, 224, 244)
         val WINDOWS_1251: Charset = Charset.forName("windows-1251")
     }
 }

@@ -15,7 +15,6 @@ data class TajikistanExportSticker(
     val costRub: Double?,
     val senderName: String,
     val senderAddress: String,
-    val recipientName: String,
     val recipientAddress: String,
     val recipientPhone: String,
     val items: List<TajikistanExportStickerItem>
@@ -35,7 +34,6 @@ enum class TajikistanStickerField {
     COST,
     SENDER_NAME,
     SENDER_ADDRESS,
-    RECIPIENT_NAME,
     RECIPIENT_ADDRESS,
     RECIPIENT_PHONE,
     ITEMS,
@@ -93,7 +91,6 @@ fun TajikistanExportStickerPayload?.validateForPrinting(): TajikistanStickerVali
     positiveNumber(payload.costRub, TajikistanStickerField.COST)
     val senderName = requiredText(payload.senderName, TajikistanStickerField.SENDER_NAME)
     val senderAddress = requiredText(payload.senderAddress, TajikistanStickerField.SENDER_ADDRESS)
-    val recipientName = requiredText(payload.recipientName, TajikistanStickerField.RECIPIENT_NAME)
     val recipientAddress = requiredText(payload.recipientAddress, TajikistanStickerField.RECIPIENT_ADDRESS)
     val recipientPhone = requiredText(payload.recipientPhone, TajikistanStickerField.RECIPIENT_PHONE)
     if (payload.items.isEmpty()) {
@@ -118,7 +115,6 @@ fun TajikistanExportStickerPayload?.validateForPrinting(): TajikistanStickerVali
         costRub = payload.costRub,
         senderName = requireNotNull(senderName),
         senderAddress = requireNotNull(senderAddress),
-        recipientName = requireNotNull(recipientName),
         recipientAddress = requireNotNull(recipientAddress),
         recipientPhone = requireNotNull(recipientPhone),
         items = items

@@ -86,7 +86,6 @@ This file is a part of LogiScanner application
     <string name="printer_tj_sticker_field_cost">стоимость товаров</string>
     <string name="printer_tj_sticker_field_sender_name">грузоотправитель</string>
     <string name="printer_tj_sticker_field_sender_address">адрес грузоотправителя</string>
-    <string name="printer_tj_sticker_field_recipient_name">грузополучатель</string>
     <string name="printer_tj_sticker_field_recipient_address">адрес грузополучателя</string>
     <string name="printer_tj_sticker_field_recipient_phone">телефон грузополучателя</string>
     <string name="printer_tj_sticker_field_items">список товаров</string>

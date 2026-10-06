@@ -5,7 +5,12 @@
 package consulting.sw.logiscanner.net
 
 import com.squareup.moshi.Moshi
+import consulting.sw.logiscanner.printer.TajikistanExportStickerRenderer
+import consulting.sw.logiscanner.printer.payload
+import consulting.sw.logiscanner.printer.validateForPrinting
+import java.nio.charset.Charset
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -50,6 +55,23 @@ class TajikistanExportStickerModelsTest {
         assertEquals(1200.0, result.exportSticker.costRub)
         assertEquals("Books", result.exportSticker.items.single().productName)
         assertEquals(2, result.exportSticker.items.single().quantity)
+    }
+
+    @Test
+    fun recipientNamesInOlderResponsesAreIgnoredAndMissingNamesPrintSuccessfully() {
+        val stickerAdapter = Moshi.Builder().build().adapter(TajikistanExportStickerPayload::class.java)
+        val currentJson = stickerAdapter.toJson(payload())
+        val olderJson = currentJson.replaceFirst("{", "{\"recipientName\":\"Иванов Иван Иванович\",")
+        assertFalse(currentJson.contains("recipientName"))
+        val current = stickerAdapter.fromJson(currentJson).validateForPrinting()
+        val older = stickerAdapter.fromJson(olderJson).validateForPrinting()
+
+        assertEquals(emptyList<Any>(), current.issues)
+        assertEquals(current, older)
+        val tspl = TajikistanExportStickerRenderer().render(requireNotNull(older.sticker))
+            .toString(Charset.forName("windows-1251"))
+        assertFalse(tspl.contains("Иванов"))
+        assertFalse(tspl.contains("TEXT 16,212,"))
     }
 
     @Test

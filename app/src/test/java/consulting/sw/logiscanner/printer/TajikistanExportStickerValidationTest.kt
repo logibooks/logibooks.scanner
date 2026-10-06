@@ -68,7 +68,6 @@ class TajikistanExportStickerValidationTest {
                 TajikistanStickerField.COST,
                 TajikistanStickerField.SENDER_NAME,
                 TajikistanStickerField.SENDER_ADDRESS,
-                TajikistanStickerField.RECIPIENT_NAME,
                 TajikistanStickerField.RECIPIENT_ADDRESS,
                 TajikistanStickerField.RECIPIENT_PHONE,
                 TajikistanStickerField.ITEMS
@@ -135,7 +134,6 @@ internal fun payload() = TajikistanExportStickerPayload(
     costRub = 1200.0,
     senderName = "Sender",
     senderAddress = "123456, Moscow, Tverskaya 1",
-    recipientName = "Иванов Иван",
     recipientAddress = "Душанбе, Рудаки 1",
     recipientPhone = "+992 900 00 00 00",
     items = listOf(TajikistanExportStickerItemPayload("Книги", 2))
