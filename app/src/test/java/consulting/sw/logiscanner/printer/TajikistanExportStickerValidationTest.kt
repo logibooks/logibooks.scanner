@@ -55,6 +55,61 @@ class TajikistanExportStickerValidationTest {
     }
 
     @Test
+    fun validationReportsEveryMissingFieldTogether() {
+        val result = TajikistanExportStickerPayload().validateForPrinting()
+
+        assertNull(result.sticker)
+        assertEquals(
+            listOf(
+                TajikistanStickerField.ORDER_NUMBER,
+                TajikistanStickerField.PLACES_COUNT,
+                TajikistanStickerField.DISPATCH_DATE,
+                TajikistanStickerField.WEIGHT,
+                TajikistanStickerField.COST,
+                TajikistanStickerField.SENDER_NAME,
+                TajikistanStickerField.SENDER_ADDRESS,
+                TajikistanStickerField.RECIPIENT_NAME,
+                TajikistanStickerField.RECIPIENT_ADDRESS,
+                TajikistanStickerField.RECIPIENT_PHONE,
+                TajikistanStickerField.ITEMS
+            ),
+            result.issues.map { it.field }
+        )
+        assertTrue(result.issues.all { it.reason == TajikistanStickerIssueReason.MISSING })
+    }
+
+    @Test
+    fun validationDistinguishesMissingFromInvalidNumericValues() {
+        val missing = payload().copy(placesCount = null, weightKg = null, costRub = null).validateForPrinting()
+        assertEquals(3, missing.issues.size)
+        assertTrue(missing.issues.all { it.reason == TajikistanStickerIssueReason.MISSING })
+
+        listOf(0.0, -1.0, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY).forEach { value ->
+            val invalid = payload().copy(placesCount = 0, weightKg = value, costRub = value).validateForPrinting()
+            assertNull(invalid.sticker)
+            assertEquals(3, invalid.issues.size)
+            assertTrue(invalid.issues.all { it.reason == TajikistanStickerIssueReason.INVALID })
+        }
+    }
+
+    @Test
+    fun itemNumbersAppearOnlyForMultipleItemsAndPreserveParcelPosition() {
+        val badItem = TajikistanExportStickerItemPayload(" ", null)
+        val single = payload().copy(items = listOf(badItem)).validateForPrinting()
+        assertEquals(2, single.issues.size)
+        assertTrue(single.issues.all { it.itemNumber == null })
+
+        val multiple = payload().copy(items = listOf(payload().items.single(), badItem)).validateForPrinting()
+        assertEquals(
+            listOf(
+                TajikistanStickerDataIssue(TajikistanStickerField.PRODUCT_NAME, TajikistanStickerIssueReason.MISSING, 2),
+                TajikistanStickerDataIssue(TajikistanStickerField.QUANTITY, TajikistanStickerIssueReason.MISSING, 2)
+            ),
+            multiple.issues
+        )
+    }
+
+    @Test
     fun unsupportedCode128OrderNumberIsKeptForNativeTextButNotBarcode() {
         listOf("Заказ", "bad\"value", "ABCDEFGHIJKLMNOP").forEach { orderNumber ->
             val sticker = payload().copy(orderNumber = orderNumber).toPrintableSticker()
