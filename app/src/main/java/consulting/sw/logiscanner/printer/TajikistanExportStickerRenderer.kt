@@ -272,7 +272,7 @@ class TajikistanExportStickerRenderer {
 
         const val ITEMS_HEADER_Y_DOTS = 263
         const val ITEMS_VALUE_Y_DOTS = 277
-        const val ITEMS_MAX_CHARS = CONTENT_WIDTH_DOTS / 8
+        const val ITEMS_MAX_CHARS = 42
         const val ITEMS_MAX_LINES = 3
         const val ELLIPSIS = "..."
         const val COST_COLUMN_INDEX = 2
