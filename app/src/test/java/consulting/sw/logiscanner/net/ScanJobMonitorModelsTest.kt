@@ -13,6 +13,25 @@ import org.junit.Test
 class ScanJobMonitorModelsTest {
 
     @Test
+    fun savedBoxStickerParsesWithoutChangingCurrentJobIndicators() {
+        val adapter = Moshi.Builder().build().adapter(ScanJobMonitorSnapshot::class.java)
+        val snapshot = adapter.fromJson("""{"companyId":2,"registerType":2097154,
+            "boxes":[{"boxId":7,"boxSticker":"$1:1:4542503776:362877","printableTemplates":["WBR_BOX"]}]}""")!!
+        assertEquals(2, snapshot.companyId)
+        val box = snapshot.boxes.single()
+        assertEquals("$1:1:4542503776:362877", box.boxSticker)
+        assertEquals(listOf("WBR_BOX"), box.printableTemplates)
+        assertTrue(!box.boxStickerScanned)
+        assertEquals(null, box.boxScannedTime)
+        val legacy = adapter.fromJson("""{"boxes":[{"boxId":7}]}""")!!
+        assertEquals(0, legacy.companyId)
+        assertEquals(null, legacy.boxes.single().boxSticker)
+        assertTrue(legacy.boxes.single().printableTemplates.isEmpty())
+        val labels = Moshi.Builder().build().adapter(BoxLabel::class.java)
+        assertEquals("WBR_BOX", labels.fromJson("""{"template":"WBR_BOX","contentBase64":"QQ==","language":"TSPL","widthMm":58,"heightMm":40}""")!!.template)
+    }
+
+    @Test
     fun scanJob_parsesRegisterTypeAndStickerTemplate() {
         val json = """
             {
@@ -92,7 +111,7 @@ class ScanJobMonitorModelsTest {
                   "heightCm": 30.25,
                   "weightKg": 4.125,
                   "boxStickerScanned": true,
-                  "boxScannedSticker": "BOX-1",
+                  "boxSticker": "BOX-1",
                   "boxScannedUserName": "Operator",
                   "boxScannedTime": "2026-05-15T21:31:00+03:00",
                   "totalParcels": 3,

@@ -29,6 +29,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -69,6 +71,7 @@ import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.BulkyItemsModes
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
 import consulting.sw.logiscanner.net.RegisterTypes
+import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
@@ -115,7 +118,8 @@ internal fun ScanJobMonitorPanel(
     onToggleBulkyItemsMode: () -> Unit,
     onJumpNumberChange: (String) -> Unit,
     onJumpToNumber: () -> Unit,
-    onJumpFieldFocusChanged: (Boolean) -> Unit = {}
+    onJumpFieldFocusChanged: (Boolean) -> Unit = {},
+    onPrintBoxSticker: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -265,6 +269,7 @@ internal fun ScanJobMonitorPanel(
                 Text(error, color = MaterialTheme.colorScheme.error)
             }
 
+            PrinterStatusMessages(loading = printerLoading, message = printerMessage, error = printerError)
             LocalScanResult(
                 lastCode = lastCode,
                 lastParcelCount = lastParcelCount,
@@ -277,11 +282,10 @@ internal fun ScanJobMonitorPanel(
                 lastScanTime = lastScanTime,
                 printerSelected = printerSelected,
                 printerLoading = printerLoading,
-                printerMessage = printerMessage,
-                printerError = printerError,
                 onPrintKgtSticker = onPrintKgtSticker,
-                onPrintTajikistanExportSticker = onPrintTajikistanExportSticker,
-                canPrintTajikistanExportSticker = canPrintTajikistanExportSticker
+                snapshot = snapshot,
+                detailSnapshot = detailSnapshot,
+                onPrintBoxSticker = onPrintBoxSticker
             )
 
             if (loading && snapshot == null) {
@@ -319,7 +323,7 @@ internal fun ScanJobMonitorPanel(
 
             if (snapshot != null) {
                 if (selectedScope.area == ScanJobMonitorAreas.BOXES) {
-                    MonitorBoxesList(snapshot.boxes, onOpenBox)
+                    MonitorBoxesList(snapshot, onOpenBox)
                 } else {
                     MonitorBoxDetail(
                         snapshot = detailSnapshot,
@@ -329,7 +333,11 @@ internal fun ScanJobMonitorPanel(
                         printerLoading = printerLoading,
                         onPrintKgtSticker = onPrintKgtSticker,
                         onPrintParcelSticker = onPrintParcelSticker,
-                        onOpenRegister = onOpenRegister
+                        lastTajikistanExportSticker = lastTajikistanExportSticker,
+                        canPrintTajikistanExportSticker = canPrintTajikistanExportSticker,
+                        onPrintTajikistanExportSticker = onPrintTajikistanExportSticker,
+                        onOpenRegister = onOpenRegister,
+                        onPrintBoxSticker = onPrintBoxSticker
                     )
                 }
             }
@@ -339,9 +347,10 @@ internal fun ScanJobMonitorPanel(
 
 @Composable
 private fun MonitorBoxesList(
-    boxes: List<ScanJobMonitorBox>,
+    snapshot: ScanJobMonitorSnapshot,
     onOpenBox: (ScanJobMonitorBox) -> Unit
 ) {
+    val boxes = snapshot.boxes
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             stringResource(R.string.monitor_boxes),
@@ -456,6 +465,14 @@ private fun MonitorBoxRow(
 }
 
 @Composable
+internal fun BoxStickerAttribute(box: ScanJobMonitorBox) {
+    if (!isPhysicalMonitorBox(box)) return
+    val label = stringResource(R.string.monitor_box_sticker)
+    val value = box.boxSticker?.takeIf { it.isNotBlank() } ?: stringResource(R.string.monitor_not_set)
+    MonitorAttribute(label, value)
+}
+
+@Composable
 private fun MonitorBoxParcelProgressText(
     box: ScanJobMonitorBox,
     modifier: Modifier = Modifier
@@ -485,7 +502,7 @@ private fun MonitorBoxParcelProgressText(
 }
 
 @Composable
-private fun MonitorBoxDetail(
+internal fun MonitorBoxDetail(
     snapshot: ScanJobMonitorSnapshot?,
     loading: Boolean,
     highlightedParcelId: Int?,
@@ -493,7 +510,11 @@ private fun MonitorBoxDetail(
     printerLoading: Boolean,
     onPrintKgtSticker: (String) -> Unit,
     onPrintParcelSticker: (ParcelSticker) -> Unit,
-    onOpenRegister: () -> Unit
+    lastTajikistanExportSticker: TajikistanExportSticker?,
+    canPrintTajikistanExportSticker: Boolean,
+    onPrintTajikistanExportSticker: () -> Unit,
+    onOpenRegister: () -> Unit,
+    onPrintBoxSticker: (Int) -> Unit
 ) {
     val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -586,13 +607,21 @@ private fun MonitorBoxDetail(
                         stringResource(R.string.monitor_box_weight_value, it)
                     } ?: notSetText
                 )
+                val stickerLabel = stringResource(R.string.sticker)
+                val stickerNumber = box.boxCode.ifBlank { notSetText }
+                if (showWbrBoxStickerPrint(snapshot, box)) {
+                    StickerPrintAttribute(
+                        label = stickerLabel,
+                        value = stickerNumber,
+                        printEnabled = canPrintWbrBoxSticker(box, printerSelected, printerLoading),
+                        contentDescription = stringResource(R.string.printer_print_box_sticker),
+                        onPrint = { box.boxId?.let(onPrintBoxSticker) }
+                    )
+                } else {
+                    MonitorAttribute(label = stickerLabel, value = stickerNumber)
+                }
             }
-            box.boxScannedSticker?.takeIf { it.isNotBlank() }?.let { scannedSticker ->
-                MonitorAttribute(
-                    label = stringResource(R.string.monitor_parcel_scanned_sticker),
-                    value = scannedSticker
-                )
-            }
+            BoxStickerAttribute(box)
             if (box.boxScannedUserName.isNotBlank()) {
                 MonitorAttribute(
                     label = stringResource(R.string.monitor_parcel_scanned_user),
@@ -657,6 +686,9 @@ private fun MonitorBoxDetail(
                         printerLoading = printerLoading,
                         onPrintKgtSticker = onPrintKgtSticker,
                         onPrintParcelSticker = onPrintParcelSticker,
+                        lastTajikistanExportSticker = lastTajikistanExportSticker,
+                        canPrintTajikistanExportSticker = canPrintTajikistanExportSticker,
+                        onPrintTajikistanExportSticker = onPrintTajikistanExportSticker,
                         onToggleExpanded = {
                             expandedParcelKey = if (expandedParcelKey == parcelKey) null else parcelKey
                         }
@@ -668,7 +700,7 @@ private fun MonitorBoxDetail(
 }
 
 @Composable
-private fun MonitorParcelRow(
+internal fun MonitorParcelRow(
     parcel: ScanJobMonitorParcel,
     registerType: Int,
     weightCorrection: MonitorWeightCorrection?,
@@ -678,6 +710,9 @@ private fun MonitorParcelRow(
     printerLoading: Boolean,
     onPrintKgtSticker: (String) -> Unit,
     onPrintParcelSticker: (ParcelSticker) -> Unit,
+    lastTajikistanExportSticker: TajikistanExportSticker?,
+    canPrintTajikistanExportSticker: Boolean,
+    onPrintTajikistanExportSticker: () -> Unit,
     onToggleExpanded: () -> Unit
 ) {
     val statusText = when {
@@ -771,13 +806,32 @@ private fun MonitorParcelRow(
         }
 
         if (expanded) {
-            if (!parcel.productName.isNullOrBlank()) {
-                Text(
-                    parcel.productName.orEmpty(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    overflow = TextOverflow.Visible
-                )
+            // The invoice's order number is the WBR-N parcel's SHK, not its sticker code.
+            val hasInvoice = registerType == RegisterTypes.WBR_N &&
+                lastTajikistanExportSticker != null &&
+                lastTajikistanExportSticker.orderNumber == parcel.shk?.trim()
+            if (!parcel.productName.isNullOrBlank() || hasInvoice) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        parcel.productName.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        overflow = TextOverflow.Visible,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (hasInvoice) {
+                        StickerPrintButton(
+                            printEnabled = canPrintTajikistanExportSticker && !printerLoading,
+                            contentDescription = stringResource(R.string.printer_print_invoice),
+                            onPrint = onPrintTajikistanExportSticker,
+                            imageVector = Icons.Filled.Description
+                        )
+                    }
+                }
             }
             MonitorParcelAttributes(
                 parcel = parcel,
@@ -1052,22 +1106,28 @@ private fun StickerPrintAttribute(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(
-                onClick = onPrint,
-                enabled = printEnabled,
-                modifier = Modifier
-                    .width(32.dp)
-                    .height(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Print,
-                    contentDescription = contentDescription,
-                    modifier = Modifier
-                        .width(18.dp)
-                        .height(18.dp)
-                )
-            }
+            StickerPrintButton(printEnabled, contentDescription, onPrint)
         }
+    }
+}
+
+@Composable
+private fun StickerPrintButton(
+    printEnabled: Boolean,
+    contentDescription: String,
+    onPrint: () -> Unit,
+    imageVector: ImageVector = Icons.Filled.Print
+) {
+    IconButton(
+        onClick = onPrint,
+        enabled = printEnabled,
+        modifier = Modifier.width(32.dp).height(32.dp)
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            modifier = Modifier.width(18.dp).height(18.dp)
+        )
     }
 }
 
@@ -1080,7 +1140,7 @@ private fun parcelExpansionKey(parcel: ScanJobMonitorParcel, index: Int): String
 }
 
 @Composable
-private fun LocalScanResult(
+internal fun LocalScanResult(
     lastCode: String?,
     lastParcelCount: Int?,
     lastBoxCount: Int?,
@@ -1092,11 +1152,10 @@ private fun LocalScanResult(
     lastScanTime: String?,
     printerSelected: Boolean,
     printerLoading: Boolean,
-    printerMessage: String?,
-    printerError: String?,
     onPrintKgtSticker: (String) -> Unit,
-    onPrintTajikistanExportSticker: () -> Unit,
-    canPrintTajikistanExportSticker: Boolean
+    snapshot: ScanJobMonitorSnapshot?,
+    detailSnapshot: ScanJobMonitorSnapshot?,
+    onPrintBoxSticker: (Int) -> Unit
 ) {
     val display = localScanResultDisplay(
         lastCode = lastCode,
@@ -1110,7 +1169,7 @@ private fun LocalScanResult(
     ) ?: return
     val displayTime = formatLocalScanResultTime(display.scanTime)
     val displayDate = formatLocalScanResultDate(display.scanTime)
-    val stickerCode = display.code?.takeIf { it.isNotBlank() }
+    val scannedBox = localScanResultBox(display, snapshot, detailSnapshot)
     val numberAttribute = display.numberKind?.let { numberKind ->
         val resources = LocalResources.current
         val value = display.itemNumbers.joinToString(", ")
@@ -1185,27 +1244,28 @@ private fun LocalScanResult(
             )
         }
         lastTajikistanExportSticker?.let { sticker ->
-            StickerPrintAttribute(
+            MonitorAttribute(
                 label = stringResource(R.string.printer_tj_sticker_order),
-                value = sticker.orderNumber,
-                printEnabled = canPrintTajikistanExportSticker && !printerLoading,
-                contentDescription = stringResource(R.string.printer_repeat_sticker),
-                onPrint = onPrintTajikistanExportSticker
+                value = sticker.orderNumber
             )
         }
-        stickerCode?.let { code ->
-            MonitorAttribute(
-                label = stringResource(R.string.sticker),
-                value = code
-            )
+        if (display.scanSource != ScannedItemSources.BOX_STICKER || snapshot?.companyId != RegisterTypes.WBR) {
+            display.code?.let { code ->
+                MonitorAttribute(label = stringResource(R.string.sticker), value = code)
+            }
         }
         numberAttribute?.let { (label, value) ->
-            MonitorAttribute(label = label, value = value)
+            if (snapshot != null && scannedBox != null && showWbrBoxStickerPrint(snapshot, scannedBox)) {
+                StickerPrintAttribute(
+                    label = label,
+                    value = value,
+                    printEnabled = canPrintWbrBoxSticker(scannedBox, printerSelected, printerLoading),
+                    contentDescription = stringResource(R.string.printer_print_box_sticker),
+                    onPrint = { scannedBox.boxId?.let(onPrintBoxSticker) }
+                )
+            } else {
+                MonitorAttribute(label = label, value = value)
+            }
         }
-        PrinterStatusMessages(
-            loading = printerLoading,
-            message = printerMessage,
-            error = printerError
-        )
     }
 }

@@ -73,6 +73,7 @@ This file is a part of LogiScanner application
     <string name="printer_print_failed">Unable to print sticker: %1$s</string>
     <string name="printer_tj_sticker_order">Shipment number</string>
     <string name="printer_repeat_sticker">Reprint last sticker</string>
+    <string name="printer_print_invoice">Print invoice</string>
     <string name="printer_tj_sticker_missing_data">Unable to print sticker. %1$s</string>
     <string name="printer_tj_sticker_payload_missing">The server did not provide data for printing the sticker</string>
     <string name="printer_tj_sticker_no_last">No sticker is available to reprint. Scan a parcel first</string>
@@ -132,7 +133,7 @@ This file is a part of LogiScanner application
     <string name="monitor_box_display_name">Box %1$s</string>
     <string name="monitor_box_dimensions">Dimensions</string>
     <string name="monitor_box_weight">Weight</string>
-    <string name="monitor_not_set">not set</string>
+    <string name="monitor_not_set">—</string>
     <string name="monitor_box_dimensions_value">%1$s cm</string>
     <string name="monitor_box_weight_value">%1$s kg</string>
     <string name="monitor_current_box_numbered">Current box %1$s</string>
@@ -201,4 +202,6 @@ This file is a part of LogiScanner application
     <string name="scan_error_server">Server interaction error. Please try again later</string>
     <string name="scan_stopped_warning">Scanning is stopped. Press Start Scanning, then scan again.</string>
     <string name="scan_stopped_tts">Сканирование остановлено</string>
+    <string name="monitor_box_sticker">Sticker code</string>
+    <string name="printer_print_box_sticker">Print box sticker</string>
 </resources>

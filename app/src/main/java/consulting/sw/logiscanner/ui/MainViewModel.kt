@@ -406,6 +406,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun printBoxSticker(boxId: Int) {
+        if (state.value.printerLoading) return
+        _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
+        viewModelScope.launch {
+            try {
+                val result = stickerPrintService.printBoxSticker(state.value.printerBluetoothAddress) {
+                    scanJobMonitorRepo.loadBoxLabel(boxId)
+                }
+                applyPrinterResult(result)
+            } finally {
+                _state.update { it.copy(printerLoading = false) }
+            }
+        }
+    }
+
     fun printLastTajikistanExportSticker() {
         val sticker = state.value.lastTajikistanExportSticker
         if (sticker == null) {

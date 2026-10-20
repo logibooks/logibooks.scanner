@@ -184,3 +184,12 @@ This file is a part of LogiScanner application.
 ## Support
 
 For issues, questions, or contributions, contact the development team at www.sw.consulting.
+
+
+### Saved box stickers
+
+Physical boxes of all companies show their saved sticker in the monitor detail view under `Код стикера` (`Sticker code` in English), or `—` when no saved value is available. The separate `Стикер` (`Sticker`) row shows the box number. Saved sticker values are not shown in the monitor list. Current-job scan indicators remain independent.
+
+Manual box-sticker printing is available for physical boxes whose snapshot `companyId` identifies WBR and whose `printableTemplates` includes `WBR_BOX`. The print button appears beside the box number in the detail view and beside a single matched box number in the latest scan result. It is enabled when a printer is selected and printing is not in progress.
+
+The manual box-sticker print action uses the selected Bluetooth printer. It fetches server-rendered TSPL from `GET /api/boxes/{id}/label?template=WBR_BOX` and prints one 58 x 40 mm label with the full saved QR, readable box number, and current time in the server's configured printing timezone. Destination and routing areas remain blank. Network and printer failures stay visible and can be retried explicitly. Printing does not modify box data or scan status.

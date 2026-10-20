@@ -42,6 +42,13 @@ interface ApiService {
         @Query("number") number: String
     ): ScanJobMonitorTarget
 
+    @GET("boxes/{id}/label")
+    suspend fun getBoxLabel(
+        @Header("Authorization") bearer: String,
+        @Path("id") id: Int,
+        @Query("template") template: String = "WBR_BOX"
+    ): BoxLabel
+
     @POST("ScanJobs/scan")
     suspend fun scan(
         @Header("Authorization") bearer: String,

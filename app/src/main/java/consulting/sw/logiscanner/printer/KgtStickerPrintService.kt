@@ -54,9 +54,21 @@ class KgtStickerPrintService(
         }
     }
 
+    suspend fun printBoxSticker(
+        address: String?,
+        loadLabel: suspend () -> consulting.sw.logiscanner.net.BoxLabel
+    ): KgtStickerPrintResult = printRendered(address) {
+        val label = loadLabel()
+        require(label.template == "WBR_BOX" && label.language == "TSPL" &&
+            label.widthMm == 58 && label.heightMm == 40) { "Invalid box label format" }
+        val bytes = java.util.Base64.getDecoder().decode(label.contentBase64)
+        require(bytes.isNotEmpty()) { "Empty box label" }
+        bytes
+    }
+
     private suspend fun printRendered(
         address: String?,
-        renderPayload: () -> ByteArray
+        renderPayload: suspend () -> ByteArray
     ): KgtStickerPrintResult {
         if (address.isNullOrBlank()) {
             return KgtStickerPrintResult.MissingPrinter
