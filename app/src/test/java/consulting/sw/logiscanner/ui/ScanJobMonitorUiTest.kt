@@ -29,6 +29,45 @@ import java.util.Locale
 class ScanJobMonitorUiTest {
 
     @Test
+    fun savedBoxStickerUsesCompanyIdAndServerCapabilities() {
+        val snapshot = ScanJobMonitorSnapshot(companyId = 2, registerType = RegisterTypes.WBR_N)
+        val box = ScanJobMonitorBox(boxId = 7, boxSticker = "$1:1:4542503776:362877", printableTemplates = listOf("WBR_BOX"))
+        assertTrue(showWbrBoxSticker(snapshot, box))
+        assertTrue(showWbrBoxSticker(snapshot.copy(registerType = RegisterTypes.OZON), box))
+        for (registerType in listOf(RegisterTypes.WBR, RegisterTypes.WBR_N)) {
+            for (companyId in listOf(0, RegisterTypes.OZON, RegisterTypes.WBR_N)) {
+                val otherCompany = snapshot.copy(companyId = companyId, registerType = registerType)
+                assertFalse(showWbrBoxSticker(otherCompany, box))
+            }
+        }
+        assertFalse(showWbrBoxSticker(ScanJobMonitorSnapshot(registerType = RegisterTypes.OZON), box))
+        assertFalse(showWbrBoxSticker(snapshot, box.copy(area = ScanJobMonitorAreas.UNASSIGNED)))
+        assertTrue(canPrintWbrBoxSticker(box, true, false))
+        assertFalse(canPrintWbrBoxSticker(box.copy(boxId = null), true, false))
+        assertFalse(canPrintWbrBoxSticker(box.copy(printableTemplates = emptyList()), true, false))
+        assertFalse(canPrintWbrBoxSticker(box, false, false))
+        assertFalse(canPrintWbrBoxSticker(box, true, true))
+    }
+
+    @Test
+    fun localScanResultBox_ignoresDetailFromAnotherJobAndUnassignedGroups() {
+        val display = localScanResultDisplay(
+            lastCode = "scanned-code", lastParcelCount = 1, lastBoxCount = 1,
+            lastScanSource = ScannedItemSources.BOX_STICKER, lastItemNumbers = listOf("BOX-7"),
+            lastExtData = null, lastExtId = null, lastScanTime = null
+        )!!
+        val box = ScanJobMonitorBox(boxId = 7, boxCode = "BOX-7")
+        val snapshot = ScanJobMonitorSnapshot(scanJobId = 1, boxes = listOf(box))
+        val staleDetail = ScanJobMonitorSnapshot(scanJobId = 2, box = box.copy(boxId = 99))
+
+        assertEquals(7, localScanResultBox(display, snapshot, staleDetail)?.boxId)
+        assertNull(localScanResultBox(display, null, staleDetail))
+        assertNull(localScanResultBox(display, snapshot.copy(boxes = emptyList()), staleDetail))
+        assertNull(localScanResultBox(display, snapshot.copy(boxes = listOf(box.copy(area = ScanJobMonitorAreas.UNASSIGNED))), null))
+        assertEquals(7, localScanResultBox(display, snapshot.copy(boxes = emptyList()), snapshot.copy(box = box))?.boxId)
+    }
+
+    @Test
     fun isUnassignedMonitorBox_detectsAreaAndBucket() {
         assertTrue(isUnassignedMonitorBox(ScanJobMonitorBox(area = ScanJobMonitorAreas.UNASSIGNED)))
         assertTrue(isUnassignedMonitorBox(ScanJobMonitorBox(boxId = null, bucketIndex = 2)))

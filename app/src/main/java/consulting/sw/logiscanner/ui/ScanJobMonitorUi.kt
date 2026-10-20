@@ -5,6 +5,7 @@
 package consulting.sw.logiscanner.ui
 
 import android.content.Context
+import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
@@ -340,3 +341,25 @@ private fun formatMonitorDateTimePart(value: String?, formatter: DateTimeFormatt
     }
 }
 
+
+internal fun showWbrBoxSticker(snapshot: ScanJobMonitorSnapshot, box: ScanJobMonitorBox): Boolean =
+    isPhysicalMonitorBox(box) &&
+        snapshot.companyId == RegisterTypes.WBR
+
+internal fun showWbrBoxStickerPrint(snapshot: ScanJobMonitorSnapshot, box: ScanJobMonitorBox): Boolean =
+    showWbrBoxSticker(snapshot, box) && "WBR_BOX" in box.printableTemplates
+
+internal fun localScanResultBox(
+    display: LocalScanResultDisplay,
+    snapshot: ScanJobMonitorSnapshot?,
+    detailSnapshot: ScanJobMonitorSnapshot?
+): ScanJobMonitorBox? {
+    if (display.numberKind != LocalScanResultNumberKind.BOX || snapshot == null) return null
+    val number = display.itemNumbers.singleOrNull() ?: return null
+    val detailBox = detailSnapshot?.takeIf { it.scanJobId == snapshot.scanJobId }?.box
+    if (isPhysicalMonitorBox(detailBox) && detailBox?.boxCode == number) return detailBox
+    return snapshot.boxes.singleOrNull { isPhysicalMonitorBox(it) && it.boxCode == number }
+}
+
+internal fun canPrintWbrBoxSticker(box: ScanJobMonitorBox, printerSelected: Boolean, busy: Boolean): Boolean =
+    box.boxId != null && "WBR_BOX" in box.printableTemplates && printerSelected && !busy

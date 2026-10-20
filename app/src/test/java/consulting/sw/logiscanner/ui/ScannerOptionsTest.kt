@@ -669,28 +669,32 @@ class ScannerOptionsTest {
     }
 
     @Test
-    fun repeatTajikistanStickerRequiresActiveFullModePrinterAndStoredSticker() {
+    fun repeatTajikistanStickerRequiresPrinterTemplateAndStoredStickerOnly() {
         val job = scanJob(
             registerType = RegisterTypes.WBR_N,
             stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT
         )
+        assertFalse(
+            shouldAutoPrintTajikistanExportSticker(
+                submode = RelabelingSubmode.FULL,
+                relabelingMode = BulkyItemsModes.OFF,
+                printerSelected = true,
+                job = job,
+                result = scanResultItem(extId = null, stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT)
+            )
+        )
         assertTrue(
             canRepeatTajikistanExportSticker(
-                RelabelingSubmode.FULL,
-                BulkyItemsModes.SILENT,
                 printerSelected = true,
                 job = job,
                 hasSticker = true
             )
         )
-        assertFalse(canRepeatTajikistanExportSticker(RelabelingSubmode.KGT, BulkyItemsModes.SILENT, true, job, true))
-        assertFalse(canRepeatTajikistanExportSticker(RelabelingSubmode.FULL, BulkyItemsModes.OFF, true, job, true))
-        assertFalse(canRepeatTajikistanExportSticker(RelabelingSubmode.FULL, BulkyItemsModes.SILENT, false, job, true))
-        assertFalse(canRepeatTajikistanExportSticker(RelabelingSubmode.FULL, BulkyItemsModes.SILENT, true, job, false))
+        assertFalse(canRepeatTajikistanExportSticker(false, job, true))
+        assertFalse(canRepeatTajikistanExportSticker(true, job, false))
+        assertFalse(canRepeatTajikistanExportSticker(true, null, true))
         assertFalse(
             canRepeatTajikistanExportSticker(
-                RelabelingSubmode.FULL,
-                BulkyItemsModes.SILENT,
                 true,
                 scanJob(registerType = RegisterTypes.WBR_N),
                 true

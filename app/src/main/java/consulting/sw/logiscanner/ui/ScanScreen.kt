@@ -94,7 +94,8 @@ internal fun ScanScreen(
     onBackToJobs: () -> Unit,
     onLogout: () -> Unit,
     onOpenSettings: () -> Unit,
-    onScanned: (String) -> Unit
+    onScanned: (String) -> Unit,
+    onPrintBoxSticker: (Int) -> Unit
 ) {
     var isJumpFieldFocused by remember { mutableStateOf(false) }
     if (hidScannerInputEnabled(externalScannerEnabled)) {
@@ -262,6 +263,7 @@ internal fun ScanScreen(
                 printerError = printerError,
                 onPrintKgtSticker = onPrintKgtSticker,
                 onPrintParcelSticker = onPrintParcelSticker,
+                onPrintBoxSticker = onPrintBoxSticker,
                 onPrintTajikistanExportSticker = onPrintTajikistanExportSticker,
                 jumpNumber = monitorJumpNumber,
                 jumpLoading = monitorJumpLoading,

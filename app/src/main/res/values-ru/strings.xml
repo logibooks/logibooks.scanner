@@ -73,6 +73,7 @@ This file is a part of LogiScanner application
     <string name="printer_print_failed">Не удалось напечатать стикер: %1$s</string>
     <string name="printer_tj_sticker_order">Номер отправления</string>
     <string name="printer_repeat_sticker">Повторно напечатать последний стикер</string>
+    <string name="printer_print_invoice">Печать накладной</string>
     <string name="printer_tj_sticker_missing_data">Не удалось напечатать стикер. %1$s</string>
     <string name="printer_tj_sticker_payload_missing">Сервер не передал данные для печати стикера</string>
     <string name="printer_tj_sticker_no_last">Нет стикера для повторной печати. Сначала отсканируйте посылку</string>
@@ -136,7 +137,7 @@ This file is a part of LogiScanner application
     <string name="monitor_box_display_name">Коробка %1$s</string>
     <string name="monitor_box_dimensions">Габариты</string>
     <string name="monitor_box_weight">Вес</string>
-    <string name="monitor_not_set">не задано</string>
+    <string name="monitor_not_set">—</string>
     <string name="monitor_box_dimensions_value">%1$s см</string>
     <string name="monitor_box_weight_value">%1$s кг</string>
     <string name="monitor_current_box_numbered">Текущая коробка %1$s</string>
@@ -205,4 +206,6 @@ This file is a part of LogiScanner application
     <string name="scan_error_server">Ошибка взаимодействия с сервером. Пожалуйста, повторите позже</string>
     <string name="scan_stopped_warning">Сканирование остановлено. Нажмите «Сканировать», затем повторите сканирование.</string>
     <string name="scan_stopped_tts">Сканирование остановлено</string>
+    <string name="monitor_box_sticker">Код стикера</string>
+    <string name="printer_print_box_sticker">Печать стикера коробки</string>
 </resources>

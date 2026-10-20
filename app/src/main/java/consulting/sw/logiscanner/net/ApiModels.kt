@@ -149,12 +149,13 @@ data class ScanJobMonitorBox(
     var boxId: Int? = null,
     var bucketIndex: Int? = null,
     var boxCode: String = "",
+    var boxSticker: String? = null,
+    var printableTemplates: List<String> = emptyList(),
     var lengthCm: Double? = null,
     var widthCm: Double? = null,
     var heightCm: Double? = null,
     var weightKg: Double? = null,
     var boxStickerScanned: Boolean = false,
-    var boxScannedSticker: String? = null,
     var boxScannedUserName: String = "",
     var boxScannedTime: String? = null,
     var totalParcels: Int = 0,
@@ -174,6 +175,7 @@ data class ScanJobMonitorSnapshot(
     var status: Int = 0,
     var registerId: Int = 0,
     var registerType: Int = 0,
+    var companyId: Int = 0,
     var dealNumber: String = "",
     var warehouseId: Int = 0,
     var realWeightKg: Double? = null,
@@ -198,6 +200,15 @@ data class ScanJobMonitorFollowTarget(
     var boxId: Int? = null,
     var bucketIndex: Int? = null,
     var parcelId: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class BoxLabel(
+    val template: String,
+    val contentBase64: String,
+    val language: String,
+    val widthMm: Int,
+    val heightMm: Int
 )
 
 @JsonClass(generateAdapter = true)

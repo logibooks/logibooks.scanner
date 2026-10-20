@@ -199,8 +199,6 @@ class MainActivity : ComponentActivity() {
                                 lastExtId = state.lastExtId,
                                 lastTajikistanExportSticker = state.lastTajikistanExportSticker,
                                 canPrintTajikistanExportSticker = canRepeatTajikistanExportSticker(
-                                    submode = state.relabelingSubmode,
-                                    relabelingMode = state.bulkyItemsMode,
                                     printerSelected = printerSelected,
                                     job = state.selectedScanJob,
                                     hasSticker = state.lastTajikistanExportSticker != null
@@ -243,6 +241,9 @@ class MainActivity : ComponentActivity() {
                                     runPrinterAction {
                                         vm.printParcelSticker(sticker)
                                     }
+                                },
+                                onPrintBoxSticker = { boxId ->
+                                    runPrinterAction { vm.printBoxSticker(boxId) }
                                 },
                                 onPrintTajikistanExportSticker = {
                                     runPrinterAction {

@@ -68,6 +68,19 @@ class ScanJobMonitorRepository(
         )
     }
 
+    suspend fun loadBoxLabel(boxId: Int): consulting.sw.logiscanner.net.BoxLabel {
+        try {
+            return api.getBoxLabel("Bearer $token", boxId)
+        } catch (exception: retrofit2.HttpException) {
+            val body = exception.response()?.errorBody()?.string()
+            val message = body?.let {
+                runCatching { com.squareup.moshi.Moshi.Builder().build()
+                    .adapter(consulting.sw.logiscanner.net.ErrMessage::class.java).fromJson(it)?.msg }.getOrNull()
+            }
+            throw java.io.IOException(message?.takeIf { it.isNotBlank() } ?: exception.message, exception)
+        }
+    }
+
     suspend fun resolveTarget(scanJobId: Int, number: String): ScanJobMonitorTarget {
         return api.resolveScanJobMonitorTarget(
             bearer = "Bearer $token",

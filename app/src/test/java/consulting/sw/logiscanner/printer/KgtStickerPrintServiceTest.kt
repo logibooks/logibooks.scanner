@@ -23,6 +23,27 @@ import java.io.IOException
 class KgtStickerPrintServiceTest {
 
     @Test
+    fun boxPrintingSendsServerBytesAndRejectsInvalidPayloads() = runTest {
+        val client = RecordingClient()
+        val service = KgtStickerPrintService(TscStickerRenderer(), client)
+        val payload = "SIZE 58 mm,40 mm\r\nQRCODE server bytes\r\nPRINT 1,1\r\n"
+        val label = consulting.sw.logiscanner.net.BoxLabel("WBR_BOX", java.util.Base64.getEncoder().encodeToString(payload.toByteArray()), "TSPL", 58, 40)
+        assertEquals(KgtStickerPrintResult.Success, service.printBoxSticker("AA:BB") { label })
+        assertEquals(payload, client.prints.single().payload)
+        assertEquals(KgtStickerPrintResult.MissingPrinter, service.printBoxSticker(null) { error("Must not fetch") })
+        for (invalid in listOf(label.copy(template = "WBRN"), label.copy(language = "ZPL"), label.copy(widthMm = 40),
+            label.copy(heightMm = 58), label.copy(contentBase64 = "!"), label.copy(contentBase64 = ""))) {
+            assertTrue(service.printBoxSticker("AA:BB") { invalid } is KgtStickerPrintResult.InvalidSticker)
+        }
+        assertEquals(1, client.prints.size)
+        assertTrue(service.printBoxSticker("AA:BB") { throw IOException("offline") } is KgtStickerPrintResult.Failed)
+        try {
+            service.printBoxSticker("AA:BB") { throw kotlinx.coroutines.CancellationException("cancelled") }
+            error("Cancellation must propagate")
+        } catch (_: kotlinx.coroutines.CancellationException) { }
+    }
+
+    @Test
     fun printReturnsMissingPrinterWhenAddressIsBlank() = runTest {
         val service = KgtStickerPrintService(TscStickerRenderer(), RecordingClient())
 

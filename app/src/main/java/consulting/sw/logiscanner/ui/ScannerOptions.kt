@@ -281,13 +281,9 @@ fun tajikistanExportStickerAutoPrintAction(
 }
 
 fun canRepeatTajikistanExportSticker(
-    submode: RelabelingSubmode,
-    relabelingMode: Int,
     printerSelected: Boolean,
     job: ScanJob?,
     hasSticker: Boolean
-): Boolean = relabelingModeAvailable(job, submode, printerSelected)
-    && submode == RelabelingSubmode.FULL
-    && relabelingMode != BulkyItemsModes.OFF
-    && printerSelected
+): Boolean = printerSelected
+    && job?.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
     && hasSticker
