@@ -10,6 +10,7 @@ import consulting.sw.logiscanner.net.LookupScanOutcome
 import consulting.sw.logiscanner.net.LookupTargetModes
 import consulting.sw.logiscanner.net.ScanJobOperations
 import consulting.sw.logiscanner.net.ScanResultItem
+import consulting.sw.logiscanner.net.ScopedLookupProgress
 
 @StringRes
 internal fun lookupPresetLabel(targetMode: Int?, operation: Int?): Int? = when (targetMode) {
@@ -19,6 +20,13 @@ internal fun lookupPresetLabel(targetMode: Int?, operation: Int?): Int? = when (
 }
 
 data class LookupScanFeedback(@param:StringRes val label: Int, val candidateParcelNumbers: List<String> = emptyList())
+
+internal fun ScopedLookupProgress.withReportFrom(report: ScopedLookupProgress?): ScopedLookupProgress {
+    if (missingParcels != null || report?.missingParcels == null ||
+        report.expectedCount != expectedCount || report.confirmedCount != confirmedCount
+    ) return this
+    return copy(missingParcels = report.missingParcels, confirmedParcels = report.confirmedParcels)
+}
 
 internal fun lookupScanFeedback(result: ScanResultItem): LookupScanFeedback? = when (result.lookupOutcome) {
     LookupScanOutcome.CONFIRMED -> LookupScanFeedback(R.string.lookup_confirmed)

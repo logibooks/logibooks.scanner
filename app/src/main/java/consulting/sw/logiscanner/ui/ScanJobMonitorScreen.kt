@@ -117,6 +117,7 @@ internal fun ScanJobMonitorPanel(
     jumpLoading: Boolean,
     highlightedParcelId: Int?,
     onOpenRegister: () -> Unit,
+    onLoadLookupReport: () -> Unit,
     onOpenBox: (ScanJobMonitorBox) -> Unit,
     onToggleAutoFollow: () -> Unit,
     onToggleBulkyItemsMode: () -> Unit,
@@ -319,8 +320,13 @@ internal fun ScanJobMonitorPanel(
                     } else {
                         Text(stringResource(R.string.lookup_search_progress, progress.confirmedCount, progress.missingCount))
                     }
-                    ScopedLookupParcelList(R.string.lookup_missing_parcels, progress.missingParcels.map { it.parcelNumber })
-                    ScopedLookupParcelList(R.string.lookup_confirmed_parcels, progress.confirmedParcels.map { it.parcelNumber })
+                    if (progress.expectedCount > 0 && progress.missingParcels == null) {
+                        TextButton(onClick = onLoadLookupReport, enabled = !loading) {
+                            Text(stringResource(R.string.lookup_load_report))
+                        }
+                    }
+                    ScopedLookupParcelList(R.string.lookup_missing_parcels, progress.missingParcels.orEmpty().map { it.parcelNumber })
+                    ScopedLookupParcelList(R.string.lookup_confirmed_parcels, progress.confirmedParcels.orEmpty().map { it.parcelNumber })
                 }
             }
 

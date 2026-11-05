@@ -190,8 +190,8 @@ data class ScopedLookupProgress(
     val expectedCount: Int = 0,
     val confirmedCount: Int = 0,
     val missingCount: Int = 0,
-    val missingParcels: List<ScopedLookupParcel> = emptyList(),
-    val confirmedParcels: List<ScopedLookupParcel> = emptyList()
+    val missingParcels: List<ScopedLookupParcel>? = null,
+    val confirmedParcels: List<ScopedLookupParcel>? = null
 )
 
 @JsonClass(generateAdapter = true)

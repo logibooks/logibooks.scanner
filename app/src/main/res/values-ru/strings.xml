@@ -219,4 +219,6 @@ This file is a part of LogiScanner application
     <string name="lookup_search_progress">Найдено: %1$d · Осталось найти: %2$d</string>
     <string name="lookup_missing_parcels">Ненайденные посылки (%1$d)</string>
     <string name="lookup_confirmed_parcels">Подтверждённые посылки (%1$d)</string>
+    <string name="lookup_load_report">Показать списки посылок</string>
+    <string name="lookup_report_error">Не удалось загрузить списки посылок задания</string>
 </resources>

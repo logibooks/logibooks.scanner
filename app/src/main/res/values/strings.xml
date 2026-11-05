@@ -215,4 +215,6 @@ This file is a part of LogiScanner application
     <string name="lookup_search_progress">Recovered: %1$d · Still missing: %2$d</string>
     <string name="lookup_missing_parcels">Missing parcels (%1$d)</string>
     <string name="lookup_confirmed_parcels">Confirmed parcels (%1$d)</string>
+    <string name="lookup_load_report">Show parcel lists</string>
+    <string name="lookup_report_error">Unable to load job parcel lists</string>
 </resources>

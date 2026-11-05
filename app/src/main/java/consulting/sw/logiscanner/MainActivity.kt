@@ -231,6 +231,7 @@ class MainActivity : ComponentActivity() {
                                 onStartScanning = vm::startScanning,
                                 onStopScanning = vm::stopScanning,
                                 onOpenMonitorRegister = vm::openMonitorRegister,
+                                onLoadLookupReport = vm::loadMonitorLookupReport,
                                 onOpenMonitorBox = vm::openMonitorBox,
                                 onToggleMonitorAutoFollow = vm::toggleMonitorAutoFollow,
                                 onToggleBulkyItemsMode = vm::toggleBulkyItemsMode,

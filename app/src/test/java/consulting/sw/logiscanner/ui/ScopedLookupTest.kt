@@ -32,6 +32,21 @@ class ScopedLookupTest {
     }
 
     @Test
+    fun countUpdatesRetainOnlyMatchingParcelLists() {
+        val adapter = moshi.adapter(ScanJobMonitorSnapshot::class.java)
+        val report = adapter.fromJson(
+            """{"lookupProgress":{"expectedCount":1,"confirmedCount":0,"missingCount":1,
+                "missingParcels":[{"parcelId":1,"parcelNumber":"P-1"}],"confirmedParcels":[]}}"""
+        )!!.lookupProgress!!
+        val counts = adapter.fromJson(
+            """{"lookupProgress":{"expectedCount":1,"confirmedCount":0,"missingCount":1,
+                "missingParcels":null,"confirmedParcels":null}}"""
+        )!!.lookupProgress!!
+        assertEquals(report, counts.withReportFrom(report))
+        assertNull(counts.copy(confirmedCount = 1, missingCount = 0).withReportFrom(report).missingParcels)
+    }
+
+    @Test
     fun scopedMonitorProgressDecodesIndependentlyOfRegisterTotals() {
         val snapshot = moshi.adapter(ScanJobMonitorSnapshot::class.java).fromJson(
             """{"lookupTargetMode":1,"operation":30,"totalParcels":99,

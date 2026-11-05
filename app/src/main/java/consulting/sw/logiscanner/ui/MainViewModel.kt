@@ -829,9 +829,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         _state.update {
             it.copy(
-                monitorSnapshot = snapshot,
+                monitorSnapshot = snapshot.copy(
+                    lookupProgress = snapshot.lookupProgress?.withReportFrom(it.monitorSnapshot?.lookupProgress)
+                ),
                 monitorError = null
             )
+        }
+    }
+
+    fun loadMonitorLookupReport() {
+        val jobId = state.value.selectedScanJob?.id ?: return
+        if (state.value.monitorLoading) return
+        val version = monitorScopeVersion
+        _state.update { it.copy(monitorLoading = true) }
+        viewModelScope.launch {
+            try {
+                val report = scanJobMonitorRepo.loadSnapshot(jobId, ScanJobMonitorScope(ScanJobMonitorAreas.BOXES))
+                if (version == monitorScopeVersion) {
+                    _state.update { current ->
+                        val snapshot = current.monitorSnapshot
+                        current.copy(
+                            monitorSnapshot = snapshot?.copy(
+                                lookupProgress = snapshot.lookupProgress?.withReportFrom(report.lookupProgress)
+                            ),
+                            monitorError = null
+                        )
+                    }
+                }
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                Log.e(javaClass.simpleName, "Failed to load lookup report", ex)
+                if (version == monitorScopeVersion) {
+                    _state.update { it.copy(monitorError = getApplication<Application>().getString(R.string.lookup_report_error)) }
+                }
+            } finally {
+                if (version == monitorScopeVersion) {
+                    _state.update { it.copy(monitorLoading = false) }
+                }
+            }
         }
     }
 
