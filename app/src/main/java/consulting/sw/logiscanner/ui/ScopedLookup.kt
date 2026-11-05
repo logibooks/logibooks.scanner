@@ -6,24 +6,16 @@ package consulting.sw.logiscanner.ui
 
 import androidx.annotation.StringRes
 import consulting.sw.logiscanner.R
+import consulting.sw.logiscanner.net.LookupScanOutcome
+import consulting.sw.logiscanner.net.LookupTargetModes
+import consulting.sw.logiscanner.net.ScanJobOperations
 import consulting.sw.logiscanner.net.ScanResultItem
-
-internal object LookupTargetModes {
-    const val RED_ZONE_AT_START = 1
-    const val MISSING_FROM_JOB = 2
-}
-
-internal object LookupScanOutcome {
-    const val CONFIRMED = 1
-    const val INSPECT_BOX = 2
-    const val ALREADY_CONFIRMED = 3
-}
 
 @StringRes
 internal fun lookupPresetLabel(targetMode: Int?, operation: Int?): Int? = when (targetMode) {
     LookupTargetModes.RED_ZONE_AT_START -> R.string.lookup_preset_red
     LookupTargetModes.MISSING_FROM_JOB -> R.string.lookup_preset_missing
-    else -> R.string.lookup_preset_status.takeIf { operation == 30 }
+    else -> R.string.lookup_preset_status.takeIf { operation == ScanJobOperations.LOOKUP }
 }
 
 data class LookupScanFeedback(@param:StringRes val label: Int, val candidateParcelNumbers: List<String> = emptyList())

@@ -48,6 +48,21 @@ object RegisterTypes {
     const val WBR_N = 2 * 1024 * 1024 + WBR
 }
 
+internal object ScanJobOperations {
+    const val LOOKUP = 30
+}
+
+internal object LookupTargetModes {
+    const val RED_ZONE_AT_START = 1
+    const val MISSING_FROM_JOB = 2
+}
+
+internal object LookupScanOutcome {
+    const val CONFIRMED = 1
+    const val INSPECT_BOX = 2
+    const val ALREADY_CONFIRMED = 3
+}
+
 /** Bulky item mode values sent with scan requests. */
 object BulkyItemsModes {
     const val OFF = 0

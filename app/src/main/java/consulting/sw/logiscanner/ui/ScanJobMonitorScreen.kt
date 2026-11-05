@@ -4,6 +4,7 @@
 
 package consulting.sw.logiscanner.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -76,6 +77,7 @@ import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
+import consulting.sw.logiscanner.net.LookupTargetModes
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.TajikistanExportSticker
@@ -1159,7 +1161,7 @@ private fun parcelExpansionKey(parcel: ScanJobMonitorParcel, index: Int): String
 }
 
 @Composable
-private fun ScopedLookupParcelList(label: Int, numbers: List<String>) {
+private fun ScopedLookupParcelList(@StringRes label: Int, numbers: List<String>) {
     if (numbers.isEmpty()) return
     var expanded by remember { mutableStateOf(false) }
     TextButton(onClick = { expanded = !expanded }) {

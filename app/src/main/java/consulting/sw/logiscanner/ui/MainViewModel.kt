@@ -19,6 +19,7 @@ import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScanJobMonitorTargetKinds
+import consulting.sw.logiscanner.net.LookupScanOutcome
 import consulting.sw.logiscanner.net.ScanResultItem
 import consulting.sw.logiscanner.printer.BluetoothPrinterClient
 import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
