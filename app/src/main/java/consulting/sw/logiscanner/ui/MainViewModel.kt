@@ -830,7 +830,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update {
             it.copy(
                 monitorSnapshot = snapshot.copy(
-                    lookupProgress = snapshot.lookupProgress?.withReportFrom(it.monitorSnapshot?.lookupProgress)
+                    lookupProgress = mergeLookupProgress(it.monitorSnapshot?.lookupProgress, snapshot.lookupProgress)
                 ),
                 monitorError = null
             )
@@ -841,6 +841,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val jobId = state.value.selectedScanJob?.id ?: return
         if (state.value.monitorLoading) return
         val version = monitorScopeVersion
+        val reportError = getApplication<Application>().getString(R.string.lookup_report_error)
         _state.update { it.copy(monitorLoading = true) }
         viewModelScope.launch {
             try {
@@ -850,9 +851,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val snapshot = current.monitorSnapshot
                         current.copy(
                             monitorSnapshot = snapshot?.copy(
-                                lookupProgress = snapshot.lookupProgress?.withReportFrom(report.lookupProgress)
+                                lookupProgress = mergeLookupProgress(snapshot.lookupProgress, report.lookupProgress)
                             ),
-                            monitorError = null
+                            monitorError = current.monitorError.takeUnless { it == reportError }
                         )
                     }
                 }
@@ -860,7 +861,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (ex is CancellationException) throw ex
                 Log.e(javaClass.simpleName, "Failed to load lookup report", ex)
                 if (version == monitorScopeVersion) {
-                    _state.update { it.copy(monitorError = getApplication<Application>().getString(R.string.lookup_report_error)) }
+                    _state.update { it.copy(monitorError = reportError) }
                 }
             } finally {
                 if (version == monitorScopeVersion) {

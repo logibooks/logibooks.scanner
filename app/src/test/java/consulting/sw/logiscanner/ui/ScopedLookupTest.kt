@@ -42,8 +42,14 @@ class ScopedLookupTest {
             """{"lookupProgress":{"expectedCount":1,"confirmedCount":0,"missingCount":1,
                 "missingParcels":null,"confirmedParcels":null}}"""
         )!!.lookupProgress!!
-        assertEquals(report, counts.withReportFrom(report))
-        assertNull(counts.copy(confirmedCount = 1, missingCount = 0).withReportFrom(report).missingParcels)
+        val newerCounts = counts.copy(confirmedCount = 1, missingCount = 0)
+        val newerReport = newerCounts.copy(missingParcels = emptyList(), confirmedParcels = report.missingParcels)
+        assertEquals(report, mergeLookupProgress(report, counts))
+        assertEquals(report, mergeLookupProgress(counts, report))
+        assertNull(mergeLookupProgress(report, newerCounts)?.missingParcels)
+        assertEquals(newerReport, mergeLookupProgress(counts, newerReport))
+        assertEquals(newerReport, mergeLookupProgress(newerReport, counts))
+        assertEquals(newerCounts, mergeLookupProgress(newerCounts, report))
     }
 
     @Test

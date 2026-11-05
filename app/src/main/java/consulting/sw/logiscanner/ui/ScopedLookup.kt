@@ -21,11 +21,16 @@ internal fun lookupPresetLabel(targetMode: Int?, operation: Int?): Int? = when (
 
 data class LookupScanFeedback(@param:StringRes val label: Int, val candidateParcelNumbers: List<String> = emptyList())
 
-internal fun ScopedLookupProgress.withReportFrom(report: ScopedLookupProgress?): ScopedLookupProgress {
-    if (missingParcels != null || report?.missingParcels == null ||
-        report.expectedCount != expectedCount || report.confirmedCount != confirmedCount
-    ) return this
-    return copy(missingParcels = report.missingParcels, confirmedParcels = report.confirmedParcels)
+// Target membership is frozen at start and confirmations can only increase.
+internal fun mergeLookupProgress(
+    current: ScopedLookupProgress?,
+    incoming: ScopedLookupProgress?
+): ScopedLookupProgress? {
+    if (incoming == null) return current
+    if (current == null || incoming.expectedCount > current.expectedCount) return incoming
+    if (incoming.expectedCount < current.expectedCount || incoming.confirmedCount < current.confirmedCount) return current
+    if (incoming.confirmedCount == current.confirmedCount && incoming.missingParcels == null) return current
+    return incoming
 }
 
 internal fun lookupScanFeedback(result: ScanResultItem): LookupScanFeedback? = when (result.lookupOutcome) {
