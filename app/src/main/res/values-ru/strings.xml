@@ -208,4 +208,15 @@ This file is a part of LogiScanner application
     <string name="scan_stopped_tts">Сканирование остановлено</string>
     <string name="monitor_box_sticker">Код стикера</string>
     <string name="printer_print_box_sticker">Печать стикера коробки</string>
+    <string name="lookup_preset_status">Поиск по статусу</string>
+    <string name="lookup_preset_red">Контроль красной зоны</string>
+    <string name="lookup_preset_missing">Поиск ненайденных</string>
+    <string name="lookup_inspect_box">Откройте коробку и проверьте посылки</string>
+    <string name="lookup_confirmed">Посылка подтверждена</string>
+    <string name="lookup_already_confirmed">Посылка уже подтверждена</string>
+    <string name="lookup_candidate_parcels">Посылки для проверки: %1$s</string>
+    <string name="lookup_verification_progress">Ожидается: %1$d · Подтверждено: %2$d · Не найдено: %3$d</string>
+    <string name="lookup_search_progress">Найдено: %1$d · Осталось найти: %2$d</string>
+    <string name="lookup_missing_parcels">Ненайденные посылки (%1$d)</string>
+    <string name="lookup_confirmed_parcels">Подтверждённые посылки (%1$d)</string>
 </resources>

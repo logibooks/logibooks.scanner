@@ -44,6 +44,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -92,6 +93,7 @@ internal fun ScanJobMonitorPanel(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lastLookupFeedback: LookupScanFeedback? = null,
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
     canPrintTajikistanExportSticker: Boolean,
@@ -277,6 +279,7 @@ internal fun ScanJobMonitorPanel(
                 lastScanSource = lastScanSource,
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
+                lookupFeedback = lastLookupFeedback,
                 lastExtId = lastExtId,
                 lastTajikistanExportSticker = lastTajikistanExportSticker,
                 lastScanTime = lastScanTime,
@@ -301,6 +304,22 @@ internal fun ScanJobMonitorPanel(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 return@Column
+            }
+
+            if (snapshot != null) {
+                lookupPresetLabel(snapshot.lookupTargetMode, snapshot.operation)?.let { label ->
+                    Text(stringResource(label), style = MaterialTheme.typography.titleSmall)
+                }
+                snapshot.lookupProgress?.let { progress ->
+                    if (snapshot.lookupTargetMode == LookupTargetModes.RED_ZONE_AT_START) {
+                        Text(stringResource(R.string.lookup_verification_progress,
+                            progress.expectedCount, progress.confirmedCount, progress.missingCount))
+                    } else {
+                        Text(stringResource(R.string.lookup_search_progress, progress.confirmedCount, progress.missingCount))
+                    }
+                    ScopedLookupParcelList(R.string.lookup_missing_parcels, progress.missingParcels.map { it.parcelNumber })
+                    ScopedLookupParcelList(R.string.lookup_confirmed_parcels, progress.confirmedParcels.map { it.parcelNumber })
+                }
             }
 
             if (snapshot != null && selectedScope.area == ScanJobMonitorAreas.BOXES) {
@@ -1140,6 +1159,16 @@ private fun parcelExpansionKey(parcel: ScanJobMonitorParcel, index: Int): String
 }
 
 @Composable
+private fun ScopedLookupParcelList(label: Int, numbers: List<String>) {
+    if (numbers.isEmpty()) return
+    var expanded by remember { mutableStateOf(false) }
+    TextButton(onClick = { expanded = !expanded }) {
+        Text(stringResource(label, numbers.size))
+    }
+    if (expanded) Text(numbers.joinToString(", "))
+}
+
+@Composable
 internal fun LocalScanResult(
     lastCode: String?,
     lastParcelCount: Int?,
@@ -1147,6 +1176,7 @@ internal fun LocalScanResult(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lookupFeedback: LookupScanFeedback? = null,
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
     lastScanTime: String?,
@@ -1226,7 +1256,13 @@ internal fun LocalScanResult(
                 modifier = Modifier.weight(0.58f)
             )
         }
-        display.hint?.let { hint ->
+        lookupFeedback?.let { feedback ->
+            Text(stringResource(feedback.label), style = MaterialTheme.typography.titleSmall)
+            if (feedback.candidateParcelNumbers.isNotEmpty()) {
+                Text(stringResource(R.string.lookup_candidate_parcels, feedback.candidateParcelNumbers.joinToString(", ")))
+            }
+        }
+        display.hint?.takeIf { lookupFeedback == null }?.let { hint ->
             Text(
                 text = hint,
                 style = MaterialTheme.typography.bodySmall,

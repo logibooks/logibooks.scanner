@@ -192,6 +192,9 @@ internal fun JobSelectionScreen(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
+                            lookupPresetLabel(job.lookupTargetMode, job.operation)?.let { label ->
+                                Text(stringResource(label), style = MaterialTheme.typography.bodyMedium)
+                            }
                             Text(
                                 stringResource(R.string.job_type, scanJobTypeDisplays[job.type] ?: job.type),
                                 style = MaterialTheme.typography.bodySmall,

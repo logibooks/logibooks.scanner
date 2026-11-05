@@ -49,11 +49,13 @@ import java.time.OffsetDateTime
 import java.util.Locale
 
 enum class ScanResultColor {
-    NONE, NOT_FOUND, OK, ISSUE, SERVER_ERROR, IGNORED
+    NONE, NOT_FOUND, OK, ISSUE, INSPECT_BOX, SERVER_ERROR, IGNORED
 }
 
 fun determineScanResultColor(result: ScanResultItem): ScanResultColor {
-    return if (result.hasIssues) {
+    return if (result.lookupOutcome == LookupScanOutcome.INSPECT_BOX) {
+        ScanResultColor.INSPECT_BOX
+    } else if (result.hasIssues) {
         ScanResultColor.ISSUE
     } else if (result.count == 0) {
         ScanResultColor.NOT_FOUND
@@ -100,6 +102,7 @@ data class MainState(
     val lastScanSource: Int? = null,
     val lastItemNumbers: List<String> = emptyList(),
     val lastExtData: String? = null,
+    val lastLookupFeedback: LookupScanFeedback? = null,
     val lastExtId: String? = null,
     val lastTajikistanExportSticker: TajikistanExportSticker? = null,
     val lastScanTime: String? = null,
@@ -610,6 +613,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastScanSource = if (jobChanged) null else it.lastScanSource,
                     lastItemNumbers = if (jobChanged) emptyList() else it.lastItemNumbers,
                     lastExtData = if (jobChanged) null else it.lastExtData,
+                    lastLookupFeedback = if (jobChanged) null else it.lastLookupFeedback,
                     lastExtId = if (jobChanged) null else it.lastExtId,
                     lastTajikistanExportSticker = if (jobChanged) null else it.lastTajikistanExportSticker,
                     lastScanTime = if (jobChanged) null else it.lastScanTime,
@@ -937,6 +941,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 lastScanSource = null,
                 lastItemNumbers = emptyList(),
                 lastExtData = null,
+                lastLookupFeedback = null,
                 lastExtId = null,
                 lastScanTime = null,
                 scanResultColor = ScanResultColor.NONE,
@@ -1065,6 +1070,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastScanSource = result.scanSource,
                         lastItemNumbers = result.itemNumbers,
                         lastExtData = result.extData,
+                        lastLookupFeedback = lookupScanFeedback(result),
                         lastExtId = result.extId,
                         lastTajikistanExportSticker = if (tajikistanMissingData) {
                             null
@@ -1144,6 +1150,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
                             lastExtData = null,
+                            lastLookupFeedback = null,
                             lastExtId = null,
                             lastTajikistanExportSticker = null,
                             lastScanTime = null,
@@ -1161,6 +1168,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
                             lastExtData = null,
+                            lastLookupFeedback = null,
                             lastExtId = null,
                             lastScanTime = OffsetDateTime.now().toString(),
                             error = getApplication<Application>().getString(R.string.scan_error_server),

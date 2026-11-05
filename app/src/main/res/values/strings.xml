@@ -204,4 +204,15 @@ This file is a part of LogiScanner application
     <string name="scan_stopped_tts">Сканирование остановлено</string>
     <string name="monitor_box_sticker">Sticker code</string>
     <string name="printer_print_box_sticker">Print box sticker</string>
+    <string name="lookup_preset_status">Lookup by status</string>
+    <string name="lookup_preset_red">Red-zone verification</string>
+    <string name="lookup_preset_missing">Search for missing parcels</string>
+    <string name="lookup_inspect_box">Open the box and check the parcels</string>
+    <string name="lookup_confirmed">Parcel confirmed</string>
+    <string name="lookup_already_confirmed">Parcel already confirmed</string>
+    <string name="lookup_candidate_parcels">Parcels to check: %1$s</string>
+    <string name="lookup_verification_progress">Expected: %1$d · Confirmed: %2$d · Missing: %3$d</string>
+    <string name="lookup_search_progress">Recovered: %1$d · Still missing: %2$d</string>
+    <string name="lookup_missing_parcels">Missing parcels (%1$d)</string>
+    <string name="lookup_confirmed_parcels">Confirmed parcels (%1$d)</string>
 </resources>

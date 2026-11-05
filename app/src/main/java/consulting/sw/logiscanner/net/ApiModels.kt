@@ -36,7 +36,9 @@ data class ScanJob(
     val status: String,
     val type: String,
     val registerType: Int = 0,
-    val stickerTemplate: String? = null
+    val stickerTemplate: String? = null,
+    val operation: Int? = null,
+    val lookupTargetMode: Int? = null
 )
 
 /** Register type ids used by scanner-only feature gates. */
@@ -166,6 +168,18 @@ data class ScanJobMonitorBox(
 )
 
 @JsonClass(generateAdapter = true)
+data class ScopedLookupParcel(val parcelId: Int, val parcelNumber: String)
+
+@JsonClass(generateAdapter = true)
+data class ScopedLookupProgress(
+    val expectedCount: Int = 0,
+    val confirmedCount: Int = 0,
+    val missingCount: Int = 0,
+    val missingParcels: List<ScopedLookupParcel> = emptyList(),
+    val confirmedParcels: List<ScopedLookupParcel> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
 data class ScanJobMonitorSnapshot(
     var scanJobId: Int = 0,
     var scanJobName: String = "",
@@ -173,6 +187,8 @@ data class ScanJobMonitorSnapshot(
     var operation: Int = 0,
     var mode: Int = 0,
     var status: Int = 0,
+    var lookupTargetMode: Int? = null,
+    var lookupProgress: ScopedLookupProgress? = null,
     var registerId: Int = 0,
     var registerType: Int = 0,
     var companyId: Int = 0,
@@ -234,7 +250,9 @@ data class ScanResultItem(
     val scanTime: String? = null,
     val followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget(),
     val stickerTemplate: String? = null,
-    val exportSticker: TajikistanExportStickerPayload? = null
+    val exportSticker: TajikistanExportStickerPayload? = null,
+    val lookupOutcome: Int = 0,
+    val candidateParcelNumbers: List<String>? = null
 )
 
 @JsonClass(generateAdapter = true)

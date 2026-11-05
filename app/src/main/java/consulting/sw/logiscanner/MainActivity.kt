@@ -98,6 +98,7 @@ class MainActivity : ComponentActivity() {
                 val backgroundColor = when (state.scanResultColor) {
                     ScanResultColor.NOT_FOUND -> colorResource(id = R.color.scan_result_not_found)
                     ScanResultColor.OK -> colorResource(id = R.color.scan_result_ok)
+                    ScanResultColor.INSPECT_BOX -> colorResource(id = R.color.scan_result_inspect_box)
                     ScanResultColor.ISSUE -> colorResource(id = R.color.scan_result_issue)
                     ScanResultColor.SERVER_ERROR -> colorResource(id = R.color.scan_result_server_error)
                     ScanResultColor.IGNORED -> colorResource(id = R.color.scan_result_ignored)
@@ -196,6 +197,7 @@ class MainActivity : ComponentActivity() {
                                 lastScanSource = state.lastScanSource,
                                 lastItemNumbers = state.lastItemNumbers,
                                 lastExtData = state.lastExtData,
+                                lastLookupFeedback = state.lastLookupFeedback,
                                 lastExtId = state.lastExtId,
                                 lastTajikistanExportSticker = state.lastTajikistanExportSticker,
                                 canPrintTajikistanExportSticker = canRepeatTajikistanExportSticker(
