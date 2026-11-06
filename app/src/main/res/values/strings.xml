@@ -109,6 +109,12 @@ This file is a part of LogiScanner application
     <string name="monitor_stat_not_scanned">Not scanned</string>
     <string name="monitor_restricted">Restricted</string>
     <string name="monitor_not_in_register">Not in register</string>
+    <string name="monitor_recovery_remaining">Still missing</string>
+    <string name="monitor_recovery_recovered">Recovered by this job</string>
+    <string name="monitor_recovery_box">Box number</string>
+    <string name="monitor_recovery_candidates">Parcels to check</string>
+    <string name="monitor_recovery_confirmed">Parcel recovered</string>
+    <string name="scan_error_ambiguous_return_parcel">Code %1$s matches several parcels. Scan a unique code.</string>
     <string name="monitor_local_scan_result_title">Last scan %1$s %2$s</string>
     <string name="monitor_local_scan_result_title_no_time">Last scan</string>
     <string name="monitor_local_scan_result_parcels">Parcels: %1$d</string>

@@ -183,6 +183,8 @@ class MainActivity : ComponentActivity() {
                                 lastBoxCount = state.lastBoxCount,
                                 lastScanSource = state.lastScanSource,
                                 lastItemNumbers = state.lastItemNumbers,
+                                lastRecoveryBoxAdvice = state.lastRecoveryBoxAdvice,
+                                lastRecoveryConfirmed = state.lastRecoveryConfirmed,
                                 lastExtData = state.lastExtData,
                                 lastExtId = state.lastExtId,
                                 lastTajikistanExportSticker = state.lastTajikistanExportSticker,

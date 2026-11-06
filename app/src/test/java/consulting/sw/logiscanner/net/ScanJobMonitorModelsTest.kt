@@ -13,6 +13,27 @@ import org.junit.Test
 class ScanJobMonitorModelsTest {
 
     @Test
+    fun recoveryProgressAndFeedbackDecodeWithoutChangingLegacyDefaults() {
+        val moshi = Moshi.Builder().build()
+        val monitor = moshi.adapter(ScanJobMonitorSnapshot::class.java)
+        val snapshot = monitor.fromJson("""{"parcelsWithStickerScanned":19,"returnRecovery":{"remaining":3,"recovered":1}}""")!!
+        assertEquals(ReturnRecoveryProgress(3, 1), snapshot.returnRecovery)
+        assertEquals(19, snapshot.parcelsWithStickerScanned)
+        assertEquals(null, monitor.fromJson("{}")!!.returnRecovery)
+
+        val scan = moshi.adapter(ScanResultItem::class.java)
+        val legacy = """{"count":0,"parcelCount":0,"boxCount":1,"scanSource":20,"itemNumbers":["BOX"],"extData":null}"""
+        val advice = scan.fromJson(legacy.dropLast(1) + ""","recoveryBoxAdvice":{"boxNumber":"BOX",
+            "candidateParcelNumbers":["P1","P2"],"instruction":"Откройте коробку и проверьте посылки"}}""")!!
+        assertEquals(RecoveryBoxAdvice("BOX", listOf("P1", "P2"), "Откройте коробку и проверьте посылки"), advice.recoveryBoxAdvice)
+        assertEquals(false, advice.recoveryConfirmed)
+        val recovered = scan.fromJson(legacy.dropLast(1) + ""","recoveryConfirmed":true}""")!!
+        assertTrue(recovered.recoveryConfirmed)
+        assertEquals(null, recovered.recoveryBoxAdvice)
+        assertEquals(false, scan.fromJson(legacy)!!.recoveryConfirmed)
+    }
+
+    @Test
     fun savedBoxStickerParsesWithoutChangingCurrentJobIndicators() {
         val adapter = Moshi.Builder().build().adapter(ScanJobMonitorSnapshot::class.java)
         val snapshot = adapter.fromJson("""{"companyId":2,"registerType":2097154,

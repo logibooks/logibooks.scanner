@@ -17,6 +17,7 @@ import consulting.sw.logiscanner.net.SCAN_JOB_STATUS_IN_PROGRESS
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
+import consulting.sw.logiscanner.net.RecoveryBoxAdvice
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScanJobMonitorTargetKinds
 import consulting.sw.logiscanner.net.ScanResultItem
@@ -44,6 +45,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import consulting.sw.logiscanner.repo.AmbiguousReturnParcelStickerException
 import retrofit2.HttpException
 import java.time.OffsetDateTime
 import java.util.Locale
@@ -53,7 +55,7 @@ enum class ScanResultColor {
 }
 
 fun determineScanResultColor(result: ScanResultItem): ScanResultColor {
-    return if (result.hasIssues) {
+    return if (result.hasIssues || result.recoveryBoxAdvice != null) {
         ScanResultColor.ISSUE
     } else if (result.count == 0) {
         ScanResultColor.NOT_FOUND
@@ -99,6 +101,8 @@ data class MainState(
     val lastBoxCount: Int? = null,
     val lastScanSource: Int? = null,
     val lastItemNumbers: List<String> = emptyList(),
+    val lastRecoveryBoxAdvice: RecoveryBoxAdvice? = null,
+    val lastRecoveryConfirmed: Boolean = false,
     val lastExtData: String? = null,
     val lastExtId: String? = null,
     val lastTajikistanExportSticker: TajikistanExportSticker? = null,
@@ -616,6 +620,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastBoxCount = if (jobChanged) null else it.lastBoxCount,
                     lastScanSource = if (jobChanged) null else it.lastScanSource,
                     lastItemNumbers = if (jobChanged) emptyList() else it.lastItemNumbers,
+                    lastRecoveryBoxAdvice = if (jobChanged) null else it.lastRecoveryBoxAdvice,
+                    lastRecoveryConfirmed = !jobChanged && it.lastRecoveryConfirmed,
                     lastExtData = if (jobChanged) null else it.lastExtData,
                     lastExtId = if (jobChanged) null else it.lastExtId,
                     lastTajikistanExportSticker = if (jobChanged) null else it.lastTajikistanExportSticker,
@@ -943,6 +949,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 lastBoxCount = null,
                 lastScanSource = null,
                 lastItemNumbers = emptyList(),
+                lastRecoveryBoxAdvice = null,
+                lastRecoveryConfirmed = false,
                 lastExtData = null,
                 lastExtId = null,
                 lastScanTime = null,
@@ -1071,6 +1079,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastBoxCount = result.boxCount,
                         lastScanSource = result.scanSource,
                         lastItemNumbers = result.itemNumbers,
+                        lastRecoveryBoxAdvice = result.recoveryBoxAdvice,
+                        lastRecoveryConfirmed = result.recoveryConfirmed,
                         lastExtData = result.extData,
                         lastExtId = result.extId,
                         lastTajikistanExportSticker = if (tajikistanMissingData) {
@@ -1150,6 +1160,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastBoxCount = null,
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
+                            lastRecoveryBoxAdvice = null,
+                            lastRecoveryConfirmed = false,
                             lastExtData = null,
                             lastExtId = null,
                             lastTajikistanExportSticker = null,
@@ -1167,10 +1179,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastBoxCount = null,
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
+                            lastRecoveryBoxAdvice = null,
+                            lastRecoveryConfirmed = false,
                             lastExtData = null,
                             lastExtId = null,
                             lastScanTime = OffsetDateTime.now().toString(),
-                            error = getApplication<Application>().getString(R.string.scan_error_server),
+                            error = if (ex is AmbiguousReturnParcelStickerException) {
+                                getApplication<Application>().getString(R.string.scan_error_ambiguous_return_parcel, code)
+                            } else {
+                                getApplication<Application>().getString(R.string.scan_error_server)
+                            },
                             scanResultColor = ScanResultColor.SERVER_ERROR
                         )
                     }

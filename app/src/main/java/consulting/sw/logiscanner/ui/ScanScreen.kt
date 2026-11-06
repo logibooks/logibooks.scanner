@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.R
+import consulting.sw.logiscanner.net.RecoveryBoxAdvice
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
@@ -58,6 +59,8 @@ internal fun ScanScreen(
     lastBoxCount: Int?,
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
+    lastRecoveryBoxAdvice: RecoveryBoxAdvice?,
+    lastRecoveryConfirmed: Boolean,
     lastExtData: String?,
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
@@ -249,6 +252,8 @@ internal fun ScanScreen(
                 lastBoxCount = lastBoxCount,
                 lastScanSource = lastScanSource,
                 lastItemNumbers = lastItemNumbers,
+                lastRecoveryBoxAdvice = lastRecoveryBoxAdvice,
+                lastRecoveryConfirmed = lastRecoveryConfirmed,
                 lastExtData = lastExtData,
                 lastExtId = lastExtId,
                 lastTajikistanExportSticker = lastTajikistanExportSticker,

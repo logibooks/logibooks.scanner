@@ -78,6 +78,7 @@ import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
+import consulting.sw.logiscanner.net.RecoveryBoxAdvice
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.TajikistanExportSticker
@@ -95,6 +96,8 @@ internal fun ScanJobMonitorPanel(
     lastBoxCount: Int?,
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
+    lastRecoveryBoxAdvice: RecoveryBoxAdvice? = null,
+    lastRecoveryConfirmed: Boolean = false,
     lastExtData: String?,
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
@@ -267,6 +270,8 @@ internal fun ScanJobMonitorPanel(
                 lastBoxCount = lastBoxCount,
                 lastScanSource = lastScanSource,
                 lastItemNumbers = lastItemNumbers,
+                lastRecoveryBoxAdvice = lastRecoveryBoxAdvice,
+                lastRecoveryConfirmed = lastRecoveryConfirmed,
                 lastExtData = lastExtData,
                 lastExtId = lastExtId,
                 lastTajikistanExportSticker = lastTajikistanExportSticker,
@@ -292,6 +297,11 @@ internal fun ScanJobMonitorPanel(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 return@Column
+            }
+
+            snapshot?.returnRecovery?.let { recovery ->
+                MonitorAttribute(label = stringResource(R.string.monitor_recovery_remaining), value = recovery.remaining.toString())
+                MonitorAttribute(label = stringResource(R.string.monitor_recovery_recovered), value = recovery.recovered.toString())
             }
 
             if (snapshot != null && selectedScope.area == ScanJobMonitorAreas.BOXES) {
@@ -1216,6 +1226,8 @@ internal fun LocalScanResult(
     lastBoxCount: Int?,
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
+    lastRecoveryBoxAdvice: RecoveryBoxAdvice? = null,
+    lastRecoveryConfirmed: Boolean = false,
     lastExtData: String?,
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
@@ -1296,7 +1308,7 @@ internal fun LocalScanResult(
                 modifier = Modifier.weight(0.58f)
             )
         }
-        display.hint?.let { hint ->
+        (lastRecoveryBoxAdvice?.instruction ?: display.hint)?.let { hint ->
             Text(
                 text = hint,
                 style = MaterialTheme.typography.bodySmall,
@@ -1324,7 +1336,20 @@ internal fun LocalScanResult(
                 MonitorAttribute(label = stringResource(R.string.sticker), value = code)
             }
         }
-        numberAttribute?.let { (label, value) ->
+        lastRecoveryBoxAdvice?.let { advice ->
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_recovery_box),
+                value = advice.boxNumber
+            )
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_recovery_candidates),
+                value = advice.candidateParcelNumbers.joinToString(", ")
+            )
+        }
+        if (lastRecoveryConfirmed) {
+            Text(stringResource(R.string.monitor_recovery_confirmed), style = MaterialTheme.typography.bodyMedium)
+        }
+        numberAttribute?.takeIf { lastRecoveryBoxAdvice == null }?.let { (label, value) ->
             if (snapshot != null && scannedBox != null && showWbrBoxStickerPrint(snapshot, scannedBox)) {
                 StickerPrintAttribute(
                     label = label,

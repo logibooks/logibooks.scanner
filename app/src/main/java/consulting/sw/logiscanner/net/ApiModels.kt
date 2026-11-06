@@ -15,7 +15,8 @@ data class Credentials(
 
 @JsonClass(generateAdapter = true)
 data class ErrMessage(
-    val msg: String
+    val msg: String,
+    val code: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -192,7 +193,18 @@ data class ScanJobMonitorSnapshot(
     var restrictedParcels: Int = 0,
     var scannedItemsNotInRegister: Int = 0,
     var boxes: List<ScanJobMonitorBox> = emptyList(),
-    var box: ScanJobMonitorBox? = null
+    var box: ScanJobMonitorBox? = null,
+    val returnRecovery: ReturnRecoveryProgress? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ReturnRecoveryProgress(val remaining: Int, val recovered: Int)
+
+@JsonClass(generateAdapter = true)
+data class RecoveryBoxAdvice(
+    val boxNumber: String,
+    val candidateParcelNumbers: List<String>,
+    val instruction: String
 )
 
 @JsonClass(generateAdapter = true)
@@ -244,7 +256,9 @@ data class ScanResultItem(
     val scanTime: String? = null,
     val followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget(),
     val stickerTemplate: String? = null,
-    val exportSticker: TajikistanExportStickerPayload? = null
+    val exportSticker: TajikistanExportStickerPayload? = null,
+    val recoveryBoxAdvice: RecoveryBoxAdvice? = null,
+    val recoveryConfirmed: Boolean = false
 )
 
 @JsonClass(generateAdapter = true)

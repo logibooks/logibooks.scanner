@@ -4,6 +4,7 @@
 
 package consulting.sw.logiscanner
 
+import consulting.sw.logiscanner.net.RecoveryBoxAdvice
 import consulting.sw.logiscanner.net.ScanResultItem
 import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.ui.ScanResultColor
@@ -71,6 +72,14 @@ class ScanResultColorTest {
         val color = determineScanResultColor(item)
 
         assertEquals(ScanResultColor.ISSUE, color)
+    }
+
+    @Test
+    fun boxInspectionAdviceIsNotReportedAsNotFound() {
+        val advice = scanResultItem(count = 0, hasIssues = false).copy(
+            recoveryBoxAdvice = RecoveryBoxAdvice("BOX", listOf("P1"), "Откройте коробку")
+        )
+        assertEquals(ScanResultColor.ISSUE, determineScanResultColor(advice))
     }
 
     private fun scanResultItem(count: Int, hasIssues: Boolean): ScanResultItem {

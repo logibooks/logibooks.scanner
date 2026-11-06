@@ -208,4 +208,10 @@ This file is a part of LogiScanner application
     <string name="scan_stopped_tts">Сканирование остановлено</string>
     <string name="monitor_box_sticker">Код стикера</string>
     <string name="printer_print_box_sticker">Печать стикера коробки</string>
+    <string name="monitor_recovery_remaining">Осталось найти</string>
+    <string name="monitor_recovery_recovered">Найдено при поиске</string>
+    <string name="monitor_recovery_box">Номер коробки</string>
+    <string name="monitor_recovery_candidates">Посылки для проверки</string>
+    <string name="monitor_recovery_confirmed">Посылка найдена при поиске</string>
+    <string name="scan_error_ambiguous_return_parcel">Код %1$s соответствует нескольким посылкам. Отсканируйте уникальный код.</string>
 </resources>
