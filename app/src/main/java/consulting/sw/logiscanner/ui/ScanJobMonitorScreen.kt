@@ -1341,10 +1341,14 @@ internal fun LocalScanResult(
                 label = stringResource(R.string.monitor_recovery_box),
                 value = advice.boxNumber
             )
-            MonitorAttribute(
-                label = stringResource(R.string.monitor_recovery_candidates),
-                value = advice.candidateParcelNumbers.joinToString(", ")
+            Text(
+                text = stringResource(R.string.monitor_recovery_candidates),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            advice.candidateParcelNumbers.forEach { number ->
+                Text(text = number, style = MaterialTheme.typography.bodySmall)
+            }
         }
         if (lastRecoveryConfirmed) {
             Text(stringResource(R.string.monitor_recovery_confirmed), style = MaterialTheme.typography.bodyMedium)
