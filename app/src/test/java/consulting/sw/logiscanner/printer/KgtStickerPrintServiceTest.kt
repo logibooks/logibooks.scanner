@@ -27,7 +27,7 @@ class KgtStickerPrintServiceTest {
         val client = RecordingClient()
         val service = KgtStickerPrintService(TscStickerRenderer(), client)
         val payload = "SIZE 58 mm,40 mm\r\nQRCODE server bytes\r\nPRINT 1,1\r\n"
-        val label = consulting.sw.logiscanner.net.BoxLabel("WBR_BOX", java.util.Base64.getEncoder().encodeToString(payload.toByteArray()), "TSPL", 58, 40)
+        val label = consulting.sw.logiscanner.net.LabelPrintPayload("WBR_BOX", java.util.Base64.getEncoder().encodeToString(payload.toByteArray()), "TSPL", 58, 40)
         assertEquals(KgtStickerPrintResult.Success, service.printBoxSticker("AA:BB") { label })
         assertEquals(payload, client.prints.single().payload)
         assertEquals(KgtStickerPrintResult.MissingPrinter, service.printBoxSticker(null) { error("Must not fetch") })

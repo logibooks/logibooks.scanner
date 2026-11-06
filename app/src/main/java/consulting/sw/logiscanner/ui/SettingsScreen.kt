@@ -57,7 +57,6 @@ internal fun SettingsScreen(
     externalScannerEnabled: Boolean,
     printerBluetoothAddress: String?,
     bondedPrinters: List<BluetoothPrinterDevice>,
-    printerAutoPrintEnabled: Boolean,
     kgtVoiceEnabled: Boolean,
     relabelingSubmode: RelabelingSubmode,
     printerLoading: Boolean,
@@ -65,7 +64,6 @@ internal fun SettingsScreen(
     printerError: String?,
     onExternalScannerEnabledChange: (Boolean) -> Unit,
     onPrinterSelected: (String?) -> Unit,
-    onPrinterAutoPrintEnabledChange: (Boolean) -> Unit,
     onKgtVoiceEnabledChange: (Boolean) -> Unit,
     onRelabelingSubmodeChange: (RelabelingSubmode) -> Unit,
     onRefreshPrinters: () -> Unit,
@@ -179,12 +177,6 @@ internal fun SettingsScreen(
                     stringResource(R.string.settings_kgt_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
-                )
-                SettingsCheckboxRow(
-                    checked = printerAutoPrintEnabled,
-                    label = stringResource(R.string.kgt_auto_print_sticker),
-                    enabled = printerSelected,
-                    onCheckedChange = onPrinterAutoPrintEnabledChange
                 )
                 SettingsCheckboxRow(
                     checked = kgtVoiceEnabled,

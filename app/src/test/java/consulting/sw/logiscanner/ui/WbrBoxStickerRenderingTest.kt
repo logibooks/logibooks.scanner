@@ -48,8 +48,8 @@ class WbrBoxStickerRenderingTest {
                     snapshot = snapshot.copy(box = box.value), loading = false, highlightedParcelId = null,
                     printerSelected = printerSelected.value, printerLoading = busy.value,
                     onPrintKgtSticker = {}, onPrintParcelSticker = {}, onOpenRegister = {},
-                    lastTajikistanExportSticker = null, canPrintTajikistanExportSticker = false,
-                    onPrintTajikistanExportSticker = {},
+                    tajikistanInvoiceJobId = null, loadTajikistanInvoice = { _, _ -> error("Not a TJ job") },
+                    onPrintTajikistanInvoice = { _, _ -> },
                     onPrintBoxSticker = { printed = it }
                 )
             }

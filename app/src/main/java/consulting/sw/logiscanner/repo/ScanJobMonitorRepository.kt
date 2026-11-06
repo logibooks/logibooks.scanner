@@ -8,10 +8,14 @@ import android.util.Log
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import com.microsoft.signalr.HubConnectionState
+import com.squareup.moshi.Moshi
+import consulting.sw.logiscanner.net.ErrMessage
+import consulting.sw.logiscanner.net.LabelPrintPayload
 import consulting.sw.logiscanner.net.NetworkModule
 import consulting.sw.logiscanner.net.ScanJobMonitorObserveRequest
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScanJobMonitorTarget
+import consulting.sw.logiscanner.net.StickerTemplates
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Single
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +27,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
@@ -68,16 +74,26 @@ class ScanJobMonitorRepository(
         )
     }
 
-    suspend fun loadBoxLabel(boxId: Int): consulting.sw.logiscanner.net.BoxLabel {
+    suspend fun loadBoxLabel(boxId: Int): LabelPrintPayload = loadLabel {
+        api.getBoxLabel("Bearer $token", boxId)
+    }
+
+    suspend fun loadTajikistanInvoice(scanJobId: Int, parcelId: Int): ByteArray {
+        val template = StickerTemplates.TAJIKISTAN_EXPORT
+        return loadLabel {
+            api.getMonitorParcelLabel("Bearer $token", scanJobId, parcelId, template)
+        }.decodeTspl(template)
+    }
+
+    private suspend fun loadLabel(request: suspend () -> LabelPrintPayload): LabelPrintPayload {
         try {
-            return api.getBoxLabel("Bearer $token", boxId)
-        } catch (exception: retrofit2.HttpException) {
+            return request()
+        } catch (exception: HttpException) {
             val body = exception.response()?.errorBody()?.string()
             val message = body?.let {
-                runCatching { com.squareup.moshi.Moshi.Builder().build()
-                    .adapter(consulting.sw.logiscanner.net.ErrMessage::class.java).fromJson(it)?.msg }.getOrNull()
+                runCatching { Moshi.Builder().build().adapter(ErrMessage::class.java).fromJson(it)?.msg }.getOrNull()
             }
-            throw java.io.IOException(message?.takeIf { it.isNotBlank() } ?: exception.message, exception)
+            throw IOException(message?.takeIf { it.isNotBlank() } ?: exception.message, exception)
         }
     }
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -41,6 +42,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -58,6 +60,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -79,6 +82,7 @@ import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.TajikistanExportSticker
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 @Composable
@@ -94,13 +98,14 @@ internal fun ScanJobMonitorPanel(
     lastExtData: String?,
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
-    canPrintTajikistanExportSticker: Boolean,
+    tajikistanInvoiceJobId: Int?,
     lastScanTime: String?,
     loading: Boolean,
     detailLoading: Boolean,
     error: String?,
     autoFollow: Boolean,
     bulkyItemsMode: Int,
+    kgtAutoPrintEnabled: Boolean,
     relabelingModeAvailable: Boolean,
     printerSelected: Boolean,
     printerLoading: Boolean,
@@ -108,7 +113,8 @@ internal fun ScanJobMonitorPanel(
     printerError: String?,
     onPrintKgtSticker: (String) -> Unit,
     onPrintParcelSticker: (ParcelSticker) -> Unit,
-    onPrintTajikistanExportSticker: () -> Unit,
+    loadTajikistanInvoice: suspend (Int, Int) -> ByteArray,
+    onPrintTajikistanInvoice: (Int, ByteArray) -> Unit,
     jumpNumber: String,
     jumpLoading: Boolean,
     highlightedParcelId: Int?,
@@ -116,6 +122,7 @@ internal fun ScanJobMonitorPanel(
     onOpenBox: (ScanJobMonitorBox) -> Unit,
     onToggleAutoFollow: () -> Unit,
     onToggleBulkyItemsMode: () -> Unit,
+    onKgtAutoPrintEnabledChange: (Boolean) -> Unit,
     onJumpNumberChange: (String) -> Unit,
     onJumpToNumber: () -> Unit,
     onJumpFieldFocusChanged: (Boolean) -> Unit = {},
@@ -137,31 +144,15 @@ internal fun ScanJobMonitorPanel(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
-                val relabelingModeOn = bulkyItemsMode != BulkyItemsModes.OFF
-                IconButton(
-                    onClick = onToggleBulkyItemsMode,
-                    enabled = relabelingModeAvailable,
-                    modifier = Modifier
-                        .width(36.dp)
-                        .height(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Inventory2,
-                        contentDescription = if (relabelingModeOn) {
-                            stringResource(R.string.relabeling_mode_disable)
-                        } else {
-                            stringResource(R.string.relabeling_mode_enable)
-                        },
-                        tint = when {
-                            !relabelingModeAvailable -> MaterialTheme.colorScheme.onSurfaceVariant
-                            relabelingModeOn -> KgtModeOnIconColor
-                            else -> KgtModeOffIconColor
-                        },
-                        modifier = Modifier
-                            .width(18.dp)
-                            .height(18.dp)
-                    )
-                }
+                MonitorRelabelingControls(
+                    isTajikistanInvoiceJob = tajikistanInvoiceJobId != null,
+                    relabelingOn = bulkyItemsMode != BulkyItemsModes.OFF,
+                    relabelingAvailable = relabelingModeAvailable,
+                    kgtAutoPrintEnabled = kgtAutoPrintEnabled,
+                    printerSelected = printerSelected,
+                    onToggleRelabeling = onToggleBulkyItemsMode,
+                    onKgtAutoPrintEnabledChange = onKgtAutoPrintEnabledChange
+                )
                 IconButton(
                     onClick = onToggleAutoFollow,
                     modifier = Modifier
@@ -333,14 +324,71 @@ internal fun ScanJobMonitorPanel(
                         printerLoading = printerLoading,
                         onPrintKgtSticker = onPrintKgtSticker,
                         onPrintParcelSticker = onPrintParcelSticker,
-                        lastTajikistanExportSticker = lastTajikistanExportSticker,
-                        canPrintTajikistanExportSticker = canPrintTajikistanExportSticker,
-                        onPrintTajikistanExportSticker = onPrintTajikistanExportSticker,
+                        tajikistanInvoiceJobId = tajikistanInvoiceJobId,
+                        loadTajikistanInvoice = loadTajikistanInvoice,
+                        onPrintTajikistanInvoice = onPrintTajikistanInvoice,
                         onOpenRegister = onOpenRegister,
                         onPrintBoxSticker = onPrintBoxSticker
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+internal fun MonitorRelabelingControls(
+    isTajikistanInvoiceJob: Boolean,
+    relabelingOn: Boolean,
+    relabelingAvailable: Boolean,
+    kgtAutoPrintEnabled: Boolean,
+    printerSelected: Boolean,
+    onToggleRelabeling: () -> Unit,
+    onKgtAutoPrintEnabledChange: (Boolean) -> Unit
+) {
+    if (!isTajikistanInvoiceJob) {
+        IconButton(
+            onClick = onToggleRelabeling,
+            enabled = relabelingAvailable,
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Inventory2,
+                contentDescription = stringResource(
+                    if (relabelingOn) R.string.relabeling_mode_disable else R.string.relabeling_mode_enable
+                ),
+                tint = when {
+                    !relabelingAvailable -> MaterialTheme.colorScheme.onSurfaceVariant
+                    relabelingOn -> KgtModeOnIconColor
+                    else -> KgtModeOffIconColor
+                },
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+    if (isTajikistanInvoiceJob || relabelingAvailable) {
+        val autoPrintOn = if (isTajikistanInvoiceJob) relabelingOn else kgtAutoPrintEnabled
+        val autoPrintAvailable = printerSelected && relabelingAvailable
+        IconToggleButton(
+            checked = autoPrintOn,
+            onCheckedChange = { enabled ->
+                if (isTajikistanInvoiceJob) onToggleRelabeling() else onKgtAutoPrintEnabledChange(enabled)
+            },
+            enabled = autoPrintAvailable,
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_auto_print),
+                contentDescription = stringResource(
+                    if (isTajikistanInvoiceJob) R.string.tj_auto_print else R.string.kgt_auto_print_sticker
+                ),
+                tint = when {
+                    !autoPrintAvailable -> MaterialTheme.colorScheme.onSurfaceVariant
+                    autoPrintOn -> KgtModeOnIconColor
+                    else -> KgtModeOffIconColor
+                },
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
@@ -510,9 +558,9 @@ internal fun MonitorBoxDetail(
     printerLoading: Boolean,
     onPrintKgtSticker: (String) -> Unit,
     onPrintParcelSticker: (ParcelSticker) -> Unit,
-    lastTajikistanExportSticker: TajikistanExportSticker?,
-    canPrintTajikistanExportSticker: Boolean,
-    onPrintTajikistanExportSticker: () -> Unit,
+    tajikistanInvoiceJobId: Int?,
+    loadTajikistanInvoice: suspend (Int, Int) -> ByteArray,
+    onPrintTajikistanInvoice: (Int, ByteArray) -> Unit,
     onOpenRegister: () -> Unit,
     onPrintBoxSticker: (Int) -> Unit
 ) {
@@ -686,9 +734,9 @@ internal fun MonitorBoxDetail(
                         printerLoading = printerLoading,
                         onPrintKgtSticker = onPrintKgtSticker,
                         onPrintParcelSticker = onPrintParcelSticker,
-                        lastTajikistanExportSticker = lastTajikistanExportSticker,
-                        canPrintTajikistanExportSticker = canPrintTajikistanExportSticker,
-                        onPrintTajikistanExportSticker = onPrintTajikistanExportSticker,
+                        tajikistanInvoiceJobId = tajikistanInvoiceJobId?.takeIf { it == snapshot.scanJobId },
+                        loadTajikistanInvoice = loadTajikistanInvoice,
+                        onPrintTajikistanInvoice = onPrintTajikistanInvoice,
                         onToggleExpanded = {
                             expandedParcelKey = if (expandedParcelKey == parcelKey) null else parcelKey
                         }
@@ -710,9 +758,9 @@ internal fun MonitorParcelRow(
     printerLoading: Boolean,
     onPrintKgtSticker: (String) -> Unit,
     onPrintParcelSticker: (ParcelSticker) -> Unit,
-    lastTajikistanExportSticker: TajikistanExportSticker?,
-    canPrintTajikistanExportSticker: Boolean,
-    onPrintTajikistanExportSticker: () -> Unit,
+    tajikistanInvoiceJobId: Int?,
+    loadTajikistanInvoice: suspend (Int, Int) -> ByteArray,
+    onPrintTajikistanInvoice: (Int, ByteArray) -> Unit,
     onToggleExpanded: () -> Unit
 ) {
     val statusText = when {
@@ -806,11 +854,25 @@ internal fun MonitorParcelRow(
         }
 
         if (expanded) {
-            // The invoice's order number is the WBR-N parcel's SHK, not its sticker code.
-            val hasInvoice = registerType == RegisterTypes.WBR_N &&
-                lastTajikistanExportSticker != null &&
-                lastTajikistanExportSticker.orderNumber == parcel.shk?.trim()
-            if (!parcel.productName.isNullOrBlank() || hasInvoice) {
+            val parcelId = parcel.parcelId
+            val showInvoice = tajikistanInvoiceJobId != null && parcelId != null &&
+                registerType == RegisterTypes.WBR_N && parcel.isInRegister
+            val invoiceResult = if (showInvoice && printerSelected) {
+                var result by remember(tajikistanInvoiceJobId, parcel) { mutableStateOf<Result<ByteArray>?>(null) }
+                LaunchedEffect(tajikistanInvoiceJobId, parcel) {
+                    result = try {
+                        Result.success(loadTajikistanInvoice(tajikistanInvoiceJobId, parcelId))
+                    } catch (ex: CancellationException) {
+                        throw ex
+                    } catch (ex: Exception) {
+                        Result.failure(ex)
+                    }
+                }
+                result
+            } else {
+                null
+            }
+            if (!parcel.productName.isNullOrBlank() || showInvoice) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -823,15 +885,23 @@ internal fun MonitorParcelRow(
                         overflow = TextOverflow.Visible,
                         modifier = Modifier.weight(1f)
                     )
-                    if (hasInvoice) {
+                    if (showInvoice) {
+                        val payload = invoiceResult?.getOrNull()
                         StickerPrintButton(
-                            printEnabled = canPrintTajikistanExportSticker && !printerLoading,
+                            printEnabled = payload != null && !printerLoading,
                             contentDescription = stringResource(R.string.printer_print_invoice),
-                            onPrint = onPrintTajikistanExportSticker,
+                            onPrint = { payload?.let { onPrintTajikistanInvoice(tajikistanInvoiceJobId, it) } },
                             imageVector = Icons.Filled.Description
                         )
                     }
                 }
+            }
+            invoiceResult?.exceptionOrNull()?.let { error ->
+                Text(
+                    text = error.message ?: stringResource(R.string.printer_invalid_sticker),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
             MonitorParcelAttributes(
                 parcel = parcel,

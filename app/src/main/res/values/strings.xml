@@ -52,6 +52,7 @@ This file is a part of LogiScanner application
     <string name="bulky_items_mode_disable">BI mode is on. Tap to turn off</string>
     <string name="relabeling_mode_enable">Relabeling is off. Tap to turn on</string>
     <string name="relabeling_mode_disable">Relabeling is on. Tap to turn off</string>
+    <string name="tj_auto_print">TJ invoice auto-print</string>
     <string name="relabeling_mode_full">Full</string>
     <string name="relabeling_mode_kgt_only">KGT only</string>
     <string name="bulky_items_number_speech">BI number: %1$s</string>
@@ -76,7 +77,6 @@ This file is a part of LogiScanner application
     <string name="printer_print_invoice">Print invoice</string>
     <string name="printer_tj_sticker_missing_data">Unable to print sticker. %1$s</string>
     <string name="printer_tj_sticker_payload_missing">The server did not provide data for printing the sticker</string>
-    <string name="printer_tj_sticker_no_last">No sticker is available to reprint. Scan a parcel first</string>
     <string name="printer_tj_sticker_fields_missing">Missing data: %1$s.</string>
     <string name="printer_tj_sticker_fields_invalid">Invalid values: %1$s. Enter numbers greater than zero.</string>
     <string name="printer_tj_sticker_data">sticker data</string>
