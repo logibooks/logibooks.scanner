@@ -279,11 +279,3 @@ fun tajikistanExportStickerAutoPrintAction(
         TajikistanExportStickerAutoPrintAction.MISSING_DATA
     }
 }
-
-fun canRepeatTajikistanExportSticker(
-    printerSelected: Boolean,
-    job: ScanJob?,
-    hasSticker: Boolean
-): Boolean = printerSelected
-    && job?.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
-    && hasSticker

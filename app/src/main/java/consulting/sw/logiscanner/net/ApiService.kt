@@ -47,7 +47,15 @@ interface ApiService {
         @Header("Authorization") bearer: String,
         @Path("id") id: Int,
         @Query("template") template: String = "WBR_BOX"
-    ): BoxLabel
+    ): LabelPrintPayload
+
+    @GET("ScanJobs/{id}/monitor/parcels/{parcelId}/label")
+    suspend fun getMonitorParcelLabel(
+        @Header("Authorization") bearer: String,
+        @Path("id") id: Int,
+        @Path("parcelId") parcelId: Int,
+        @Query("template") template: String
+    ): LabelPrintPayload
 
     @POST("ScanJobs/scan")
     suspend fun scan(

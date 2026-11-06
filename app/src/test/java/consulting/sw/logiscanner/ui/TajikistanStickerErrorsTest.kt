@@ -128,16 +128,12 @@ class TajikistanStickerErrorsTest {
     }
 
     @Test
-    fun missingPayloadAndNoSavedStickerHaveDifferentMessages() {
+    fun missingPayloadReportsMissingStickerData() {
         val payload: TajikistanExportStickerPayload? = null
         val context = context("ru")
         assertEquals(
             "Сервер не передал данные для печати стикера",
             tajikistanStickerDataError(context, payload.validateForPrinting().issues)
-        )
-        assertEquals(
-            "Нет стикера для повторной печати. Сначала отсканируйте посылку",
-            context.getString(R.string.printer_tj_sticker_no_last)
         )
     }
 

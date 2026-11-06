@@ -52,6 +52,7 @@ This file is a part of LogiScanner application
     <string name="bulky_items_mode_disable">Режим КГТ включен. Нажмите, чтобы выключить</string>
     <string name="relabeling_mode_enable">Перемаркировка выключена. Нажмите, чтобы включить</string>
     <string name="relabeling_mode_disable">Перемаркировка включена. Нажмите, чтобы выключить</string>
+    <string name="tj_auto_print">Автопечать накладной ТЖ</string>
     <string name="relabeling_mode_full">Полная</string>
     <string name="relabeling_mode_kgt_only">Только КГТ</string>
     <string name="bulky_items_number_speech">Номер КГТ: %1$s</string>
@@ -76,7 +77,6 @@ This file is a part of LogiScanner application
     <string name="printer_print_invoice">Печать накладной</string>
     <string name="printer_tj_sticker_missing_data">Не удалось напечатать стикер. %1$s</string>
     <string name="printer_tj_sticker_payload_missing">Сервер не передал данные для печати стикера</string>
-    <string name="printer_tj_sticker_no_last">Нет стикера для повторной печати. Сначала отсканируйте посылку</string>
     <string name="printer_tj_sticker_fields_missing">Не указаны данные: %1$s.</string>
     <string name="printer_tj_sticker_fields_invalid">Некорректные значения: %1$s. Укажите числа больше нуля.</string>
     <string name="printer_tj_sticker_data">данные стикера</string>

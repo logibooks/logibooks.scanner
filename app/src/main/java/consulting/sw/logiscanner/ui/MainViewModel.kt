@@ -421,19 +421,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun printLastTajikistanExportSticker() {
-        val sticker = state.value.lastTajikistanExportSticker
-        if (sticker == null) {
-            _state.update {
-                it.copy(
-                    printerError = getApplication<Application>().getString(R.string.printer_tj_sticker_no_last),
-                    printerMessage = null
-                )
-            }
+    suspend fun loadTajikistanInvoice(scanJobId: Int, parcelId: Int): ByteArray {
+        return scanJobMonitorRepo.loadTajikistanInvoice(scanJobId, parcelId)
+    }
+
+    fun printTajikistanInvoice(scanJobId: Int, payload: ByteArray) {
+        val current = state.value
+        val job = current.selectedScanJob ?: return
+        val address = current.printerBluetoothAddress
+        if (job.id != scanJobId || job.stickerTemplate != StickerTemplates.TAJIKISTAN_EXPORT ||
+            address.isNullOrBlank() || current.printerLoading
+        ) {
             return
         }
+        _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
         viewModelScope.launch {
-            printTajikistanExportStickerInternal(sticker)
+            try {
+                applyPrinterResult(stickerPrintService.printTajikistanInvoice(address, payload))
+            } finally {
+                _state.update { it.copy(printerLoading = false) }
+            }
         }
     }
 

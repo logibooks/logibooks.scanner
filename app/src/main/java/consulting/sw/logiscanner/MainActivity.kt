@@ -37,7 +37,6 @@ import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.ScanScreen
 import consulting.sw.logiscanner.ui.SettingsScreen
-import consulting.sw.logiscanner.ui.canRepeatTajikistanExportSticker
 import consulting.sw.logiscanner.ui.hasSelectedPrinter
 import consulting.sw.logiscanner.ui.relabelingModeAvailable
 import consulting.sw.logiscanner.ui.scanReceiverEnabled
@@ -126,7 +125,6 @@ class MainActivity : ComponentActivity() {
                                 externalScannerEnabled = state.externalScannerEnabled,
                                 printerBluetoothAddress = state.printerBluetoothAddress,
                                 bondedPrinters = state.bondedPrinters,
-                                printerAutoPrintEnabled = state.printerAutoPrintEnabled,
                                 kgtVoiceEnabled = state.kgtVoiceEnabled,
                                 relabelingSubmode = state.relabelingSubmode,
                                 printerLoading = state.printerLoading,
@@ -134,16 +132,6 @@ class MainActivity : ComponentActivity() {
                                 printerError = state.printerError,
                                 onExternalScannerEnabledChange = vm::setExternalScannerEnabled,
                                 onPrinterSelected = vm::setPrinterBluetoothAddress,
-                                onPrinterAutoPrintEnabledChange = { enabled ->
-                                    if (enabled) {
-                                        runPrinterAction {
-                                            vm.setPrinterAutoPrintEnabled(true)
-                                            vm.refreshPrinters()
-                                        }
-                                    } else {
-                                        vm.setPrinterAutoPrintEnabled(false)
-                                    }
-                                },
                                 onKgtVoiceEnabledChange = vm::setKgtVoiceEnabled,
                                 onRelabelingSubmodeChange = vm::setRelabelingSubmode,
                                 onRefreshPrinters = {
@@ -198,11 +186,6 @@ class MainActivity : ComponentActivity() {
                                 lastExtData = state.lastExtData,
                                 lastExtId = state.lastExtId,
                                 lastTajikistanExportSticker = state.lastTajikistanExportSticker,
-                                canPrintTajikistanExportSticker = canRepeatTajikistanExportSticker(
-                                    printerSelected = printerSelected,
-                                    job = state.selectedScanJob,
-                                    hasSticker = state.lastTajikistanExportSticker != null
-                                ),
                                 lastScanTime = state.lastScanTime,
                                 externalScannerEnabled = state.externalScannerEnabled,
                                 monitorSnapshot = state.monitorSnapshot,
@@ -213,6 +196,7 @@ class MainActivity : ComponentActivity() {
                                 monitorError = state.monitorError,
                                 monitorAutoFollow = state.monitorAutoFollow,
                                 bulkyItemsMode = state.bulkyItemsMode,
+                                kgtAutoPrintEnabled = state.printerAutoPrintEnabled,
                                 relabelingModeAvailable = relabelingModeAvailable(
                                     state.selectedScanJob,
                                     state.relabelingSubmode,
@@ -232,6 +216,16 @@ class MainActivity : ComponentActivity() {
                                 onOpenMonitorBox = vm::openMonitorBox,
                                 onToggleMonitorAutoFollow = vm::toggleMonitorAutoFollow,
                                 onToggleBulkyItemsMode = vm::toggleBulkyItemsMode,
+                                onKgtAutoPrintEnabledChange = { enabled ->
+                                    if (enabled) {
+                                        runPrinterAction {
+                                            vm.setPrinterAutoPrintEnabled(true)
+                                            vm.refreshPrinters()
+                                        }
+                                    } else {
+                                        vm.setPrinterAutoPrintEnabled(false)
+                                    }
+                                },
                                 onPrintKgtSticker = { code ->
                                     runPrinterAction {
                                         vm.printKgtSticker(code)
@@ -245,9 +239,10 @@ class MainActivity : ComponentActivity() {
                                 onPrintBoxSticker = { boxId ->
                                     runPrinterAction { vm.printBoxSticker(boxId) }
                                 },
-                                onPrintTajikistanExportSticker = {
+                                loadTajikistanInvoice = vm::loadTajikistanInvoice,
+                                onPrintTajikistanInvoice = { scanJobId, payload ->
                                     runPrinterAction {
-                                        vm.printLastTajikistanExportSticker()
+                                        vm.printTajikistanInvoice(scanJobId, payload)
                                     }
                                 },
                                 onMonitorJumpNumberChange = vm::setMonitorJumpNumber,

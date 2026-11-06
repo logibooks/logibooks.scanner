@@ -41,6 +41,7 @@ import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
+import consulting.sw.logiscanner.net.StickerTemplates
 import consulting.sw.logiscanner.repo.ScanJobMonitorScope
 import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.TajikistanExportSticker
@@ -60,7 +61,6 @@ internal fun ScanScreen(
     lastExtData: String?,
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
-    canPrintTajikistanExportSticker: Boolean,
     lastScanTime: String?,
     externalScannerEnabled: Boolean,
     monitorSnapshot: ScanJobMonitorSnapshot?,
@@ -71,6 +71,7 @@ internal fun ScanScreen(
     monitorError: String?,
     monitorAutoFollow: Boolean,
     bulkyItemsMode: Int,
+    kgtAutoPrintEnabled: Boolean,
     relabelingModeAvailable: Boolean,
     printerSelected: Boolean,
     printerLoading: Boolean,
@@ -86,9 +87,11 @@ internal fun ScanScreen(
     onOpenMonitorBox: (ScanJobMonitorBox) -> Unit,
     onToggleMonitorAutoFollow: () -> Unit,
     onToggleBulkyItemsMode: () -> Unit,
+    onKgtAutoPrintEnabledChange: (Boolean) -> Unit,
     onPrintKgtSticker: (String) -> Unit,
     onPrintParcelSticker: (ParcelSticker) -> Unit,
-    onPrintTajikistanExportSticker: () -> Unit,
+    loadTajikistanInvoice: suspend (Int, Int) -> ByteArray,
+    onPrintTajikistanInvoice: (Int, ByteArray) -> Unit,
     onMonitorJumpNumberChange: (String) -> Unit,
     onJumpToMonitorNumber: () -> Unit,
     onBackToJobs: () -> Unit,
@@ -249,13 +252,16 @@ internal fun ScanScreen(
                 lastExtData = lastExtData,
                 lastExtId = lastExtId,
                 lastTajikistanExportSticker = lastTajikistanExportSticker,
-                canPrintTajikistanExportSticker = canPrintTajikistanExportSticker,
+                tajikistanInvoiceJobId = selectedJob.takeIf {
+                    it.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
+                }?.id,
                 lastScanTime = lastScanTime,
                 loading = monitorLoading,
                 detailLoading = monitorDetailLoading,
                 error = monitorError,
                 autoFollow = monitorAutoFollow,
                 bulkyItemsMode = bulkyItemsMode,
+                kgtAutoPrintEnabled = kgtAutoPrintEnabled,
                 relabelingModeAvailable = relabelingModeAvailable,
                 printerSelected = printerSelected,
                 printerLoading = printerLoading,
@@ -264,7 +270,8 @@ internal fun ScanScreen(
                 onPrintKgtSticker = onPrintKgtSticker,
                 onPrintParcelSticker = onPrintParcelSticker,
                 onPrintBoxSticker = onPrintBoxSticker,
-                onPrintTajikistanExportSticker = onPrintTajikistanExportSticker,
+                loadTajikistanInvoice = loadTajikistanInvoice,
+                onPrintTajikistanInvoice = onPrintTajikistanInvoice,
                 jumpNumber = monitorJumpNumber,
                 jumpLoading = monitorJumpLoading,
                 highlightedParcelId = monitorHighlightedParcelId,
@@ -272,6 +279,7 @@ internal fun ScanScreen(
                 onOpenBox = onOpenMonitorBox,
                 onToggleAutoFollow = onToggleMonitorAutoFollow,
                 onToggleBulkyItemsMode = onToggleBulkyItemsMode,
+                onKgtAutoPrintEnabledChange = onKgtAutoPrintEnabledChange,
                 onJumpNumberChange = onMonitorJumpNumberChange,
                 onJumpToNumber = onJumpToMonitorNumber,
                 onJumpFieldFocusChanged = {
