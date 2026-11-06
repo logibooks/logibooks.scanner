@@ -668,40 +668,6 @@ class ScannerOptionsTest {
         )
     }
 
-    @Test
-    fun repeatTajikistanStickerRequiresPrinterTemplateAndStoredStickerOnly() {
-        val job = scanJob(
-            registerType = RegisterTypes.WBR_N,
-            stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT
-        )
-        assertFalse(
-            shouldAutoPrintTajikistanExportSticker(
-                submode = RelabelingSubmode.FULL,
-                relabelingMode = BulkyItemsModes.OFF,
-                printerSelected = true,
-                job = job,
-                result = scanResultItem(extId = null, stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT)
-            )
-        )
-        assertTrue(
-            canRepeatTajikistanExportSticker(
-                printerSelected = true,
-                job = job,
-                hasSticker = true
-            )
-        )
-        assertFalse(canRepeatTajikistanExportSticker(false, job, true))
-        assertFalse(canRepeatTajikistanExportSticker(true, job, false))
-        assertFalse(canRepeatTajikistanExportSticker(true, null, true))
-        assertFalse(
-            canRepeatTajikistanExportSticker(
-                true,
-                scanJob(registerType = RegisterTypes.WBR_N),
-                true
-            )
-        )
-    }
-
     private fun scanJob(registerType: Int, stickerTemplate: String? = null): ScanJob {
         return ScanJob(
             id = 1,

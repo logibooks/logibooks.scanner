@@ -4,6 +4,7 @@
 
 package consulting.sw.logiscanner.printer
 
+import consulting.sw.logiscanner.net.LabelPrintPayload
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -56,15 +57,13 @@ class KgtStickerPrintService(
 
     suspend fun printBoxSticker(
         address: String?,
-        loadLabel: suspend () -> consulting.sw.logiscanner.net.BoxLabel
+        loadLabel: suspend () -> LabelPrintPayload
     ): KgtStickerPrintResult = printRendered(address) {
-        val label = loadLabel()
-        require(label.template == "WBR_BOX" && label.language == "TSPL" &&
-            label.widthMm == 58 && label.heightMm == 40) { "Invalid box label format" }
-        val bytes = java.util.Base64.getDecoder().decode(label.contentBase64)
-        require(bytes.isNotEmpty()) { "Empty box label" }
-        bytes
+        loadLabel().decodeTspl("WBR_BOX")
     }
+
+    suspend fun printTajikistanInvoice(address: String, payload: ByteArray): KgtStickerPrintResult =
+        printRendered(address) { payload }
 
     private suspend fun printRendered(
         address: String?,

@@ -27,7 +27,7 @@ class ScanJobMonitorModelsTest {
         assertEquals(0, legacy.companyId)
         assertEquals(null, legacy.boxes.single().boxSticker)
         assertTrue(legacy.boxes.single().printableTemplates.isEmpty())
-        val labels = Moshi.Builder().build().adapter(BoxLabel::class.java)
+        val labels = Moshi.Builder().build().adapter(LabelPrintPayload::class.java)
         assertEquals("WBR_BOX", labels.fromJson("""{"template":"WBR_BOX","contentBase64":"QQ==","language":"TSPL","widthMm":58,"heightMm":40}""")!!.template)
     }
 

@@ -5,6 +5,7 @@
 package consulting.sw.logiscanner.net
 
 import com.squareup.moshi.JsonClass
+import java.util.Base64
 
 @JsonClass(generateAdapter = true)
 data class Credentials(
@@ -203,13 +204,22 @@ data class ScanJobMonitorFollowTarget(
 )
 
 @JsonClass(generateAdapter = true)
-data class BoxLabel(
+data class LabelPrintPayload(
     val template: String,
     val contentBase64: String,
     val language: String,
     val widthMm: Int,
     val heightMm: Int
-)
+) {
+    fun decodeTspl(expectedTemplate: String): ByteArray {
+        require(template == expectedTemplate && language == "TSPL" && widthMm == 58 && heightMm == 40) {
+            "Invalid label format"
+        }
+        return Base64.getDecoder().decode(contentBase64).also {
+            require(it.isNotEmpty()) { "Empty label" }
+        }
+    }
+}
 
 @JsonClass(generateAdapter = true)
 data class ScanRequest(
