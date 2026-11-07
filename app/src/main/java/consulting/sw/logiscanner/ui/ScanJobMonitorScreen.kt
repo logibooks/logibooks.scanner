@@ -309,15 +309,13 @@ internal fun ScanJobMonitorPanel(
                     notScanned = snapshot.parcelsWithStickerNotScanned,
                     restricted = snapshot.restrictedParcels,
                     lookupFoundCount = snapshot.lookupFoundCount,
-                    lookupNotFoundCount = snapshot.lookupNotFoundCount,
-                    showLookupProgress = snapshot.lookupRemainingCount != null ||
-                        snapshot.lookupFoundCount != null || snapshot.lookupNotFoundCount != null
+                    lookupNotFoundCount = snapshot.lookupNotFoundCount
                 )
                 MonitorAttribute(
                     label = stringResource(R.string.monitor_not_in_register),
                     value = snapshot.scannedItemsNotInRegister.toString()
                 )
-                snapshot.lookupRemainingCount?.takeIf { snapshot.lookupNotFoundCount == null }?.let { remaining ->
+                snapshot.lookupRemainingCount?.let { remaining ->
                     MonitorAttribute(
                         label = stringResource(R.string.monitor_lookup_remaining),
                         value = remaining.toString()
@@ -1116,9 +1114,8 @@ private fun MonitorParcelsStatistics(
     scanned: Int,
     notScanned: Int,
     restricted: Int,
-    lookupFoundCount: Int? = null,
-    lookupNotFoundCount: Int? = null,
-    showLookupProgress: Boolean = lookupFoundCount != null && lookupNotFoundCount != null
+    lookupFoundCount: Int?,
+    lookupNotFoundCount: Int?
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
         MonitorAttribute(
@@ -1137,14 +1134,16 @@ private fun MonitorParcelsStatistics(
             label = stringResource(R.string.monitor_restricted),
             value = restricted.toString()
         )
-        if (showLookupProgress) {
+        if (lookupFoundCount != null) {
             MonitorAttribute(
                 label = stringResource(R.string.monitor_lookup_found),
-                value = lookupFoundCount?.toString() ?: "—"
+                value = lookupFoundCount.toString()
             )
+        }
+        if (lookupNotFoundCount != null) {
             MonitorAttribute(
                 label = stringResource(R.string.monitor_lookup_not_found),
-                value = lookupNotFoundCount?.toString() ?: "—"
+                value = lookupNotFoundCount.toString()
             )
         }
     }
