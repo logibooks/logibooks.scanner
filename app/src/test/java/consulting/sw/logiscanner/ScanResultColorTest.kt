@@ -73,6 +73,16 @@ class ScanResultColorTest {
         assertEquals(ScanResultColor.ISSUE, color)
     }
 
+    @Test
+    fun listLookupSeparatesInspectionConfirmationAndRepeat() {
+        val noConfirmation = scanResultItem(count = 0, hasIssues = false)
+        assertEquals(ScanResultColor.ISSUE, determineScanResultColor(noConfirmation.copy(lookupOutcome = "inspectBox")))
+        assertEquals(ScanResultColor.IGNORED, determineScanResultColor(noConfirmation.copy(lookupOutcome = "alreadyConfirmed")))
+        assertEquals(ScanResultColor.IGNORED, determineScanResultColor(noConfirmation.copy(lookupOutcome = "noOutstanding")))
+        assertEquals(ScanResultColor.NOT_FOUND, determineScanResultColor(noConfirmation.copy(lookupOutcome = "notTarget")))
+        assertEquals(ScanResultColor.OK, determineScanResultColor(noConfirmation.copy(count = 1, lookupOutcome = "confirmed")))
+    }
+
     private fun scanResultItem(count: Int, hasIssues: Boolean): ScanResultItem {
         return ScanResultItem(
             count = count,

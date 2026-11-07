@@ -78,6 +78,7 @@ import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
+import consulting.sw.logiscanner.net.LookupScanCandidate
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.TajikistanExportSticker
@@ -96,6 +97,7 @@ internal fun ScanJobMonitorPanel(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lastLookupCandidates: List<LookupScanCandidate> = emptyList(),
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
     tajikistanInvoiceJobId: Int?,
@@ -268,6 +270,7 @@ internal fun ScanJobMonitorPanel(
                 lastScanSource = lastScanSource,
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
+                lastLookupCandidates = lastLookupCandidates,
                 lastExtId = lastExtId,
                 lastTajikistanExportSticker = lastTajikistanExportSticker,
                 lastScanTime = lastScanTime,
@@ -304,12 +307,22 @@ internal fun ScanJobMonitorPanel(
                     total = snapshot.totalParcels,
                     scanned = snapshot.parcelsWithStickerScanned,
                     notScanned = snapshot.parcelsWithStickerNotScanned,
-                    restricted = snapshot.restrictedParcels
+                    restricted = snapshot.restrictedParcels,
+                    lookupFoundCount = snapshot.lookupFoundCount,
+                    lookupNotFoundCount = snapshot.lookupNotFoundCount,
+                    showLookupProgress = snapshot.lookupRemainingCount != null ||
+                        snapshot.lookupFoundCount != null || snapshot.lookupNotFoundCount != null
                 )
                 MonitorAttribute(
                     label = stringResource(R.string.monitor_not_in_register),
                     value = snapshot.scannedItemsNotInRegister.toString()
                 )
+                snapshot.lookupRemainingCount?.takeIf { snapshot.lookupNotFoundCount == null }?.let { remaining ->
+                    MonitorAttribute(
+                        label = stringResource(R.string.monitor_lookup_remaining),
+                        value = remaining.toString()
+                    )
+                }
             }
 
             if (snapshot != null) {
@@ -394,7 +407,7 @@ internal fun MonitorRelabelingControls(
 }
 
 @Composable
-private fun MonitorBoxesList(
+internal fun MonitorBoxesList(
     snapshot: ScanJobMonitorSnapshot,
     onOpenBox: (ScanJobMonitorBox) -> Unit
 ) {
@@ -508,6 +521,17 @@ private fun MonitorBoxRow(
                     modifier = Modifier.alignByBaseline()
                 )
             }
+        }
+        val found = box.lookupFoundCount
+        val notFound = box.lookupNotFoundCount
+        if (found != null && notFound != null) {
+            val foundLabel = stringResource(R.string.monitor_lookup_found)
+            val notFoundLabel = stringResource(R.string.monitor_lookup_not_found)
+            Text(
+                "$foundLabel / $notFoundLabel — $found / $notFound",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -639,7 +663,9 @@ internal fun MonitorBoxDetail(
                 total = box.totalParcels,
                 scanned = box.parcelsWithStickerScanned,
                 notScanned = box.parcelsWithStickerNotScanned,
-                restricted = box.restrictedParcels
+                restricted = box.restrictedParcels,
+                lookupFoundCount = box.lookupFoundCount,
+                lookupNotFoundCount = box.lookupNotFoundCount
             )
             if (isPhysicalMonitorBox(box)) {
                 val notSetText = stringResource(R.string.monitor_not_set)
@@ -1085,7 +1111,15 @@ private fun MonitorBoxesStatistics(total: Int, scanned: Int, notScanned: Int) {
 }
 
 @Composable
-private fun MonitorParcelsStatistics(total: Int, scanned: Int, notScanned: Int, restricted: Int) {
+private fun MonitorParcelsStatistics(
+    total: Int,
+    scanned: Int,
+    notScanned: Int,
+    restricted: Int,
+    lookupFoundCount: Int? = null,
+    lookupNotFoundCount: Int? = null,
+    showLookupProgress: Boolean = lookupFoundCount != null && lookupNotFoundCount != null
+) {
     Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
         MonitorAttribute(
             label = stringResource(R.string.monitor_parcels_total),
@@ -1103,6 +1137,16 @@ private fun MonitorParcelsStatistics(total: Int, scanned: Int, notScanned: Int, 
             label = stringResource(R.string.monitor_restricted),
             value = restricted.toString()
         )
+        if (showLookupProgress) {
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_lookup_found),
+                value = lookupFoundCount?.toString() ?: "—"
+            )
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_lookup_not_found),
+                value = lookupNotFoundCount?.toString() ?: "—"
+            )
+        }
     }
 }
 
@@ -1217,6 +1261,7 @@ internal fun LocalScanResult(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lastLookupCandidates: List<LookupScanCandidate> = emptyList(),
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
     lastScanTime: String?,
@@ -1303,6 +1348,14 @@ internal fun LocalScanResult(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (lastLookupCandidates.isNotEmpty()) {
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_lookup_candidates),
+                value = lastLookupCandidates.joinToString(", ") { candidate ->
+                    candidate.parcelNumber.ifBlank { "#${candidate.parcelId}" }
+                }
             )
         }
         display.extId?.takeIf { kgtStickerCode(it) != null }?.let { extId ->
