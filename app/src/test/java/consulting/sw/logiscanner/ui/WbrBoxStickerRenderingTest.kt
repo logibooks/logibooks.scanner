@@ -82,6 +82,46 @@ class WbrBoxStickerRenderingTest {
         compose.onNodeWithText("Sticker").assertDoesNotExist()
     }
 
+    @Test fun boxListOnlyShowsLookupProgressOnRowsWithLookupItems() {
+        val targetBox = ScanJobMonitorBox(boxId = 7, boxCode = "BOX-7", lookupFoundCount = 0, lookupNotFoundCount = 2)
+        val ordinaryBox = ScanJobMonitorBox(boxId = 8, boxCode = "BOX-8")
+        val boxes = mutableStateOf(listOf(targetBox, ordinaryBox))
+        compose.setContent {
+            MaterialTheme {
+                MonitorBoxesList(ScanJobMonitorSnapshot(boxes = boxes.value, lookupFoundCount = 3, lookupNotFoundCount = 8)) {}
+            }
+        }
+        compose.onNodeWithText("BOX-7", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("BOX-8", substring = true).assertIsDisplayed()
+        compose.onAllNodesWithText("Found / Not found", substring = true).assertCountEquals(1)
+        compose.onNodeWithText("Found / Not found — 0 / 2").assertIsDisplayed()
+        compose.runOnIdle { boxes.value = listOf(ordinaryBox) }
+        compose.onNodeWithText("Found / Not found", substring = true).assertDoesNotExist()
+    }
+
+    @Test fun boxDetailsOnlyShowLookupStatsFromTheBox() {
+        val box = mutableStateOf(ScanJobMonitorBox(
+            boxId = 7, boxCode = "BOX-7", totalParcels = 5, lookupFoundCount = 0, lookupNotFoundCount = 2
+        ))
+        compose.setContent {
+            MaterialTheme {
+                MonitorBoxDetail(
+                    snapshot = ScanJobMonitorSnapshot(box = box.value, lookupFoundCount = 3, lookupNotFoundCount = 8),
+                    loading = false, highlightedParcelId = null, printerSelected = false, printerLoading = false,
+                    onPrintKgtSticker = {}, onPrintParcelSticker = {}, onOpenRegister = {},
+                    tajikistanInvoiceJobId = null, loadTajikistanInvoice = { _, _ -> error("Not a TJ job") },
+                    onPrintTajikistanInvoice = { _, _ -> }, onPrintBoxSticker = {}
+                )
+            }
+        }
+        compose.onNodeWithText("Found").assertIsDisplayed()
+        compose.onNodeWithText("Not found").assertIsDisplayed()
+        compose.onNodeWithText("2").assertIsDisplayed()
+        compose.runOnIdle { box.value = box.value.copy(lookupFoundCount = null, lookupNotFoundCount = null) }
+        compose.onNodeWithText("Found").assertDoesNotExist()
+        compose.onNodeWithText("Not found").assertDoesNotExist()
+    }
+
     @Test fun latestNonBoxResultsPreserveScannedCodeWithoutItemNumbersOrSnapshot() {
         val source = mutableStateOf<Int?>(ScannedItemSources.PARCEL_STICKER)
         val code = mutableStateOf<String?>("raw-scanned-sticker")
