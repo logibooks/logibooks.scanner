@@ -132,6 +132,12 @@ class InvoicePrintingRenderingTest {
         assertEquals(ParcelSticker.WbrN("LABEL-7"), printedLabel)
         assertEquals(1, printedInvoices.size)
 
+        compose.runOnIdle {
+            parcel.value = parcel.value.copy(stickerScanned = true)
+        }
+        printInvoice.assertIsEnabled()
+        compose.runOnIdle { assertEquals(listOf(1 to 7), requests) }
+
         compose.runOnIdle { busy.value = true }
         printInvoice.assertIsNotEnabled()
         compose.runOnIdle {
