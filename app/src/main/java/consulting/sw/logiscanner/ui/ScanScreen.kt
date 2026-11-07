@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.R
+import consulting.sw.logiscanner.net.LookupScanCandidate
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
@@ -59,6 +60,7 @@ internal fun ScanScreen(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lastLookupCandidates: List<LookupScanCandidate>,
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
     lastScanTime: String?,
@@ -250,6 +252,7 @@ internal fun ScanScreen(
                 lastScanSource = lastScanSource,
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
+                lastLookupCandidates = lastLookupCandidates,
                 lastExtId = lastExtId,
                 lastTajikistanExportSticker = lastTajikistanExportSticker,
                 tajikistanInvoiceJobId = selectedJob.takeIf {

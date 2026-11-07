@@ -19,6 +19,7 @@ import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScanJobMonitorTargetKinds
+import consulting.sw.logiscanner.net.LookupScanCandidate
 import consulting.sw.logiscanner.net.ScanResultItem
 import consulting.sw.logiscanner.printer.BluetoothPrinterClient
 import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
@@ -53,12 +54,11 @@ enum class ScanResultColor {
 }
 
 fun determineScanResultColor(result: ScanResultItem): ScanResultColor {
-    return if (result.hasIssues) {
-        ScanResultColor.ISSUE
-    } else if (result.count == 0) {
-        ScanResultColor.NOT_FOUND
-    } else {
-        ScanResultColor.OK
+    return when {
+        result.lookupOutcome in setOf("alreadyConfirmed", "noOutstanding") -> ScanResultColor.IGNORED
+        result.lookupOutcome in setOf("inspectBox", "ambiguous") || result.hasIssues -> ScanResultColor.ISSUE
+        result.count == 0 -> ScanResultColor.NOT_FOUND
+        else -> ScanResultColor.OK
     }
 }
 
@@ -100,6 +100,7 @@ data class MainState(
     val lastScanSource: Int? = null,
     val lastItemNumbers: List<String> = emptyList(),
     val lastExtData: String? = null,
+    val lastLookupCandidates: List<LookupScanCandidate> = emptyList(),
     val lastExtId: String? = null,
     val lastTajikistanExportSticker: TajikistanExportSticker? = null,
     val lastScanTime: String? = null,
@@ -617,6 +618,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastScanSource = if (jobChanged) null else it.lastScanSource,
                     lastItemNumbers = if (jobChanged) emptyList() else it.lastItemNumbers,
                     lastExtData = if (jobChanged) null else it.lastExtData,
+                    lastLookupCandidates = if (jobChanged) emptyList() else it.lastLookupCandidates,
                     lastExtId = if (jobChanged) null else it.lastExtId,
                     lastTajikistanExportSticker = if (jobChanged) null else it.lastTajikistanExportSticker,
                     lastScanTime = if (jobChanged) null else it.lastScanTime,
@@ -944,6 +946,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 lastScanSource = null,
                 lastItemNumbers = emptyList(),
                 lastExtData = null,
+                lastLookupCandidates = emptyList(),
                 lastExtId = null,
                 lastScanTime = null,
                 scanResultColor = ScanResultColor.NONE,
@@ -1072,6 +1075,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastScanSource = result.scanSource,
                         lastItemNumbers = result.itemNumbers,
                         lastExtData = result.extData,
+                        lastLookupCandidates = result.lookupCandidates.orEmpty(),
                         lastExtId = result.extId,
                         lastTajikistanExportSticker = if (tajikistanMissingData) {
                             null
@@ -1151,6 +1155,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
                             lastExtData = null,
+                            lastLookupCandidates = emptyList(),
                             lastExtId = null,
                             lastTajikistanExportSticker = null,
                             lastScanTime = null,
@@ -1168,6 +1173,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
                             lastExtData = null,
+                            lastLookupCandidates = emptyList(),
                             lastExtId = null,
                             lastScanTime = OffsetDateTime.now().toString(),
                             error = getApplication<Application>().getString(R.string.scan_error_server),
