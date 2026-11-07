@@ -78,6 +78,7 @@ import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
+import consulting.sw.logiscanner.net.LookupScanCandidate
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.TajikistanExportSticker
@@ -96,6 +97,7 @@ internal fun ScanJobMonitorPanel(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lastLookupCandidates: List<LookupScanCandidate> = emptyList(),
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
     tajikistanInvoiceJobId: Int?,
@@ -268,6 +270,7 @@ internal fun ScanJobMonitorPanel(
                 lastScanSource = lastScanSource,
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
+                lastLookupCandidates = lastLookupCandidates,
                 lastExtId = lastExtId,
                 lastTajikistanExportSticker = lastTajikistanExportSticker,
                 lastScanTime = lastScanTime,
@@ -310,6 +313,12 @@ internal fun ScanJobMonitorPanel(
                     label = stringResource(R.string.monitor_not_in_register),
                     value = snapshot.scannedItemsNotInRegister.toString()
                 )
+                snapshot.lookupRemainingCount?.let { remaining ->
+                    MonitorAttribute(
+                        label = stringResource(R.string.monitor_lookup_remaining),
+                        value = remaining.toString()
+                    )
+                }
             }
 
             if (snapshot != null) {
@@ -1217,6 +1226,7 @@ internal fun LocalScanResult(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
+    lastLookupCandidates: List<LookupScanCandidate> = emptyList(),
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
     lastScanTime: String?,
@@ -1303,6 +1313,14 @@ internal fun LocalScanResult(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (lastLookupCandidates.isNotEmpty()) {
+            MonitorAttribute(
+                label = stringResource(R.string.monitor_lookup_candidates),
+                value = lastLookupCandidates.joinToString(", ") { candidate ->
+                    candidate.parcelNumber.ifBlank { "#${candidate.parcelId}" }
+                }
             )
         }
         display.extId?.takeIf { kgtStickerCode(it) != null }?.let { extId ->

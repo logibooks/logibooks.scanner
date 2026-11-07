@@ -184,6 +184,7 @@ class MainActivity : ComponentActivity() {
                                 lastScanSource = state.lastScanSource,
                                 lastItemNumbers = state.lastItemNumbers,
                                 lastExtData = state.lastExtData,
+                                lastLookupCandidates = state.lastLookupCandidates,
                                 lastExtId = state.lastExtId,
                                 lastTajikistanExportSticker = state.lastTajikistanExportSticker,
                                 lastScanTime = state.lastScanTime,

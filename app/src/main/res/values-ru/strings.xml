@@ -109,6 +109,8 @@ This file is a part of LogiScanner application
     <string name="monitor_stat_not_scanned">Не сканировано</string>
     <string name="monitor_restricted">Запретов</string>
     <string name="monitor_not_in_register">Не в реестре</string>
+    <string name="monitor_lookup_remaining">Осталось найти</string>
+    <string name="monitor_lookup_candidates">Посылки для поиска</string>
     <string name="monitor_local_scan_result_title">Последнее сканирование %1$s %2$s</string>
     <string name="monitor_local_scan_result_title_no_time">Последнее сканирование</string>
     <string name="monitor_local_scan_result_parcels">Посылок: %1$d</string>

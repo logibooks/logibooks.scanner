@@ -191,6 +191,7 @@ data class ScanJobMonitorSnapshot(
     var parcelsWithStickerNotScanned: Int = 0,
     var restrictedParcels: Int = 0,
     var scannedItemsNotInRegister: Int = 0,
+    var lookupRemainingCount: Int? = null,
     var boxes: List<ScanJobMonitorBox> = emptyList(),
     var box: ScanJobMonitorBox? = null
 )
@@ -237,6 +238,8 @@ data class ScanResultItem(
     val scanSource: Int,
     val itemNumbers: List<String>,
     val extData: String?,
+    val lookupOutcome: String? = null,
+    val lookupCandidates: List<LookupScanCandidate>? = null,
     /** WBR bulky item number returned after a BI-mode parcel scan. */
     val extId: String? = null,
     val hasIssues: Boolean = false,
@@ -246,6 +249,9 @@ data class ScanResultItem(
     val stickerTemplate: String? = null,
     val exportSticker: TajikistanExportStickerPayload? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class LookupScanCandidate(val parcelId: Int, val parcelNumber: String, val boxNumber: String? = null)
 
 @JsonClass(generateAdapter = true)
 data class TajikistanExportStickerPayload(
