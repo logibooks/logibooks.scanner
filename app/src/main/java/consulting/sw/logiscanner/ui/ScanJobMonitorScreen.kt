@@ -882,8 +882,8 @@ internal fun MonitorParcelRow(
             val showInvoice = tajikistanInvoiceJobId != null && parcelId != null &&
                 registerType == RegisterTypes.WBR_N && parcel.isInRegister
             val invoiceResult = if (showInvoice && printerSelected) {
-                var result by remember(tajikistanInvoiceJobId, parcel) { mutableStateOf<Result<ByteArray>?>(null) }
-                LaunchedEffect(tajikistanInvoiceJobId, parcel) {
+                var result by remember(tajikistanInvoiceJobId, parcelId) { mutableStateOf<Result<ByteArray>?>(null) }
+                LaunchedEffect(tajikistanInvoiceJobId, parcelId) {
                     result = try {
                         Result.success(loadTajikistanInvoice(tajikistanInvoiceJobId, parcelId))
                     } catch (ex: CancellationException) {
