@@ -4,13 +4,61 @@
 
 package consulting.sw.logiscanner.net
 
+import com.microsoft.signalr.GsonHubProtocol
+import com.microsoft.signalr.InvocationBinder
+import com.microsoft.signalr.InvocationMessage
 import com.squareup.moshi.Moshi
+import java.lang.reflect.Type
+import java.nio.ByteBuffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScanJobMonitorModelsTest {
+
+    @Test
+    fun lookupProgressDistinguishesZeroFromLegacyPayload() {
+        val adapter = Moshi.Builder().build().adapter(ScanJobMonitorSnapshot::class.java)
+        assertEquals(0, adapter.fromJson("""{"lookupRemainingCount":0}""")!!.lookupRemainingCount)
+        assertEquals(3, adapter.fromJson("""{"lookupRemainingCount":3}""")!!.lookupRemainingCount)
+        assertEquals(null, adapter.fromJson("{}")!!.lookupRemainingCount)
+    }
+
+    @Test
+    fun signalRSnapshotDecodesRemainingCountOnObserveAndReobserve() {
+        val binder = object : InvocationBinder {
+            override fun getReturnType(invocationId: String): Type = Void.TYPE
+            override fun getParameterTypes(methodName: String): List<Type> {
+                assertEquals("ScanJobMonitorSnapshot", methodName)
+                return listOf(ScanJobMonitorSnapshot::class.java)
+            }
+        }
+        val protocol = GsonHubProtocol()
+        fun snapshot(count: Int): ScanJobMonitorSnapshot {
+            val json = """{"type":1,"target":"ScanJobMonitorSnapshot","arguments":[{"scanJobId":7,"lookupRemainingCount":$count}]}"""
+            val message = protocol.parseMessages(ByteBuffer.wrap((json + '\u001e').toByteArray()), binder)
+                .single() as InvocationMessage
+            return message.arguments.single() as ScanJobMonitorSnapshot
+        }
+        assertEquals(7, snapshot(1).scanJobId)
+        assertEquals(1, snapshot(1).lookupRemainingCount)
+        assertEquals(0, snapshot(0).lookupRemainingCount)
+    }
+
+    @Test
+    fun lookupInspectionFeedbackDecodesSeparatelyFromBoxIdentifiers() {
+        val adapter = Moshi.Builder().build().adapter(ScanResultItem::class.java)
+        val result = adapter.fromJson("""
+            {"count":0,"parcelCount":0,"boxCount":1,"scanSource":20,"itemNumbers":["BOX-7"],
+             "extData":"Откройте коробку и проверьте посылки","lookupOutcome":"inspectBox",
+             "lookupCandidates":[{"parcelId":21,"parcelNumber":"P-21","boxNumber":"BOX-7"}]}
+        """)!!
+        assertEquals(listOf("BOX-7"), result.itemNumbers)
+        assertEquals("inspectBox", result.lookupOutcome)
+        assertEquals(listOf(LookupScanCandidate(21, "P-21", "BOX-7")), result.lookupCandidates)
+        assertEquals(0, result.count)
+    }
 
     @Test
     fun savedBoxStickerParsesWithoutChangingCurrentJobIndicators() {

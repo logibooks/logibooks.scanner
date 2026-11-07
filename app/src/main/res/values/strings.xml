@@ -109,6 +109,8 @@ This file is a part of LogiScanner application
     <string name="monitor_stat_not_scanned">Not scanned</string>
     <string name="monitor_restricted">Restricted</string>
     <string name="monitor_not_in_register">Not in register</string>
+    <string name="monitor_lookup_remaining">Remaining to find</string>
+    <string name="monitor_lookup_candidates">Parcels to look for</string>
     <string name="monitor_local_scan_result_title">Last scan %1$s %2$s</string>
     <string name="monitor_local_scan_result_title_no_time">Last scan</string>
     <string name="monitor_local_scan_result_parcels">Parcels: %1$d</string>
