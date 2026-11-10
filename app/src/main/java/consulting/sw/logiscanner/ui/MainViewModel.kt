@@ -304,7 +304,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (value && !hasSelectedPrinter(state.value.printerBluetoothAddress)) {
             return
         }
-        _state.update { it.copy(printerAutoPrintEnabled = value, printerError = null, printerMessage = null) }
+        // Let the preference collector apply each toggle so an older save cannot undo a newer UI update.
+        _state.update { it.copy(printerError = null, printerMessage = null) }
         viewModelScope.launch {
             settingsStore.setPrinterAutoPrintEnabled(value)
         }
