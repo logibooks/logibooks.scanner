@@ -80,7 +80,7 @@ This file is a part of LogiScanner application
     <string name="printer_tj_sticker_fields_missing">Missing data: %1$s.</string>
     <string name="printer_tj_sticker_fields_invalid">Invalid values: %1$s. Enter numbers greater than zero.</string>
     <string name="printer_tj_sticker_data">sticker data</string>
-    <string name="printer_tj_sticker_field_order_number">shipment number</string>
+    <string name="printer_tj_sticker_field_order_number">sticker (UIN)</string>
     <string name="printer_tj_sticker_field_places_count">number of places</string>
     <string name="printer_tj_sticker_field_dispatch_date">consolidated invoice date</string>
     <string name="printer_tj_sticker_field_weight">cargo weight</string>

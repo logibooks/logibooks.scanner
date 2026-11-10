@@ -53,6 +53,16 @@ class MainActivity : ComponentActivity() {
         private const val APP_LOCALE = "ru"
     }
 
+    override fun onStart() {
+        super.onStart()
+        vm.setActivityStarted(true)
+    }
+
+    override fun onStop() {
+        vm.setActivityStarted(false)
+        super.onStop()
+    }
+
     override fun attachBaseContext(newBase: Context) {
         val locale = Locale.forLanguageTag(APP_LOCALE)
         Locale.setDefault(locale)

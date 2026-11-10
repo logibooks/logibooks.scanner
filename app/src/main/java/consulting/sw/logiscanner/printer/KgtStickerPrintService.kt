@@ -73,9 +73,10 @@ class KgtStickerPrintService(
             return KgtStickerPrintResult.MissingPrinter
         }
 
+        val send = client.preparePrint(address)
         return mutex.withLock {
             try {
-                client.print(address, renderPayload())
+                send(renderPayload())
                 KgtStickerPrintResult.Success
             } catch (ex: CancellationException) {
                 throw ex

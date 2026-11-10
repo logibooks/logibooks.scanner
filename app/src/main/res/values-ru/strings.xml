@@ -80,7 +80,7 @@ This file is a part of LogiScanner application
     <string name="printer_tj_sticker_fields_missing">Не указаны данные: %1$s.</string>
     <string name="printer_tj_sticker_fields_invalid">Некорректные значения: %1$s. Укажите числа больше нуля.</string>
     <string name="printer_tj_sticker_data">данные стикера</string>
-    <string name="printer_tj_sticker_field_order_number">номер отправления</string>
+    <string name="printer_tj_sticker_field_order_number">стикер (УИН)</string>
     <string name="printer_tj_sticker_field_places_count">количество мест</string>
     <string name="printer_tj_sticker_field_dispatch_date">дата общей накладной</string>
     <string name="printer_tj_sticker_field_weight">вес груза</string>
