@@ -8,6 +8,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -62,6 +64,41 @@ internal val AutoFollowOnIconColor = Color(0xFF4CAF50)
 internal val AutoFollowOffIconColor = Color(0xFFFF9800)
 internal val KgtModeOnIconColor = AutoFollowOnIconColor
 internal val KgtModeOffIconColor = AutoFollowOffIconColor
+
+@Composable
+internal fun ScannerScreenHeader(
+    title: String,
+    displayName: String?,
+    actions: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                if (!displayName.isNullOrBlank()) {
+                    Text(
+                        text = displayName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            actions()
+        }
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
 
 @Composable
 internal fun DismissibleMessage(message: String, onDismiss: () -> Unit) {

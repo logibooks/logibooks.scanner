@@ -21,9 +21,9 @@ This file is a part of LogiScanner application
     <string name="settings_title">Settings</string>
     <string name="settings_open">Settings</string>
     <string name="settings_back">Back</string>
+    <string name="settings_checks_title">Checks</string>
     <string name="settings_printer_title">Printer</string>
     <string name="settings_relabeling_mode_title">Marking mode</string>
-    <string name="settings_kgt_title">BI mode settings</string>
     <string name="settings_hid_title">External scanner device</string>
 
     <string name="select_scan_job">Select Scan Job</string>
@@ -34,7 +34,6 @@ This file is a part of LogiScanner application
     <string name="job_type">Type: %s</string>
     
     <string name="ready_to_scan">Ready to scan</string>
-    <string name="logged_in_as">Logged in as: %s</string>
     <string name="logout">Logout</string>
     <string name="syncing_with_server">Syncing with server…</string>
     <string name="waiting_for_barcode">Waiting for the next barcode</string>
@@ -54,15 +53,21 @@ This file is a part of LogiScanner application
     <string name="relabeling_mode_disable">Relabeling is on. Tap to turn off</string>
     <string name="tj_auto_print">TJ invoice auto-print</string>
     <string name="relabeling_mode_full">Full</string>
-    <string name="relabeling_mode_kgt_only">KGT only</string>
+    <string name="relabeling_mode_kgt_only">KGT</string>
     <string name="bulky_items_number_speech">BI number: %1$s</string>
     <string name="kgt_auto_print_sticker">Automatically print sticker</string>
-    <string name="kgt_voice_enabled_label">Voice accompaniment</string>
+    <string name="kgt_voice_enabled_label">With voice</string>
     <string name="printer_select">Select printer</string>
     <string name="printer_none">No printer</string>
     <string name="printer_select_required">Select a printer before printing</string>
     <string name="printer_selected_address">Saved printer: %1$s</string>
     <string name="printer_refresh">Refresh printers</string>
+    <string name="settings_test_printer">Printer</string>
+    <string name="settings_test_printer_failed">Unable to print the test page</string>
+    <string name="settings_test_voice">Voice</string>
+    <string name="settings_test_voice_failed">Unable to play the voice test</string>
+    <string name="settings_test_title" translatable="false">Logibooks Scanner %1$s</string>
+    <string name="settings_test_voice_phrase" translatable="false">Проверка голоса</string>
     <string name="sticker">Sticker</string>
     <string name="printer_print_sticker">Print sticker</string>
     <string name="printer_no_paired">No paired Bluetooth printers</string>

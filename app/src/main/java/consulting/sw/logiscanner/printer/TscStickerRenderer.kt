@@ -16,6 +16,22 @@ class TscStickerRenderer(
 
     fun render(code: String): ByteArray = renderCommands(code).toByteArray(Charsets.UTF_8)
 
+    internal fun renderTestPage(title: String): ByteArray = listOf(
+        "SIZE ${STICKER_WIDTH_MM} mm,${STICKER_HEIGHT_MM} mm",
+        "GAP 2 mm,0 mm",
+        "DENSITY 8",
+        "DIRECTION 1",
+        "REFERENCE 0,0",
+        "CODEPAGE 1251",
+        "CLS",
+        centeredTestText(title, TEST_FIRST_LINE_Y_DOTS),
+        centeredTestText("Проверка принтера", TEST_FIRST_LINE_Y_DOTS + TEST_LINE_SPACING_DOTS),
+        "PRINT 1,1"
+    ).joinToString("\r\n", postfix = "\r\n").toByteArray(charset("windows-1251"))
+
+    private fun centeredTestText(value: String, y: Int): String =
+        "TEXT ${STICKER_WIDTH_DOTS / 2},$y,\"3\",0,1,1,2,\"${normalizeCode(value)}\""
+
     fun renderCommands(code: String): String {
         val value = normalizeCode(code)
         val printedAt = ZonedDateTime.now(clock).format(PRINT_TIME_FORMATTER)
@@ -72,6 +88,10 @@ class TscStickerRenderer(
 
         // RE310/TSPL coordinates are dots; these defaults target 203 dpi sticker stock.
         const val STICKER_WIDTH_DOTS = 464
+        const val STICKER_HEIGHT_DOTS = 320
+        const val TEST_FONT_HEIGHT_DOTS = 24
+        const val TEST_LINE_SPACING_DOTS = 40
+        const val TEST_FIRST_LINE_Y_DOTS = (STICKER_HEIGHT_DOTS - TEST_LINE_SPACING_DOTS - TEST_FONT_HEIGHT_DOTS) / 2
         const val QR_X_DOTS = 148
         const val QR_Y_DOTS = 18
         const val QR_CELL_DOTS = 8

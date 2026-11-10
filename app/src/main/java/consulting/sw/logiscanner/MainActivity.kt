@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.JobSelectionScreen
@@ -138,8 +139,12 @@ class MainActivity : ComponentActivity() {
                                 kgtVoiceEnabled = state.kgtVoiceEnabled,
                                 relabelingSubmode = state.relabelingSubmode,
                                 printerLoading = state.printerLoading,
-                                printerMessage = state.printerMessage,
+                                printerMessage = state.printerMessage
+                                    ?.takeUnless { it == R.string.printer_printed }
+                                    ?.let { stringResource(it) },
                                 printerError = state.printerError,
+                                printerTestError = state.printerTestError?.let { stringResource(it) },
+                                voiceTestFailed = state.voiceTestFailed,
                                 onExternalScannerEnabledChange = vm::setExternalScannerEnabled,
                                 onPrinterSelected = vm::setPrinterBluetoothAddress,
                                 onKgtVoiceEnabledChange = vm::setKgtVoiceEnabled,
@@ -149,6 +154,8 @@ class MainActivity : ComponentActivity() {
                                         vm.refreshPrinters()
                                     }
                                 },
+                                onTestPrinter = { runPrinterAction(vm::printTestPage) },
+                                onTestVoice = vm::testVoice,
                                 onBack = {
                                     if (state.externalScannerEnabled) {
                                         focusManager.clearFocus()
@@ -215,7 +222,7 @@ class MainActivity : ComponentActivity() {
                                 ),
                                 printerSelected = printerSelected,
                                 printerLoading = state.printerLoading,
-                                printerMessage = state.printerMessage,
+                                printerMessage = state.printerMessage?.let { stringResource(it) },
                                 printerError = state.printerError,
                                 monitorJumpNumber = state.monitorJumpNumber,
                                 monitorJumpLoading = state.monitorJumpLoading,
