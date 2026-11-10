@@ -21,6 +21,7 @@ import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScanJobMonitorTargetKinds
 import consulting.sw.logiscanner.net.LookupScanCandidate
 import consulting.sw.logiscanner.net.ScanResultItem
+import consulting.sw.logiscanner.printer.AutoPrintPrinter
 import consulting.sw.logiscanner.printer.BluetoothPrinterClient
 import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
 import consulting.sw.logiscanner.printer.KgtStickerPrintResult
@@ -38,6 +39,7 @@ import consulting.sw.logiscanner.repo.ScanRepository
 import consulting.sw.logiscanner.store.RelabelingSubmode
 import consulting.sw.logiscanner.store.SettingsStore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -112,6 +114,19 @@ internal fun openSettingsState(state: MainState): MainState = state.copy(setting
 
 internal fun closeSettingsState(state: MainState): MainState = state.copy(settingsOpen = false)
 
+internal fun autoPrintPrinter(state: MainState): AutoPrintPrinter? {
+    val job = state.selectedScanJob ?: return null
+    val address = state.printerBluetoothAddress?.takeIf(String::isNotBlank) ?: return null
+    if (!scanReceiverEnabled(state.isLoggedIn, state.settingsOpen, job)) return null
+    if (!relabelingModeAvailable(job, state.relabelingSubmode, printerSelected = true)) return null
+
+    val autoPrintEnabled = when (state.relabelingSubmode) {
+        RelabelingSubmode.KGT -> state.printerAutoPrintEnabled
+        RelabelingSubmode.FULL -> state.bulkyItemsMode != BulkyItemsModes.OFF
+    }
+    return if (autoPrintEnabled) AutoPrintPrinter(job.id, address) else null
+}
+
 internal fun stoppedScanWarningState(state: MainState, message: String): MainState {
     return state.copy(
         error = message,
@@ -122,9 +137,10 @@ internal fun stoppedScanWarningState(state: MainState, message: String): MainSta
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settingsStore = SettingsStore(application)
+    private val bluetoothPrinter = BluetoothPrinterClient(application, viewModelScope)
     private val stickerPrintService = KgtStickerPrintService(
         renderer = TscStickerRenderer(),
-        client = BluetoothPrinterClient(application)
+        client = bluetoothPrinter
     )
     private val _state = MutableStateFlow(MainState())
     val state: StateFlow<MainState> = _state.asStateFlow()
@@ -141,11 +157,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var scanJobListRefreshJob: Job? = null
     private var scanJobListMonitorVersion = 0
     private var monitorScopeVersion = 0
+    private var activityStarted = false
+    private var signingOut = false
     
     private var tts: TextToSpeech? = null
     private var ttsReady = false
 
     init {
+        viewModelScope.launch {
+            state.collect { updatePrinterSession() }
+        }
+
         viewModelScope.launch {
             settingsStore.externalScannerEnabled().collect { enabled ->
                 _state.update { it.copy(externalScannerEnabled = enabled) }
@@ -243,6 +265,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     override fun onCleared() {
         super.onCleared()
+        bluetoothPrinter.selectPrinter(null)
         monitorJob?.cancel()
         monitorDetailJob?.cancel()
         scanJobListMonitorJob?.cancel()
@@ -259,6 +282,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setPassword(value: String) = _state.update { it.copy(password = value) }
     fun openSettings() = _state.update(::openSettingsState)
     fun closeSettings() = _state.update(::closeSettingsState)
+
+    fun setActivityStarted(started: Boolean) {
+        activityStarted = started
+        updatePrinterSession()
+    }
+
+    private fun updatePrinterSession() {
+        val printer = if (activityStarted && !signingOut) autoPrintPrinter(state.value) else null
+        bluetoothPrinter.selectPrinter(printer)
+    }
 
     fun setExternalScannerEnabled(value: Boolean) {
         _state.update { it.copy(externalScannerEnabled = value) }
@@ -396,13 +429,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun printKgtSticker(code: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             printKgtStickerInternal(code)
         }
     }
 
     fun printParcelSticker(sticker: ParcelSticker) {
-        viewModelScope.launch {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             printParcelStickerInternal(sticker)
         }
     }
@@ -410,7 +443,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun printBoxSticker(boxId: Int) {
         if (state.value.printerLoading) return
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
-        viewModelScope.launch {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {
                 val result = stickerPrintService.printBoxSticker(state.value.printerBluetoothAddress) {
                     scanJobMonitorRepo.loadBoxLabel(boxId)
@@ -436,7 +469,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
-        viewModelScope.launch {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {
                 applyPrinterResult(stickerPrintService.printTajikistanInvoice(address, payload))
             } finally {
@@ -1100,16 +1133,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 followLocalScanResult(result)
 
                 if (shouldAutoPrintKgtSticker(autoPrintEnabled, job, bulkyItemsMode, result, printerSelected)) {
-                    result.extId?.let { extId ->
-                        viewModelScope.launch {
-                            printKgtStickerInternal(extId)
-                        }
-                    }
+                    result.extId?.let(::printKgtSticker)
                 }
 
                 if (tajikistanAutoPrintAction == TajikistanExportStickerAutoPrintAction.PRINT) {
                     requireNotNull(tajikistanSticker).let { sticker ->
-                        viewModelScope.launch {
+                        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
                             printTajikistanExportStickerInternal(sticker)
                         }
                     }
@@ -1194,26 +1223,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         viewModelScope.launch {
-            scanJobListMonitorVersion += 1
-            scanJobListMonitorJob?.cancel()
-            scanJobListRefreshJob?.cancel()
-            stopScanJobMonitor()
-            if (::scanJobMonitorRepo.isInitialized) {
-                scanJobMonitorRepo.stopScanJobs()
-            }
-            loginRepo.logout()
-            colorResetJob?.cancel()
-            _state.update { 
-                MainState(
-                    email = it.email,
-                    password = "",
-                    externalScannerEnabled = it.externalScannerEnabled,
-                    printerAutoPrintEnabled = it.printerAutoPrintEnabled,
-                    kgtVoiceEnabled = it.kgtVoiceEnabled,
-                    relabelingSubmode = it.relabelingSubmode,
-                    printerBluetoothAddress = it.printerBluetoothAddress,
-                    bondedPrinters = it.bondedPrinters
-                )
+            if (signingOut) return@launch
+            signingOut = true
+            updatePrinterSession()
+            try {
+                scanJobListMonitorVersion += 1
+                scanJobListMonitorJob?.cancel()
+                scanJobListRefreshJob?.cancel()
+                stopScanJobMonitor()
+                if (::scanJobMonitorRepo.isInitialized) {
+                    scanJobMonitorRepo.stopScanJobs()
+                }
+                loginRepo.logout()
+                colorResetJob?.cancel()
+                _state.update {
+                    MainState(
+                        email = it.email,
+                        password = "",
+                        externalScannerEnabled = it.externalScannerEnabled,
+                        printerAutoPrintEnabled = it.printerAutoPrintEnabled,
+                        kgtVoiceEnabled = it.kgtVoiceEnabled,
+                        relabelingSubmode = it.relabelingSubmode,
+                        printerBluetoothAddress = it.printerBluetoothAddress,
+                        bondedPrinters = it.bondedPrinters
+                    )
+                }
+            } finally {
+                signingOut = false
+                updatePrinterSession()
             }
         }
     }

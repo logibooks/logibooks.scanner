@@ -11,17 +11,19 @@ import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.UUID
 
 class BluetoothPrinterClient(
-    private val context: Context
+    private val context: Context,
+    scope: CoroutineScope
 ) : StickerPrinterClient {
-    private val mutex = Mutex()
+    private val session = PrinterSession(scope, Dispatchers.IO, ::openSocket)
+
+    internal fun selectPrinter(printer: AutoPrintPrinter?) = session.select(printer)
 
     @SuppressLint("MissingPermission")
     override suspend fun listBondedPrinters(): List<BluetoothPrinterDevice> = withContext(Dispatchers.IO) {
@@ -44,42 +46,35 @@ class BluetoothPrinterClient(
             .sortedWith(compareBy<BluetoothPrinterDevice> { it.name.lowercase() }.thenBy { it.address })
     }
 
-    @SuppressLint("MissingPermission")
-    override suspend fun print(address: String, payload: ByteArray) {
-        withContext(Dispatchers.IO) {
-            mutex.withLock {
+    override suspend fun print(address: String, payload: ByteArray) = preparePrint(address)(payload)
+
+    override fun preparePrint(address: String): suspend (ByteArray) -> Unit {
+        val send = session.preparePrint(address)
+        return { payload ->
+            try {
                 ensureBluetoothConnectPermission()
                 ensureBluetoothScanPermission()
-                val bluetoothAdapter = adapter()
-                val device = bluetoothAdapter.bondedDevices
-                    .orEmpty()
-                    .firstOrNull { it.address == address }
-                    ?: throw PrinterNotFoundException(address)
-
-                try {
-                    bluetoothAdapter.cancelDiscovery()
-                } catch (_: SecurityException) {
-                    // Discovery cancellation only improves connection speed; printing can continue without it.
-                }
-                var socket: BluetoothSocket? = null
-                try {
-                    socket = device.createRfcommSocketToServiceRecord(SPP_UUID)
-                    socket.connect()
-                    socket.outputStream.use { output ->
-                        output.write(payload)
-                        output.flush()
-                    }
-                } catch (ex: IOException) {
-                    throw PrinterUnavailableException("Unable to print sticker", ex)
-                } finally {
-                    try {
-                        socket?.close()
-                    } catch (_: IOException) {
-                        // The print attempt is already complete; ignore close failures.
-                    }
-                }
+                send(payload)
+            } catch (ex: IOException) {
+                throw PrinterUnavailableException("Unable to print sticker", ex)
             }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun openSocket(address: String): PrinterConnection {
+        ensureBluetoothConnectPermission()
+        ensureBluetoothScanPermission()
+        val bluetoothAdapter = adapter()
+        val device = bluetoothAdapter.bondedDevices.orEmpty().firstOrNull { it.address == address }
+            ?: throw PrinterNotFoundException(address)
+
+        try {
+            bluetoothAdapter.cancelDiscovery()
+        } catch (_: SecurityException) {
+            // Discovery cancellation only improves connection speed; printing can continue without it.
+        }
+        return RfcommConnection(device.createRfcommSocketToServiceRecord(SPP_UUID))
     }
 
     private fun ensureBluetoothConnectPermission() {
@@ -109,4 +104,25 @@ class BluetoothPrinterClient(
     private companion object {
         val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     }
+}
+
+private class RfcommConnection(private val socket: BluetoothSocket) : PrinterConnection {
+    @SuppressLint("MissingPermission") // Checked before the socket is created.
+    override suspend fun connect() = socket.connect()
+
+    override suspend fun write(payload: ByteArray) {
+        val output = socket.outputStream
+        output.write(payload)
+        output.flush()
+    }
+
+    override suspend fun awaitDisconnect() {
+        val input = socket.inputStream
+        val buffer = ByteArray(256)
+        while (input.read(buffer) != -1) {
+            // Drain unsolicited printer data so EOF or a read failure can signal disconnect.
+        }
+    }
+
+    override fun close() = socket.close()
 }
