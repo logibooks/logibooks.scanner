@@ -6,7 +6,9 @@ package consulting.sw.logiscanner.ui
 
 import android.app.Application
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import consulting.sw.logiscanner.BuildConfig
@@ -51,6 +53,8 @@ import retrofit2.HttpException
 import java.time.OffsetDateTime
 import java.util.Locale
 
+private val russianSpeechLocale = Locale.forLanguageTag("ru-RU")
+
 enum class ScanResultColor {
     NONE, NOT_FOUND, OK, ISSUE, SERVER_ERROR, IGNORED
 }
@@ -90,8 +94,10 @@ data class MainState(
     val printerBluetoothAddress: String? = null,
     val bondedPrinters: List<BluetoothPrinterDevice> = emptyList(),
     val printerLoading: Boolean = false,
-    val printerMessage: String? = null,
+    @get:StringRes val printerMessage: Int? = null,
     val printerError: String? = null,
+    @get:StringRes val printerTestError: Int? = null,
+    val voiceTestFailed: Boolean = false,
     val monitorJumpNumber: String = "",
     val monitorJumpLoading: Boolean = false,
     val monitorHighlightedParcelId: Int? = null,
@@ -112,7 +118,8 @@ data class MainState(
 
 internal fun openSettingsState(state: MainState): MainState = state.copy(settingsOpen = true)
 
-internal fun closeSettingsState(state: MainState): MainState = state.copy(settingsOpen = false)
+internal fun closeSettingsState(state: MainState): MainState =
+    state.copy(settingsOpen = false, printerTestError = null, voiceTestFailed = false)
 
 internal fun autoPrintPrinter(state: MainState): AutoPrintPrinter? {
     val job = state.selectedScanJob ?: return null
@@ -162,6 +169,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private var voiceTestUtteranceIds = emptySet<String>()
+    private var printerTestJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -242,18 +251,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Initialize TTS with Russian locale and male voice
         tts = TextToSpeech(application) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val russianLocale = Locale.forLanguageTag("ru-RU")
-                val result = tts?.setLanguage(russianLocale)
+                val result = tts?.setLanguage(russianSpeechLocale)
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                     Log.e(javaClass.simpleName, "Russian language not supported for TTS")
                     ttsReady = false
                 } else {
                     // Try to select a male voice
                     tts?.voices?.find { voice ->
-                        voice.locale == russianLocale && voice.name.lowercase().contains("male")
+                        voice.locale == russianSpeechLocale && voice.name.lowercase().contains("male")
                     }?.let { maleVoice ->
                         tts?.voice = maleVoice
                     }
+                    tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                        override fun onStart(utteranceId: String) = Unit
+                        override fun onDone(utteranceId: String) = Unit
+
+                        @Deprecated("Older speech engines call this overload")
+                        override fun onError(utteranceId: String) {
+                            onError(utteranceId, TextToSpeech.ERROR)
+                        }
+
+                        override fun onError(utteranceId: String, errorCode: Int) {
+                            viewModelScope.launch { showVoiceTestFailure(utteranceId, errorCode) }
+                        }
+                    })
                     ttsReady = true
                 }
             } else {
@@ -281,7 +302,60 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setEmail(value: String) = _state.update { it.copy(email = value) }
     fun setPassword(value: String) = _state.update { it.copy(password = value) }
     fun openSettings() = _state.update(::openSettingsState)
-    fun closeSettings() = _state.update(::closeSettingsState)
+    fun closeSettings() {
+        voiceTestUtteranceIds = emptySet()
+        printerTestJob?.cancel()
+        _state.update(::closeSettingsState)
+    }
+
+    fun testVoice() {
+        if (!state.value.settingsOpen) return
+        val testId = "voice_test_${System.nanoTime()}"
+        val titleId = "${testId}_title"
+        val phraseId = "${testId}_phrase"
+        voiceTestUtteranceIds = setOf(titleId, phraseId)
+        _state.update { it.copy(voiceTestFailed = false) }
+
+        val speech = tts
+        if (!ttsReady || speech == null) {
+            showVoiceTestFailure(titleId, TextToSpeech.ERROR)
+            return
+        }
+
+        val russianVoice = speech.voice
+        val englishStatus = speech.setLanguage(Locale.ENGLISH)
+        if (englishStatus < TextToSpeech.LANG_AVAILABLE) {
+            showVoiceTestFailure(titleId, englishStatus)
+            return
+        }
+
+        val app = getApplication<Application>()
+        val title = app.getString(R.string.settings_test_title, BuildConfig.VERSION_NAME)
+        val titleStatus = try {
+            // Android captures the selected voice when each utterance is queued.
+            speech.speak(title, TextToSpeech.QUEUE_FLUSH, null, titleId)
+        } finally {
+            ttsReady = russianVoice?.let(speech::setVoice) == TextToSpeech.SUCCESS ||
+                speech.setLanguage(russianSpeechLocale) >= TextToSpeech.LANG_AVAILABLE
+        }
+        if (titleStatus != TextToSpeech.SUCCESS || !ttsReady) {
+            showVoiceTestFailure(titleId, if (ttsReady) titleStatus else TextToSpeech.ERROR)
+            return
+        }
+
+        val phrase = app.getString(R.string.settings_test_voice_phrase)
+        val phraseStatus = speech.speak(phrase, TextToSpeech.QUEUE_ADD, null, phraseId)
+        if (phraseStatus != TextToSpeech.SUCCESS) {
+            showVoiceTestFailure(phraseId, phraseStatus)
+        }
+    }
+
+    private fun showVoiceTestFailure(utteranceId: String, errorCode: Int) {
+        if (utteranceId !in voiceTestUtteranceIds) return
+        voiceTestUtteranceIds = emptySet()
+        Log.w(javaClass.simpleName, "Voice test failed with TTS status $errorCode")
+        _state.update { it.copy(voiceTestFailed = true) }
+    }
 
     fun setActivityStarted(started: Boolean) {
         activityStarted = started
@@ -368,7 +442,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     hasSelectedPrinter(value)
                 ),
                 printerError = null,
-                printerMessage = null
+                printerMessage = null,
+                printerTestError = null
             )
         }
         viewModelScope.launch {
@@ -381,7 +456,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshPrinters() {
         viewModelScope.launch {
-            _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
+            _state.update {
+                it.copy(printerLoading = true, printerError = null, printerMessage = null, printerTestError = null)
+            }
             try {
                 val printers = stickerPrintService.listBondedPrinters()
                 val missingPrinterMessage = selectedPrinterMissingMessage(
@@ -392,11 +469,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     it.copy(
                         bondedPrinters = printers,
                         printerError = missingPrinterMessage,
-                        printerMessage = if (printers.isEmpty()) {
-                            getApplication<Application>().getString(R.string.printer_no_paired)
-                        } else {
-                            null
-                        }
+                        printerMessage = R.string.printer_no_paired.takeIf { printers.isEmpty() }
                     )
                 }
             } catch (ex: Exception) {
@@ -424,8 +497,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update {
             it.copy(
                 printerError = getApplication<Application>().getString(R.string.printer_permission_missing),
-                printerMessage = null
+                printerMessage = null,
+                printerTestError = null
             )
+        }
+    }
+
+    fun printTestPage() {
+        val current = state.value
+        val address = current.printerBluetoothAddress
+        if (!current.settingsOpen || current.printerLoading || address.isNullOrBlank()) return
+
+        val title = getApplication<Application>().getString(R.string.settings_test_title, BuildConfig.VERSION_NAME)
+        _state.update {
+            it.copy(printerLoading = true, printerError = null, printerMessage = null, printerTestError = null)
+        }
+        printerTestJob = viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                val result = stickerPrintService.printTestPage(address, title)
+                val error = when (result) {
+                    KgtStickerPrintResult.Success -> null
+                    KgtStickerPrintResult.MissingPrinter -> R.string.printer_select_required
+                    KgtStickerPrintResult.PermissionMissing -> R.string.printer_permission_missing
+                    is KgtStickerPrintResult.PrinterNotFound -> R.string.printer_not_found
+                    is KgtStickerPrintResult.InvalidSticker -> {
+                        Log.e(javaClass.simpleName, "Invalid printer test page: ${result.message}")
+                        R.string.settings_test_printer_failed
+                    }
+                    is KgtStickerPrintResult.Failed -> {
+                        Log.e(javaClass.simpleName, "Printer test failed", result.cause)
+                        R.string.settings_test_printer_failed
+                    }
+                }
+                _state.update { it.copy(printerTestError = error) }
+            } finally {
+                _state.update { it.copy(printerLoading = false) }
+            }
         }
     }
 
@@ -1319,7 +1426,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             KgtStickerPrintResult.Success -> {
                 _state.update {
                     it.copy(
-                        printerMessage = getApplication<Application>().getString(R.string.printer_printed),
+                        printerMessage = R.string.printer_printed,
                         printerError = null
                     )
                 }

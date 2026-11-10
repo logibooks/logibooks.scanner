@@ -62,11 +62,15 @@ internal fun SettingsScreen(
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
+    printerTestError: String?,
+    voiceTestFailed: Boolean,
     onExternalScannerEnabledChange: (Boolean) -> Unit,
     onPrinterSelected: (String?) -> Unit,
     onKgtVoiceEnabledChange: (Boolean) -> Unit,
     onRelabelingSubmodeChange: (RelabelingSubmode) -> Unit,
     onRefreshPrinters: () -> Unit,
+    onTestPrinter: () -> Unit,
+    onTestVoice: () -> Unit,
     onBack: () -> Unit
 ) {
     val printerSelected = hasSelectedPrinter(printerBluetoothAddress)
@@ -78,41 +82,55 @@ internal fun SettingsScreen(
             .padding(horizontal = 24.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ScannerScreenHeader(
+            title = stringResource(R.string.settings_title),
+            displayName = displayName
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .width(48.dp)
+                    .height(48.dp)
             ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .width(48.dp)
-                        .height(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.settings_back)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.settings_back)
+                )
             }
+        }
 
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    stringResource(R.string.settings_title),
-                    style = MaterialTheme.typography.headlineSmall,
+                    stringResource(R.string.settings_checks_title),
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                if (!displayName.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onTestPrinter,
+                        enabled = printerSelected && !printerLoading,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_test_printer))
+                    }
+                    Button(onClick = onTestVoice, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_test_voice))
+                    }
+                }
+                PrinterStatusMessages(loading = false, message = null, error = printerTestError)
+                if (voiceTestFailed) {
                     Text(
-                        stringResource(R.string.logged_in_as, displayName),
-                        style = MaterialTheme.typography.bodyMedium
+                        stringResource(R.string.settings_test_voice_failed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
@@ -156,33 +174,27 @@ internal fun SettingsScreen(
                     selected = relabelingSubmode == RelabelingSubmode.FULL,
                     label = stringResource(R.string.relabeling_mode_full),
                     enabled = printerSelected,
+                    modifier = Modifier.fillMaxWidth(),
                     onClick = { onRelabelingSubmodeChange(RelabelingSubmode.FULL) }
                 )
-                SettingsRadioRow(
-                    selected = relabelingSubmode == RelabelingSubmode.KGT,
-                    label = stringResource(R.string.relabeling_mode_kgt_only),
-                    enabled = true,
-                    onClick = { onRelabelingSubmodeChange(RelabelingSubmode.KGT) }
-                )
-            }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    stringResource(R.string.settings_kgt_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                SettingsCheckboxRow(
-                    checked = kgtVoiceEnabled,
-                    label = stringResource(R.string.kgt_voice_enabled_label),
-                    onCheckedChange = onKgtVoiceEnabledChange
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SettingsRadioRow(
+                        selected = relabelingSubmode == RelabelingSubmode.KGT,
+                        label = stringResource(R.string.relabeling_mode_kgt_only),
+                        enabled = true,
+                        onClick = { onRelabelingSubmodeChange(RelabelingSubmode.KGT) }
+                    )
+                    SettingsCheckboxRow(
+                        checked = kgtVoiceEnabled,
+                        label = stringResource(R.string.kgt_voice_enabled_label),
+                        modifier = Modifier.weight(1f),
+                        onCheckedChange = onKgtVoiceEnabledChange
+                    )
+                }
             }
         }
 
@@ -200,6 +212,7 @@ internal fun SettingsScreen(
                 SettingsCheckboxRow(
                     checked = externalScannerEnabled,
                     label = stringResource(R.string.external_hid_device_label),
+                    modifier = Modifier.fillMaxWidth(),
                     onCheckedChange = onExternalScannerEnabledChange
                 )
             }
@@ -330,20 +343,19 @@ private fun selectedPrinterDisplayName(
 private fun SettingsCheckboxRow(
     checked: Boolean,
     label: String,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     val contentColor = settingsRowContentColor(enabled)
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = checked,
-                enabled = enabled,
-                role = Role.Checkbox,
-                onValueChange = onCheckedChange
-            ),
+        modifier = modifier.toggleable(
+            value = checked,
+            enabled = enabled,
+            role = Role.Checkbox,
+            onValueChange = onCheckedChange
+        ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -370,19 +382,18 @@ private fun SettingsRadioRow(
     selected: Boolean,
     label: String,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val contentColor = settingsRowContentColor(enabled)
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(
-                selected = selected,
-                enabled = enabled,
-                role = Role.RadioButton,
-                onClick = onClick
-            ),
+        modifier = modifier.selectable(
+            selected = selected,
+            enabled = enabled,
+            role = Role.RadioButton,
+            onClick = onClick
+        ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -398,8 +409,7 @@ private fun SettingsRadioRow(
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
-            color = contentColor,
-            modifier = Modifier.weight(1f)
+            color = contentColor
         )
     }
 }

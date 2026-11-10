@@ -7,7 +7,6 @@ package consulting.sw.logiscanner.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,68 +54,45 @@ internal fun JobSelectionScreen(
             .padding(horizontal = 24.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ScannerScreenHeader(
+            title = stringResource(R.string.select_scan_job),
+            displayName = displayName
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+            IconButton(
+                onClick = onOpenSettings,
+                enabled = !isBusy,
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(40.dp)
             ) {
-                IconButton(
-                    onClick = onOpenSettings,
-                    enabled = !isBusy,
-                    modifier = Modifier
-                        .width(40.dp)
-                        .height(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = stringResource(R.string.settings_open)
-                    )
-                }
-                IconButton(
-                    onClick = onRefresh,
-                    enabled = !isBusy,
-                    modifier = Modifier
-                        .width(40.dp)
-                        .height(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.RotateLeft,
-                        contentDescription = stringResource(R.string.refresh_jobs)
-                    )
-                }
-                IconButton(
-                    onClick = onLogout,
-                    enabled = !isBusy,
-                    modifier = Modifier
-                        .width(40.dp)
-                        .height(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Logout,
-                        contentDescription = stringResource(R.string.logout)
-                    )
-                }
-            }
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    stringResource(R.string.select_scan_job),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.settings_open)
                 )
-                if (!displayName.isNullOrBlank()) {
-                    Text(
-                        stringResource(R.string.logged_in_as, displayName),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+            }
+            IconButton(
+                onClick = onRefresh,
+                enabled = !isBusy,
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.RotateLeft,
+                    contentDescription = stringResource(R.string.refresh_jobs)
+                )
+            }
+            IconButton(
+                onClick = onLogout,
+                enabled = !isBusy,
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = stringResource(R.string.logout)
+                )
             }
         }
 

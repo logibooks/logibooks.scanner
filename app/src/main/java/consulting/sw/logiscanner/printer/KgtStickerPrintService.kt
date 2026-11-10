@@ -18,7 +18,7 @@ sealed class KgtStickerPrintResult {
         val message: String,
         val contentOverflow: Boolean = false
     ) : KgtStickerPrintResult()
-    data class Failed(val message: String?) : KgtStickerPrintResult()
+    data class Failed(val message: String?, val cause: Exception) : KgtStickerPrintResult()
 }
 
 class KgtStickerPrintService(
@@ -36,6 +36,9 @@ class KgtStickerPrintService(
             renderer.render(code)
         }
     }
+
+    internal suspend fun printTestPage(address: String, title: String): KgtStickerPrintResult =
+        printRendered(address) { renderer.renderTestPage(title) }
 
     suspend fun printTajikistanExportSticker(
         address: String?,
@@ -89,7 +92,7 @@ class KgtStickerPrintService(
             } catch (ex: IllegalArgumentException) {
                 KgtStickerPrintResult.InvalidSticker(ex.message.orEmpty())
             } catch (ex: Exception) {
-                KgtStickerPrintResult.Failed(ex.message)
+                KgtStickerPrintResult.Failed(ex.message, ex)
             }
         }
     }
