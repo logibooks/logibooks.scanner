@@ -54,18 +54,26 @@ internal class BluetoothPrinterClient(
         address: String,
         payload: ByteArray,
         timing: PrinterTestTiming
-    ) = session.printTest(address, payload, timing)
+    ) = withBluetoothIo {
+        session.printTest(address, payload, timing)
+    }
 
     override fun preparePrint(address: String): suspend (ByteArray) -> Unit {
         val send = session.preparePrint(address)
         return { payload ->
-            try {
+            withBluetoothIo {
                 ensureBluetoothConnectPermission()
                 ensureBluetoothScanPermission()
                 send(payload)
-            } catch (ex: IOException) {
-                throw PrinterUnavailableException("Unable to print sticker", ex)
             }
+        }
+    }
+
+    private suspend fun withBluetoothIo(print: suspend () -> Unit) {
+        try {
+            print()
+        } catch (ex: IOException) {
+            throw PrinterUnavailableException("Unable to print sticker", ex)
         }
     }
 

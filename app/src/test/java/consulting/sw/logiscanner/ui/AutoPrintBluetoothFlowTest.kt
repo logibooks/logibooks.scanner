@@ -17,8 +17,13 @@ import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.StickerTemplates
 import consulting.sw.logiscanner.printer.AutoPrintPrinter
 import consulting.sw.logiscanner.printer.BluetoothPrinterClient
+import consulting.sw.logiscanner.printer.KgtStickerPrintService
 import consulting.sw.logiscanner.printer.PrinterNotFoundException
+import consulting.sw.logiscanner.printer.PrinterTestError
+import consulting.sw.logiscanner.printer.PrinterTestStage
 import consulting.sw.logiscanner.printer.PrinterUnavailableException
+import consulting.sw.logiscanner.printer.SettingsPrinter
+import consulting.sw.logiscanner.printer.TscStickerRenderer
 import consulting.sw.logiscanner.repo.ScanRepository
 import consulting.sw.logiscanner.store.RelabelingSubmode
 import consulting.sw.logiscanner.store.SettingsStore
@@ -58,6 +63,7 @@ class AutoPrintBluetoothFlowTest {
     @Before fun pairPrinters() {
         opened.clear()
         reconnectGate.set(null)
+        refuseNextConnection.set(false)
         shadowOf(app).grantPermissions(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN)
         @Suppress("DEPRECATION")
         val adapter = BluetoothAdapter.getDefaultAdapter()
@@ -249,6 +255,38 @@ class AutoPrintBluetoothFlowTest {
         }
     }
 
+    @Test fun printerCheckReportsBluetoothErrorsDuringConnectAndSend() = runBlocking {
+        val client = BluetoothPrinterClient(app, this)
+        val service = KgtStickerPrintService(TscStickerRenderer(), client)
+        try {
+            refuseNextConnection.set(true)
+            val connectFailure = service.printTestPage(firstAddress, "Printer test")
+            assertEquals(PrinterTestError.CONNECTION, connectFailure.error)
+            assertEquals(PrinterTestStage.CONNECT, connectFailure.failedStage)
+            assertEquals("", readLabel(opened.single().second))
+
+            client.selectPrinter(SettingsPrinter(firstAddress))
+            val socket = connected(1)
+            val writes = mutableListOf<ByteArray>()
+            shadowOf(socket).setOutputStream(object : PipedOutputStream() {
+                override fun write(bytes: ByteArray, offset: Int, length: Int) {
+                    writes += bytes.copyOfRange(offset, offset + length)
+                }
+
+                override fun flush() = throw IOException("flush failed")
+            })
+
+            val sendFailure = service.printTestPage(firstAddress, "Printer test")
+            assertEquals(PrinterTestError.CONNECTION, sendFailure.error)
+            assertEquals(PrinterTestStage.SEND, sendFailure.failedStage)
+            assertTrue(writes.single().decodeToString().endsWith("PRINT 1,1\r\n"))
+            assertFalse(socket.isConnected)
+            assertEquals(2, opened.size)
+        } finally {
+            client.selectPrinter(null)
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun stateOf(vm: MainViewModel): MutableStateFlow<MainState> =
         MainViewModel::class.java.getDeclaredField("_state").apply { isAccessible = true }.get(vm) as MutableStateFlow<MainState>
@@ -296,6 +334,7 @@ class AutoPrintBluetoothFlowTest {
 
         @Implementation
         override fun connect() {
+            if (refuseNextConnection.getAndSet(false)) throw IOException("printer refused the connection")
             super.connect()
             reconnectGate.get()?.countDown()
         }
@@ -312,6 +351,7 @@ class AutoPrintBluetoothFlowTest {
         const val secondAddress = "AA:BB:CC:DD:EE:FF"
         val opened = CopyOnWriteArrayList<Pair<String, BluetoothSocket>>()
         val reconnectGate = AtomicReference<CountDownLatch?>()
+        val refuseNextConnection = AtomicBoolean(false)
         val wbrJob = ScanJob(1, "WBR", null, "15", "30", RegisterTypes.WBR)
     }
 }

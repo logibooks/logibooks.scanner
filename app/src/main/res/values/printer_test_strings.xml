@@ -16,7 +16,7 @@ This file is a part of LogiScanner application
     <string name="printer_test_sent" translatable="false">Тестовая этикетка отправлена</string>
     <string name="printer_test_permission" translatable="false">Разрешите доступ к Bluetooth-принтеру</string>
     <string name="printer_test_missing" translatable="false">Принтер не найден</string>
-    <string name="printer_test_connection_error" translatable="false">Не удалось подключиться к принтеру</string>
+    <string name="printer_test_connection_error" translatable="false">Ошибка связи с принтером по Bluetooth</string>
     <string name="printer_test_timeout_error" translatable="false">Превышено время ожидания на отмеченном этапе</string>
     <string name="printer_test_error" translatable="false">Не удалось напечатать пробную страницу</string>
 </resources>
