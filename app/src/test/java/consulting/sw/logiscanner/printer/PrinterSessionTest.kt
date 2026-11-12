@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PrinterSessionTest {
@@ -199,6 +200,26 @@ class PrinterSessionTest {
         assertEquals(1, recovered.closes)
     }
 
+    @Test fun scanWarmsUpADisconnectedAutoPrintSocketOnlyOnce() = runTest {
+        val disconnected = FakeSocket()
+        val next = FakeSocket()
+        val fixture = Fixture(this, disconnected, next)
+        fixture.session.select(firstJob)
+        runCurrent()
+        disconnected.disconnected.complete(Unit)
+        runCurrent()
+
+        fixture.session.warmUp(firstJob)
+        fixture.session.warmUp(firstJob)
+        runCurrent()
+        assertEquals(listOf("AA", "AA"), fixture.addresses)
+        assertEquals(1, next.connects)
+        assertTrue(next.labels.isEmpty())
+
+        fixture.print("label")
+        assertEquals(listOf("label"), next.labels)
+    }
+
     @Test fun manualPrintsWithoutAutoPrintConnectAndCloseOneAtATime() = runTest {
         val gate = CompletableDeferred<Unit>()
         val first = FakeSocket(writeGate = gate)
@@ -216,6 +237,80 @@ class PrinterSessionTest {
         assertEquals(listOf("second"), second.labels)
         assertEquals(1, first.closes)
         assertEquals(1, second.closes)
+    }
+
+    @Test fun printerTestFinishesAfterOneWriteAndReportsOnlyConnectionAndSendTime() = runTest {
+        val connectGate = CompletableDeferred<Unit>()
+        val writeGate = CompletableDeferred<Unit>()
+        val socket = FakeSocket(connectGate = connectGate, writeGate = writeGate)
+        val fixture = Fixture(this, socket)
+        val timing = PrinterTestTiming { TimeUnit.MILLISECONDS.toNanos(testScheduler.currentTime) }
+        val test = async { fixture.session.printTest("AA", "test label".toByteArray(), timing) }
+
+        runCurrent()
+        advanceTimeBy(3)
+        connectGate.complete(Unit)
+        runCurrent()
+        advanceTimeBy(5)
+        assertFalse(test.isCompleted)
+        writeGate.complete(Unit)
+        runCurrent()
+        assertTrue(test.isCompleted)
+        test.await()
+
+        advanceTimeBy(1_000)
+        val report = timing.report()
+        assertEquals(listOf("test label"), socket.labels)
+        assertEquals(1, socket.closes)
+        assertEquals(3L, report.elapsedMs[PrinterTestStage.CONNECT])
+        assertEquals(5L, report.elapsedMs[PrinterTestStage.SEND])
+        assertEquals(8L, report.totalMs)
+    }
+
+    @Test fun printerChecksReuseTheSettingsConnectionWithoutAnotherConnect() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val socket = FakeSocket(connectGate = gate)
+        val fixture = Fixture(this, socket)
+        fixture.session.select(SettingsPrinter("AA"))
+        runCurrent()
+        assertEquals(1, socket.connects)
+        assertTrue(socket.labels.isEmpty())
+        gate.complete(Unit)
+        runCurrent()
+
+        repeat(2) {
+            val timing = PrinterTestTiming { TimeUnit.MILLISECONDS.toNanos(testScheduler.currentTime) }
+            fixture.session.printTest("AA", "test label".toByteArray(), timing)
+            assertEquals(0L, timing.report().elapsedMs[PrinterTestStage.CONNECT])
+        }
+
+        assertEquals(listOf("AA"), fixture.addresses)
+        assertEquals(listOf("test label", "test label"), socket.labels)
+        assertEquals(0, socket.closes)
+        fixture.session.select(null)
+        assertEquals(1, socket.closes)
+    }
+
+    @Test fun printerTestQueueTimeoutLeavesTheOtherPrintRunning() = runTest {
+        val writeGate = CompletableDeferred<Unit>()
+        val socket = FakeSocket(writeGate = writeGate)
+        val fixture = Fixture(this, socket)
+        val normal = async { fixture.print("first") }
+        runCurrent()
+        val timing = PrinterTestTiming { TimeUnit.MILLISECONDS.toNanos(testScheduler.currentTime) }
+        val test = async { runCatching { fixture.session.printTest("AA", "test label".toByteArray(), timing) } }
+
+        advanceTimeBy(15_000)
+        runCurrent()
+        val failure = test.await().exceptionOrNull() as PrinterTestFailure
+        val report = timing.report(failure.error)
+        assertEquals(PrinterTestError.TIMEOUT, report.error)
+        assertEquals(PrinterTestStage.QUEUE, report.failedStage)
+        assertEquals(15_000L, report.totalMs)
+        assertFalse(normal.isCompleted)
+        assertEquals(listOf("AA"), fixture.addresses)
+        writeGate.complete(Unit)
+        normal.await()
     }
 
     private class Fixture(scope: TestScope, vararg sockets: FakeSocket) {

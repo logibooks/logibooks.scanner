@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.R
 import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
+import consulting.sw.logiscanner.printer.PrinterTestReport
 import consulting.sw.logiscanner.store.RelabelingSubmode
 
 @Composable
@@ -62,7 +63,9 @@ internal fun SettingsScreen(
     printerLoading: Boolean,
     printerMessage: String?,
     printerError: String?,
-    printerTestError: String?,
+    printerTestPermissionDenied: Boolean,
+    printerTestRunning: Boolean,
+    printerTestReport: PrinterTestReport?,
     voiceTestFailed: Boolean,
     onExternalScannerEnabledChange: (Boolean) -> Unit,
     onPrinterSelected: (String?) -> Unit,
@@ -125,7 +128,11 @@ internal fun SettingsScreen(
                         Text(stringResource(R.string.settings_test_voice))
                     }
                 }
-                PrinterStatusMessages(loading = false, message = null, error = printerTestError)
+                PrinterTestPanel(
+                    running = printerTestRunning,
+                    permissionDenied = printerTestPermissionDenied,
+                    report = printerTestReport
+                )
                 if (voiceTestFailed) {
                     Text(
                         stringResource(R.string.settings_test_voice_failed),

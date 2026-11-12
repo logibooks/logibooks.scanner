@@ -102,6 +102,11 @@ class MainActivity : ComponentActivity() {
                     bluetoothPermissionLauncher.launch(requiredBluetoothPrinterPermissions())
                 }
             }
+            val printerTestPermissionLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestMultiplePermissions()
+            ) {
+                vm.finishPrinterTestPermission(hasBluetoothPrinterPermissions(context))
+            }
 
             LogiScannerTheme {
                 // Apply background color based on scan result
@@ -138,12 +143,14 @@ class MainActivity : ComponentActivity() {
                                 bondedPrinters = state.bondedPrinters,
                                 kgtVoiceEnabled = state.kgtVoiceEnabled,
                                 relabelingSubmode = state.relabelingSubmode,
-                                printerLoading = state.printerLoading,
+                                printerLoading = state.printerLoading || state.printerTestRunning,
                                 printerMessage = state.printerMessage
                                     ?.takeUnless { it == R.string.printer_printed }
                                     ?.let { stringResource(it) },
                                 printerError = state.printerError,
-                                printerTestError = state.printerTestError?.let { stringResource(it) },
+                                printerTestPermissionDenied = state.printerTestError != null,
+                                printerTestRunning = state.printerTestRunning,
+                                printerTestReport = state.printerTestReport,
                                 voiceTestFailed = state.voiceTestFailed,
                                 onExternalScannerEnabledChange = vm::setExternalScannerEnabled,
                                 onPrinterSelected = vm::setPrinterBluetoothAddress,
@@ -154,7 +161,11 @@ class MainActivity : ComponentActivity() {
                                         vm.refreshPrinters()
                                     }
                                 },
-                                onTestPrinter = { runPrinterAction(vm::printTestPage) },
+                                onTestPrinter = {
+                                    if (vm.requestPrinterTest(hasBluetoothPrinterPermissions(context))) {
+                                        printerTestPermissionLauncher.launch(requiredBluetoothPrinterPermissions())
+                                    }
+                                },
                                 onTestVoice = vm::testVoice,
                                 onBack = {
                                     if (state.externalScannerEnabled) {

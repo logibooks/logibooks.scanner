@@ -30,6 +30,8 @@ import consulting.sw.logiscanner.printer.KgtStickerPrintResult
 import consulting.sw.logiscanner.printer.KgtStickerPrintService
 import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.PrinterPermissionMissingException
+import consulting.sw.logiscanner.printer.PrinterTestReport
+import consulting.sw.logiscanner.printer.SettingsPrinter
 import consulting.sw.logiscanner.printer.TscStickerRenderer
 import consulting.sw.logiscanner.printer.TajikistanExportSticker
 import consulting.sw.logiscanner.printer.validateForPrinting
@@ -68,7 +70,7 @@ fun determineScanResultColor(result: ScanResultItem): ScanResultColor {
     }
 }
 
-data class MainState(
+internal data class MainState(
     val email: String = "",
     val password: String = "",
     val externalScannerEnabled: Boolean = false,
@@ -97,6 +99,8 @@ data class MainState(
     @get:StringRes val printerMessage: Int? = null,
     val printerError: String? = null,
     @get:StringRes val printerTestError: Int? = null,
+    val printerTestRunning: Boolean = false,
+    val printerTestReport: PrinterTestReport? = null,
     val voiceTestFailed: Boolean = false,
     val monitorJumpNumber: String = "",
     val monitorJumpLoading: Boolean = false,
@@ -119,7 +123,10 @@ data class MainState(
 internal fun openSettingsState(state: MainState): MainState = state.copy(settingsOpen = true)
 
 internal fun closeSettingsState(state: MainState): MainState =
-    state.copy(settingsOpen = false, printerTestError = null, voiceTestFailed = false)
+    state.copy(
+        settingsOpen = false, printerTestError = null, printerTestRunning = false,
+        printerTestReport = null, voiceTestFailed = false
+    )
 
 internal fun autoPrintPrinter(state: MainState): AutoPrintPrinter? {
     val job = state.selectedScanJob ?: return null
@@ -150,7 +157,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         client = bluetoothPrinter
     )
     private val _state = MutableStateFlow(MainState())
-    val state: StateFlow<MainState> = _state.asStateFlow()
+    internal val state: StateFlow<MainState> = _state.asStateFlow()
 
     private lateinit var loginRepo: LoginRepository
     private lateinit var scanJobRepo: ScanJobRepository
@@ -171,6 +178,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var ttsReady = false
     private var voiceTestUtteranceIds = emptySet<String>()
     private var printerTestJob: Job? = null
+    private class PrinterTestAttempt(val address: String)
+    private var printerTestAttempt: PrinterTestAttempt? = null
+    private var pendingPrinterTestPermission: PrinterTestAttempt? = null
 
     init {
         viewModelScope.launch {
@@ -224,6 +234,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             settingsStore.printerBluetoothAddress().collect { address ->
+                if (address != state.value.printerBluetoothAddress) cancelPrinterTest()
                 _state.update {
                     it.copy(
                         printerBluetoothAddress = address,
@@ -304,7 +315,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun openSettings() = _state.update(::openSettingsState)
     fun closeSettings() {
         voiceTestUtteranceIds = emptySet()
-        printerTestJob?.cancel()
+        cancelPrinterTest()
         _state.update(::closeSettingsState)
     }
 
@@ -363,7 +374,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun updatePrinterSession() {
-        val printer = if (activityStarted && !signingOut) autoPrintPrinter(state.value) else null
+        val current = state.value
+        val printer = when {
+            !activityStarted || signingOut || !current.isLoggedIn -> null
+            current.settingsOpen -> current.printerBluetoothAddress?.takeIf(String::isNotBlank)?.let(::SettingsPrinter)
+            else -> autoPrintPrinter(current)
+        }
         bluetoothPrinter.selectPrinter(printer)
     }
 
@@ -427,6 +443,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setPrinterBluetoothAddress(value: String?) {
+        if (value != state.value.printerBluetoothAddress) cancelPrinterTest()
         val printerCleared = value.isNullOrBlank()
         _state.update {
             val clearFullMode = printerCleared && it.relabelingSubmode == RelabelingSubmode.FULL
@@ -503,37 +520,60 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun printTestPage() {
+    /** Returns true when the activity needs to launch the Android permission prompt. */
+    internal fun requestPrinterTest(hasPermission: Boolean): Boolean {
         val current = state.value
         val address = current.printerBluetoothAddress
-        if (!current.settingsOpen || current.printerLoading || address.isNullOrBlank()) return
+        if (!current.settingsOpen || signingOut || current.printerLoading || current.printerTestRunning ||
+            address.isNullOrBlank() || (!hasPermission && pendingPrinterTestPermission != null)
+        ) return false
 
-        val title = getApplication<Application>().getString(R.string.settings_test_title, BuildConfig.VERSION_NAME)
+        val attempt = PrinterTestAttempt(address)
+        printerTestAttempt = attempt
         _state.update {
-            it.copy(printerLoading = true, printerError = null, printerMessage = null, printerTestError = null)
+            it.copy(printerTestRunning = true, printerTestError = null, printerTestReport = null)
         }
-        printerTestJob = viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-            try {
-                val result = stickerPrintService.printTestPage(address, title)
-                val error = when (result) {
-                    KgtStickerPrintResult.Success -> null
-                    KgtStickerPrintResult.MissingPrinter -> R.string.printer_select_required
-                    KgtStickerPrintResult.PermissionMissing -> R.string.printer_permission_missing
-                    is KgtStickerPrintResult.PrinterNotFound -> R.string.printer_not_found
-                    is KgtStickerPrintResult.InvalidSticker -> {
-                        Log.e(javaClass.simpleName, "Invalid printer test page: ${result.message}")
-                        R.string.settings_test_printer_failed
-                    }
-                    is KgtStickerPrintResult.Failed -> {
-                        Log.e(javaClass.simpleName, "Printer test failed", result.cause)
-                        R.string.settings_test_printer_failed
-                    }
-                }
-                _state.update { it.copy(printerTestError = error) }
-            } finally {
-                _state.update { it.copy(printerLoading = false) }
+        if (hasPermission) startPrinterTest(attempt) else pendingPrinterTestPermission = attempt
+        return !hasPermission
+    }
+
+    internal fun finishPrinterTestPermission(granted: Boolean) {
+        val attempt = pendingPrinterTestPermission ?: return
+        pendingPrinterTestPermission = null
+        if (printerTestAttempt !== attempt) return
+        if (granted) {
+            startPrinterTest(attempt)
+        } else {
+            printerTestAttempt = null
+            _state.update {
+                it.copy(printerTestRunning = false, printerTestError = R.string.printer_permission_missing)
             }
         }
+    }
+
+    private fun startPrinterTest(attempt: PrinterTestAttempt) {
+        val title = getApplication<Application>().getString(R.string.settings_test_title, BuildConfig.VERSION_NAME)
+        updatePrinterSession()
+        printerTestJob = viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                val report = stickerPrintService.printTestPage(attempt.address, title)
+                if (printerTestAttempt === attempt) {
+                    _state.update { it.copy(printerTestReport = report) }
+                }
+            } finally {
+                if (printerTestAttempt === attempt) {
+                    printerTestAttempt = null
+                    _state.update { it.copy(printerTestRunning = false) }
+                }
+            }
+        }
+    }
+
+    private fun cancelPrinterTest() {
+        printerTestAttempt = null
+        printerTestJob?.cancel()
+        printerTestJob = null
+        _state.update { it.copy(printerTestRunning = false, printerTestReport = null, printerTestError = null) }
     }
 
     fun printKgtSticker(code: String) {
@@ -1162,6 +1202,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             Log.w(javaClass.simpleName, "Scan received but no job selected, ignoring: $code")
             return
         }
+        autoPrintPrinter(state.value)?.let(bluetoothPrinter::warmUp)
         
         // Cancel any pending color reset
         colorResetJob?.cancel()
@@ -1333,6 +1374,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             if (signingOut) return@launch
             signingOut = true
+            cancelPrinterTest()
             updatePrinterSession()
             try {
                 scanJobListMonitorVersion += 1
