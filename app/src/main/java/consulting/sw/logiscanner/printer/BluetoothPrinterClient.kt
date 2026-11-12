@@ -17,13 +17,15 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.UUID
 
-class BluetoothPrinterClient(
+internal class BluetoothPrinterClient(
     private val context: Context,
     scope: CoroutineScope
 ) : StickerPrinterClient {
     private val session = PrinterSession(scope, Dispatchers.IO, ::openSocket)
 
-    internal fun selectPrinter(printer: AutoPrintPrinter?) = session.select(printer)
+    internal fun selectPrinter(printer: PrinterSessionTarget?) = session.select(printer)
+
+    internal fun warmUp(printer: AutoPrintPrinter) = session.warmUp(printer)
 
     @SuppressLint("MissingPermission")
     override suspend fun listBondedPrinters(): List<BluetoothPrinterDevice> = withContext(Dispatchers.IO) {
@@ -47,6 +49,12 @@ class BluetoothPrinterClient(
     }
 
     override suspend fun print(address: String, payload: ByteArray) = preparePrint(address)(payload)
+
+    override suspend fun printTest(
+        address: String,
+        payload: ByteArray,
+        timing: PrinterTestTiming
+    ) = session.printTest(address, payload, timing)
 
     override fun preparePrint(address: String): suspend (ByteArray) -> Unit {
         val send = session.preparePrint(address)

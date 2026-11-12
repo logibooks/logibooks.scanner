@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (C) 2026 Maxim [maxirmx] Samsonov (www.sw.consulting)
+All rights reserved.
+This file is a part of LogiScanner application
+-->
+<resources>
+    <string name="printer_test_running" translatable="false">Выполняется проверка принтера…</string>
+    <string name="printer_test_queue" translatable="false">Время в очереди</string>
+    <string name="printer_test_prepare" translatable="false">Подготовка этикетки</string>
+    <string name="printer_test_connect" translatable="false">Подключение по Bluetooth</string>
+    <string name="printer_test_send" translatable="false">Отправка этикетки</string>
+    <string name="printer_test_total" translatable="false">Общее время</string>
+    <string name="printer_test_duration" translatable="false">%1$s — %2$d мс</string>
+    <string name="printer_test_failed_duration" translatable="false">%1$s — %2$d мс (ошибка)</string>
+    <string name="printer_test_sent" translatable="false">Тестовая этикетка отправлена</string>
+    <string name="printer_test_permission" translatable="false">Разрешите доступ к Bluetooth-принтеру</string>
+    <string name="printer_test_missing" translatable="false">Принтер не найден</string>
+    <string name="printer_test_connection_error" translatable="false">Не удалось подключиться к принтеру</string>
+    <string name="printer_test_timeout_error" translatable="false">Превышено время ожидания на отмеченном этапе</string>
+    <string name="printer_test_error" translatable="false">Не удалось напечатать пробную страницу</string>
+</resources>

@@ -77,7 +77,7 @@ class SettingsChecksTest {
             )
             ReflectionHelpers.setField(vm, "stickerPrintService", KgtStickerPrintService(TscStickerRenderer(), client))
             state.value = state.value.copy(printerMessage = R.string.printer_printed)
-            vm.printTestPage()
+            vm.requestPrinterTest(hasPermission = true)
         }
         printButton.assertIsNotEnabled()
         compose.onNodeWithText(printedMessage).assertDoesNotExist()
@@ -95,8 +95,9 @@ class SettingsChecksTest {
         printButton.assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick) { it() }
         printButton.assertIsNotEnabled()
         compose.onNodeWithText(printError).assertDoesNotExist()
+        compose.onNodeWithText("Тестовая этикетка отправлена").assertDoesNotExist()
         compose.runOnIdle {
-            vm.printTestPage()
+            vm.requestPrinterTest(hasPermission = true)
             val (address, payload) = sent.single()
             assertEquals("AA:BB:CC:DD:EE:FF", address)
             assertEquals(
@@ -118,6 +119,8 @@ class SettingsChecksTest {
         }
         printButton.assertIsEnabled()
         compose.onNodeWithText(printedMessage).assertDoesNotExist()
+        compose.onNodeWithText("Тестовая этикетка отправлена").assertIsDisplayed()
+        compose.onNodeWithText("Общее время", substring = true).performScrollTo().assertIsDisplayed()
     }
 
     @Test

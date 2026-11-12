@@ -9,14 +9,23 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.Closeable
 import java.io.IOException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
-internal data class AutoPrintPrinter(val jobId: Int, val address: String)
+internal sealed interface PrinterSessionTarget { val address: String }
+
+internal data class AutoPrintPrinter(val jobId: Int, override val address: String) : PrinterSessionTarget
+
+internal data class SettingsPrinter(override val address: String) : PrinterSessionTarget
 
 internal interface PrinterConnection : Closeable {
     suspend fun connect()
@@ -35,74 +44,141 @@ internal class PrinterSession(
     private val ownership = Any()
     private var active: Session? = null
 
-    private class Session(val printer: AutoPrintPrinter) {
+    private class Session(val printer: PrinterSessionTarget) {
         lateinit var warmup: Deferred<Result<Unit>>
         var socket: PrinterConnection? = null
         var printing = false
     }
 
-    fun select(printer: AutoPrintPrinter?) {
+    fun select(printer: PrinterSessionTarget?) {
         val warmup = synchronized(ownership) {
             val previous = active
             if (previous?.printer == printer) return
             if (previous != null && !previous.printing) release(previous)
             active = printer?.let(::Session)
-            active?.let { session ->
-                scope.async(io, start = CoroutineStart.LAZY) {
-                    operations.withLock {
-                        // A failed preconnect is reported only if a print was already waiting for it.
-                        runCatching {
-                            if (synchronized(ownership) { active === session }) {
-                                connect(session.printer.address, session)
-                            }
-                            Unit
-                        }
-                    }
-                }.also { session.warmup = it }
-            }
+            active?.let(::createWarmup)
         }
         warmup?.start()
     }
 
+    fun warmUp(printer: AutoPrintPrinter) {
+        val warmup = synchronized(ownership) {
+            val session = active ?: return
+            if (session.printer != printer || session.socket != null || !session.warmup.isCompleted) return
+            createWarmup(session)
+        }
+        warmup.start()
+    }
+
+    private fun createWarmup(session: Session): Deferred<Result<Unit>> =
+        scope.async(io, start = CoroutineStart.LAZY) {
+            operations.withLock {
+                // A failed preconnect is reported only if a print was already waiting for it.
+                runCatching {
+                    if (synchronized(ownership) { active === session && session.socket == null }) {
+                        connect(session.printer.address, session, timed = session.printer is SettingsPrinter)
+                    }
+                    Unit
+                }
+            }
+        }.also { session.warmup = it }
+
     fun preparePrint(address: String): suspend (ByteArray) -> Unit {
-        val session = synchronized(ownership) { active?.takeIf { it.printer.address == address } }
+        val session = sessionFor(address)
         return { payload ->
-            val pendingWarmup = session?.warmup?.takeUnless { it.isCompleted }
+            val pendingWarmup = pendingWarmup(session)
             withContext(io) {
                 val warmup = pendingWarmup?.await()
-                operations.withLock {
-                    val (owner, connected) = synchronized(ownership) {
-                        // Old work can use an already open socket for the same printer, but only
-                        // a request from the current session can open a socket for reuse.
-                        val owner = active?.takeIf {
-                            it === session || (it.printer.address == address && it.socket != null)
-                        }
-                        owner?.printing = true
-                        owner to owner?.socket
-                    }
-                    try {
-                        if (owner === session) warmup?.getOrThrow()
-                        val socket = connected ?: checkNotNull(connect(address, owner))
-                        try {
-                            socket.write(payload)
-                        } catch (failure: Exception) {
-                            if (owner != null) discard(owner, socket)
-                            throw failure
-                        } finally {
-                            if (owner == null) close(socket)
-                        }
-                    } finally {
-                        if (owner != null) synchronized(ownership) {
-                            owner.printing = false
-                            if (active !== owner) release(owner)
-                        }
-                    }
-                }
+                operations.withLock { sendLocked(address, payload, session, warmup) }
             }
         }
     }
 
-    private suspend fun connect(address: String, owner: Session?): PrinterConnection? {
+    suspend fun printTest(address: String, payload: ByteArray, timing: PrinterTestTiming) {
+        val session = sessionFor(address)
+        val pendingWarmup = pendingWarmup(session)
+        withContext(io) {
+            val warmup = pendingWarmup?.let {
+                timing.measure(PrinterTestStage.CONNECT) {
+                    withTimeoutOrNull(15_000) { it.await() } ?: throw PrinterTestFailure(PrinterTestError.TIMEOUT)
+                }
+            }
+            timing.withQueueLock(operations) { sendLocked(address, payload, session, warmup, timing) }
+        }
+    }
+
+    private fun sessionFor(address: String): Session? = synchronized(ownership) {
+        active?.takeIf { it.printer.address == address }
+    }
+
+    private fun pendingWarmup(session: Session?): Deferred<Result<Unit>>? = synchronized(ownership) {
+        session?.warmup?.takeUnless { it.isCompleted }
+    }
+
+    private suspend fun sendLocked(
+        address: String,
+        payload: ByteArray,
+        session: Session?,
+        warmup: Result<Unit>?,
+        timing: PrinterTestTiming? = null
+    ) {
+        val (owner, connected) = synchronized(ownership) {
+            // A stale request may use an open socket for its address. Only current work may retain a new socket.
+            val owner = active?.takeIf { it === session || (it.printer.address == address && it.socket != null) }
+            owner?.printing = true
+            owner to owner?.socket
+        }
+        try {
+            suspend fun connection(): PrinterConnection {
+                if (owner === session) warmup?.getOrThrow()
+                return connected ?: checkNotNull(connect(address, owner, timed = timing != null))
+            }
+            val socket = if (timing == null) connection() else timing.measure(PrinterTestStage.CONNECT) { connection() }
+            try {
+                if (timing == null) {
+                    socket.write(payload)
+                } else {
+                    timing.measure(PrinterTestStage.SEND) { socket.runTestIo(5_000) { write(payload) } }
+                }
+            } catch (failure: Exception) {
+                if (owner != null) discard(owner, socket)
+                throw failure
+            } finally {
+                if (owner == null) close(socket)
+            }
+        } finally {
+            if (owner != null) synchronized(ownership) {
+                owner.printing = false
+                if (active !== owner) release(owner)
+            }
+        }
+    }
+
+    private suspend fun PrinterConnection.runTestIo(
+        timeoutMs: Long,
+        operation: suspend PrinterConnection.() -> Unit
+    ) {
+        val socket = this
+        withTimeoutOrNull(timeoutMs) {
+            coroutineScope {
+                suspendCancellableCoroutine<Unit> { continuation ->
+                    // Close independently of the worker so cancellation unblocks RFCOMM I/O.
+                    continuation.invokeOnCancellation { close(socket) }
+                    launch(io) {
+                        if (!continuation.isActive) return@launch
+                        try {
+                            socket.operation()
+                            continuation.resume(Unit)
+                        } catch (failure: Exception) {
+                            continuation.resumeWithException(failure)
+                        }
+                    }
+                }
+            }
+        } ?: throw PrinterTestFailure(PrinterTestError.TIMEOUT)
+    }
+
+    private suspend fun connect(address: String, owner: Session?, timed: Boolean): PrinterConnection? {
         val socket = openSocket(address)
         if (owner != null) synchronized(ownership) {
             if (owner !== active && !owner.printing) {
@@ -112,7 +188,7 @@ internal class PrinterSession(
             owner.socket = socket
         }
         try {
-            socket.connect()
+            if (timed) socket.runTestIo(15_000) { connect() } else socket.connect()
         } catch (failure: Exception) {
             discard(owner, socket)
             throw failure

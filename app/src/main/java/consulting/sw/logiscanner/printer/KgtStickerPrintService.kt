@@ -4,6 +4,7 @@
 
 package consulting.sw.logiscanner.printer
 
+import android.util.Log
 import consulting.sw.logiscanner.net.LabelPrintPayload
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -21,7 +22,7 @@ sealed class KgtStickerPrintResult {
     data class Failed(val message: String?, val cause: Exception) : KgtStickerPrintResult()
 }
 
-class KgtStickerPrintService(
+internal class KgtStickerPrintService(
     private val renderer: TscStickerRenderer,
     private val client: StickerPrinterClient,
     private val tajikistanRenderer: TajikistanExportStickerRenderer = TajikistanExportStickerRenderer(),
@@ -37,8 +38,28 @@ class KgtStickerPrintService(
         }
     }
 
-    internal suspend fun printTestPage(address: String, title: String): KgtStickerPrintResult =
-        printRendered(address) { renderer.renderTestPage(title) }
+    suspend fun printTestPage(address: String, title: String): PrinterTestReport {
+        val timing = PrinterTestTiming()
+        return try {
+            timing.withQueueLock(mutex) {
+                val payload = timing.measure(PrinterTestStage.PREPARE) { renderer.renderTestPage(title) }
+                client.printTest(address, payload, timing)
+            }
+            timing.report()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            val error = when (failure) {
+                is PrinterTestFailure -> failure.error
+                is PrinterPermissionMissingException, is SecurityException -> PrinterTestError.PERMISSION
+                is PrinterNotFoundException -> PrinterTestError.PRINTER_NOT_FOUND
+                is PrinterUnavailableException -> PrinterTestError.CONNECTION
+                else -> PrinterTestError.OTHER
+            }
+            if (failure !is PrinterTestFailure) Log.w("PrinterTest", "Printer test failed", failure)
+            timing.report(error)
+        }
+    }
 
     suspend fun printTajikistanExportSticker(
         address: String?,

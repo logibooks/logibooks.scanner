@@ -45,6 +45,9 @@ import java.io.PipedOutputStream
 import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(RobolectricTestRunner::class)
@@ -54,6 +57,7 @@ class AutoPrintBluetoothFlowTest {
 
     @Before fun pairPrinters() {
         opened.clear()
+        reconnectGate.set(null)
         shadowOf(app).grantPermissions(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN)
         @Suppress("DEPRECATION")
         val adapter = BluetoothAdapter.getDefaultAdapter()
@@ -102,15 +106,29 @@ class AutoPrintBluetoothFlowTest {
 
             vm.openSettings()
             waitFor("socket release when opening settings") { !foreground.isConnected }
+            val settingsPrinter = connected(3)
+            assertEquals(firstAddress, opened[3].first)
+            assertEquals("", readLabel(settingsPrinter))
+            repeat(2) {
+                vm.requestPrinterTest(hasPermission = true)
+                waitFor("printer check to send its label") { !state.value.printerTestRunning && state.value.printerTestReport != null }
+                assertNull(state.value.printerTestReport?.error)
+            }
+            assertEquals(2, Regex("PRINT 1,1").findAll(readLabel(settingsPrinter)).count())
+            assertEquals(4, opened.size)
             vm.setPrinterBluetoothAddress(secondAddress)
+            waitFor("old Settings socket release when selecting a printer") { !settingsPrinter.isConnected }
+            val changedInSettings = connected(4)
+            assertEquals(secondAddress, opened[4].first)
             vm.closeSettings()
-            val changed = connected(3)
-            assertEquals(secondAddress, opened[3].first)
+            waitFor("Settings socket release when closing settings") { !changedInSettings.isConnected }
+            val changed = connected(5)
+            assertEquals(secondAddress, opened[5].first)
 
             vm.selectScanJob(null)
             waitFor("socket release when leaving the job") { !changed.isConnected }
             vm.selectScanJob(wbrJob)
-            val reopened = connected(4)
+            val reopened = connected(6)
             vm.logout()
             waitFor("socket release and logout") { !reopened.isConnected && !state.value.isLoggedIn }
         } finally {
@@ -126,8 +144,12 @@ class AutoPrintBluetoothFlowTest {
             settings.setRelabelingSubmode(RelabelingSubmode.KGT)
         }
         val body = AtomicReference("""{"count":1,"parcelCount":1,"boxCount":0,"scanSource":10,"itemNumbers":[],"extId":"15"}""")
+        val reconnectedBeforeResponse = AtomicBoolean(false)
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
+            reconnectGate.get()?.let { gate ->
+                reconnectedBeforeResponse.set(gate.await(3, TimeUnit.SECONDS))
+            }
             val bytes = body.get().toByteArray()
             exchange.responseHeaders.set("Content-Type", "application/json")
             exchange.sendResponseHeaders(200, bytes.size.toLong())
@@ -154,14 +176,26 @@ class AutoPrintBluetoothFlowTest {
             assertTrue(readLabel(wbr).contains("15"))
             assertEquals(1, opened.size)
 
+            shadowOf(wbr).inputStreamFeeder.close()
+            waitFor("WBR printer disconnect") { !wbr.isConnected }
+            assertEquals(AutoPrintPrinter(wbrJob.id, firstAddress), autoPrintPrinter(state.value))
+            reconnectGate.set(CountDownLatch(1))
+            vm.onScanned("second-wbr-barcode")
+            val reconnected = connected(1)
+            waitFor("WBR auto-print after reconnect") {
+                readLabel(reconnected).contains("15") && !state.value.isBusy && state.value.printerMessage != null
+            }
+            assertTrue("The new connection should be ready before the response", reconnectedBeforeResponse.get())
+            reconnectGate.set(null)
+
             val tjJob = wbrJob.copy(id = 2, registerType = 0, stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT)
             vm.selectScanJob(tjJob)
-            waitFor("WBR socket release when switching jobs") { !wbr.isConnected }
+            waitFor("WBR socket release when switching jobs") { !reconnected.isConnected }
             assertNull(autoPrintPrinter(state.value))
             vm.setRelabelingSubmode(RelabelingSubmode.FULL)
             assertNull(autoPrintPrinter(state.value))
             vm.toggleBulkyItemsMode()
-            val tj = connected(1)
+            val tj = connected(2)
             assertFalse(state.value.isScanning)
             body.set("""
                 {"count":1,"parcelCount":1,"boxCount":0,"scanSource":10,"itemNumbers":[],"stickerTemplate":"TJ_EXPORT",
@@ -174,8 +208,9 @@ class AutoPrintBluetoothFlowTest {
             vm.onScanned("tj-barcode")
             waitFor("TJ auto-print") { !state.value.isBusy && state.value.printerMessage != null }
             assertTrue(readLabel(tj).contains("12345678901"))
-            assertEquals(2, opened.size)
+            assertEquals(3, opened.size)
         } finally {
+            reconnectGate.getAndSet(null)?.countDown()
             activity.pause().stop().destroy()
             server.stop(0)
         }
@@ -260,6 +295,12 @@ class AutoPrintBluetoothFlowTest {
         val payload = ByteArrayOutputStream()
 
         @Implementation
+        override fun connect() {
+            super.connect()
+            reconnectGate.get()?.countDown()
+        }
+
+        @Implementation
         override fun close() {
             super.close()
             inputStreamFeeder.close()
@@ -270,6 +311,7 @@ class AutoPrintBluetoothFlowTest {
         const val firstAddress = "00:11:22:33:44:55"
         const val secondAddress = "AA:BB:CC:DD:EE:FF"
         val opened = CopyOnWriteArrayList<Pair<String, BluetoothSocket>>()
+        val reconnectGate = AtomicReference<CountDownLatch?>()
         val wbrJob = ScanJob(1, "WBR", null, "15", "30", RegisterTypes.WBR)
     }
 }
