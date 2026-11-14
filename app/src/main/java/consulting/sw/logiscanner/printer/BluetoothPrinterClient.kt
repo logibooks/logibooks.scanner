@@ -23,9 +23,9 @@ internal class BluetoothPrinterClient(
 ) : StickerPrinterClient {
     private val session = PrinterSession(scope, Dispatchers.IO, ::openSocket)
 
-    internal fun selectPrinter(printer: PrinterSessionTarget?) = session.select(printer)
+    internal fun selectPrinter(address: String?) = session.select(address)
 
-    internal fun warmUp(printer: AutoPrintPrinter) = session.warmUp(printer)
+    internal fun warmUp(address: String) = session.warmUp(address)
 
     @SuppressLint("MissingPermission")
     override suspend fun listBondedPrinters(): List<BluetoothPrinterDevice> = withContext(Dispatchers.IO) {

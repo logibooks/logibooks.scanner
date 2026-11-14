@@ -23,7 +23,6 @@ import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScanJobMonitorTargetKinds
 import consulting.sw.logiscanner.net.LookupScanCandidate
 import consulting.sw.logiscanner.net.ScanResultItem
-import consulting.sw.logiscanner.printer.AutoPrintPrinter
 import consulting.sw.logiscanner.printer.BluetoothPrinterClient
 import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
 import consulting.sw.logiscanner.printer.KgtStickerPrintResult
@@ -31,7 +30,6 @@ import consulting.sw.logiscanner.printer.KgtStickerPrintService
 import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.PrinterPermissionMissingException
 import consulting.sw.logiscanner.printer.PrinterTestReport
-import consulting.sw.logiscanner.printer.SettingsPrinter
 import consulting.sw.logiscanner.printer.TscStickerRenderer
 import consulting.sw.logiscanner.printer.TajikistanExportSticker
 import consulting.sw.logiscanner.printer.validateForPrinting
@@ -128,18 +126,8 @@ internal fun closeSettingsState(state: MainState): MainState =
         printerTestReport = null, voiceTestFailed = false
     )
 
-internal fun autoPrintPrinter(state: MainState): AutoPrintPrinter? {
-    val job = state.selectedScanJob ?: return null
-    val address = state.printerBluetoothAddress?.takeIf(String::isNotBlank) ?: return null
-    if (!scanReceiverEnabled(state.isLoggedIn, state.settingsOpen, job)) return null
-    if (!relabelingModeAvailable(job, state.relabelingSubmode, printerSelected = true)) return null
-
-    val autoPrintEnabled = when (state.relabelingSubmode) {
-        RelabelingSubmode.KGT -> state.printerAutoPrintEnabled
-        RelabelingSubmode.FULL -> state.bulkyItemsMode != BulkyItemsModes.OFF
-    }
-    return if (autoPrintEnabled) AutoPrintPrinter(job.id, address) else null
-}
+internal fun configuredPrinterAddress(state: MainState): String? =
+    state.printerBluetoothAddress?.takeIf { state.isLoggedIn && it.isNotBlank() }
 
 internal fun stoppedScanWarningState(state: MainState, message: String): MainState {
     return state.copy(
@@ -171,7 +159,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var scanJobListRefreshJob: Job? = null
     private var scanJobListMonitorVersion = 0
     private var monitorScopeVersion = 0
-    private var activityStarted = false
     private var signingOut = false
     
     private var tts: TextToSpeech? = null
@@ -236,11 +223,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             settingsStore.printerBluetoothAddress().collect { address ->
                 if (address != state.value.printerBluetoothAddress) cancelPrinterTest()
                 _state.update {
+                    val nextSubmode = if (address.isNullOrBlank()) RelabelingSubmode.KGT else it.relabelingSubmode
                     it.copy(
                         printerBluetoothAddress = address,
+                        relabelingSubmode = nextSubmode,
                         bulkyItemsMode = normalizeRelabelingMode(
                             it.selectedScanJob,
-                            it.relabelingSubmode,
+                            nextSubmode,
                             it.bulkyItemsMode,
                             it.kgtVoiceEnabled,
                             hasSelectedPrinter(address)
@@ -368,19 +357,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(voiceTestFailed = true) }
     }
 
-    fun setActivityStarted(started: Boolean) {
-        activityStarted = started
+    fun reconnectPrinterIfNeeded() {
         updatePrinterSession()
+        if (!signingOut) configuredPrinterAddress(state.value)?.let(bluetoothPrinter::warmUp)
     }
 
     private fun updatePrinterSession() {
-        val current = state.value
-        val printer = when {
-            !activityStarted || signingOut || !current.isLoggedIn -> null
-            current.settingsOpen -> current.printerBluetoothAddress?.takeIf(String::isNotBlank)?.let(::SettingsPrinter)
-            else -> autoPrintPrinter(current)
-        }
-        bluetoothPrinter.selectPrinter(printer)
+        bluetoothPrinter.selectPrinter(if (signingOut) null else configuredPrinterAddress(state.value))
     }
 
     fun setExternalScannerEnabled(value: Boolean) {
@@ -444,27 +427,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setPrinterBluetoothAddress(value: String?) {
         if (value != state.value.printerBluetoothAddress) cancelPrinterTest()
-        val printerCleared = value.isNullOrBlank()
+        // Apply the address through the preference collector so an older save cannot reconnect
+        // the previous printer after a newer selection has already been shown.
         _state.update {
-            val clearFullMode = printerCleared && it.relabelingSubmode == RelabelingSubmode.FULL
-            val nextSubmode = if (clearFullMode) RelabelingSubmode.KGT else it.relabelingSubmode
             it.copy(
-                printerBluetoothAddress = value,
-                relabelingSubmode = nextSubmode,
-                bulkyItemsMode = normalizeRelabelingMode(
-                    it.selectedScanJob,
-                    nextSubmode,
-                    it.bulkyItemsMode,
-                    it.kgtVoiceEnabled,
-                    hasSelectedPrinter(value)
-                ),
                 printerError = null,
                 printerMessage = null,
                 printerTestError = null
             )
         }
         viewModelScope.launch {
-            if (printerCleared) {
+            if (value.isNullOrBlank()) {
                 settingsStore.setRelabelingSubmode(RelabelingSubmode.KGT)
             }
             settingsStore.setPrinterBluetoothAddress(value)
@@ -1202,7 +1175,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             Log.w(javaClass.simpleName, "Scan received but no job selected, ignoring: $code")
             return
         }
-        autoPrintPrinter(state.value)?.let(bluetoothPrinter::warmUp)
+        reconnectPrinterIfNeeded()
         
         // Cancel any pending color reset
         colorResetJob?.cancel()
