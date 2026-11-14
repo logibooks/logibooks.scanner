@@ -21,12 +21,6 @@ import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-internal sealed interface PrinterSessionTarget { val address: String }
-
-internal data class AutoPrintPrinter(val jobId: Int, override val address: String) : PrinterSessionTarget
-
-internal data class SettingsPrinter(override val address: String) : PrinterSessionTarget
-
 internal interface PrinterConnection : Closeable {
     suspend fun connect()
     suspend fun write(payload: ByteArray)
@@ -38,33 +32,33 @@ internal class PrinterSession(
     private val io: CoroutineDispatcher,
     private val openSocket: (String) -> PrinterConnection
 ) {
-    // Keep connection and write ordering separate from socket ownership. Changing jobs can close
+    // Keep connection and write ordering separate from socket ownership. Changing printers can close
     // an unused socket immediately, even while its connect() is blocking on the I/O dispatcher.
     private val operations = Mutex()
     private val ownership = Any()
     private var active: Session? = null
 
-    private class Session(val printer: PrinterSessionTarget) {
+    private class Session(val address: String) {
         lateinit var warmup: Deferred<Result<Unit>>
         var socket: PrinterConnection? = null
         var printing = false
     }
 
-    fun select(printer: PrinterSessionTarget?) {
+    fun select(address: String?) {
         val warmup = synchronized(ownership) {
             val previous = active
-            if (previous?.printer == printer) return
+            if (previous?.address == address) return
             if (previous != null && !previous.printing) release(previous)
-            active = printer?.let(::Session)
+            active = address?.let(::Session)
             active?.let(::createWarmup)
         }
         warmup?.start()
     }
 
-    fun warmUp(printer: AutoPrintPrinter) {
+    fun warmUp(address: String) {
         val warmup = synchronized(ownership) {
             val session = active ?: return
-            if (session.printer != printer || session.socket != null || !session.warmup.isCompleted) return
+            if (session.address != address || session.socket != null || !session.warmup.isCompleted) return
             createWarmup(session)
         }
         warmup.start()
@@ -76,7 +70,7 @@ internal class PrinterSession(
                 // A failed preconnect is reported only if a print was already waiting for it.
                 runCatching {
                     if (synchronized(ownership) { active === session && session.socket == null }) {
-                        connect(session.printer.address, session, timed = session.printer is SettingsPrinter)
+                        connect(session.address, session, timed = true)
                     }
                     Unit
                 }
@@ -108,7 +102,7 @@ internal class PrinterSession(
     }
 
     private fun sessionFor(address: String): Session? = synchronized(ownership) {
-        active?.takeIf { it.printer.address == address }
+        active?.takeIf { it.address == address }
     }
 
     private fun pendingWarmup(session: Session?): Deferred<Result<Unit>>? = synchronized(ownership) {
@@ -124,7 +118,7 @@ internal class PrinterSession(
     ) {
         val (owner, connected) = synchronized(ownership) {
             // A stale request may use an open socket for its address. Only current work may retain a new socket.
-            val owner = active?.takeIf { it === session || (it.printer.address == address && it.socket != null) }
+            val owner = active?.takeIf { it === session || (it.address == address && it.socket != null) }
             owner?.printing = true
             owner to owner?.socket
         }
