@@ -6,6 +6,7 @@ package consulting.sw.logiscanner.ui
 
 import android.Manifest
 import android.os.Bundle
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
 import androidx.compose.ui.semantics.SemanticsActions
@@ -85,6 +86,10 @@ class SettingsChecksTest {
         compose.runOnIdle {
             vm.setPrinterBluetoothAddress("AA:BB:CC:DD:EE:FF")
             state.value = state.value.copy(printerMessage = R.string.printer_no_paired)
+        }
+        compose.waitUntil(timeoutMillis = 5_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            state.value.printerBluetoothAddress == "AA:BB:CC:DD:EE:FF"
         }
         compose.onNodeWithText(compose.activity.getString(R.string.printer_no_paired)).performScrollTo().assertIsDisplayed()
         printButton.performScrollTo().assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick) { it() }

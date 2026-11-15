@@ -56,12 +56,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        vm.setActivityStarted(true)
-    }
-
-    override fun onStop() {
-        vm.setActivityStarted(false)
-        super.onStop()
+        vm.reconnectPrinterIfNeeded()
     }
 
     override fun attachBaseContext(newBase: Context) {

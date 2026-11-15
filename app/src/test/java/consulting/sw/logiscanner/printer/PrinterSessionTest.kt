@@ -23,7 +23,7 @@ class PrinterSessionTest {
         val gate = CompletableDeferred<Unit>()
         val socket = FakeSocket(connectGate = gate)
         val fixture = Fixture(this, socket)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         runCurrent()
         assertEquals(1, socket.connects)
         assertTrue(socket.labels.isEmpty())
@@ -36,7 +36,7 @@ class PrinterSessionTest {
         first.await()
 
         advanceTimeBy(10 * 60 * 1000)
-        fixture.session.select(firstJob.copy())
+        fixture.session.select(firstAddress)
         fixture.print("second")
         assertEquals(listOf("first", "second"), socket.labels)
         assertEquals(1, socket.connects)
@@ -50,7 +50,7 @@ class PrinterSessionTest {
         val broken = FakeSocket(connectGate = gate)
         val next = FakeSocket()
         val fixture = Fixture(this, broken, next)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         runCurrent()
         val first = async { runCatching { fixture.print("first") } }
         runCurrent()
@@ -73,7 +73,7 @@ class PrinterSessionTest {
         })
         val next = FakeSocket()
         val fixture = Fixture(this, broken, next)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         runCurrent()
         advanceTimeBy(60_000)
         assertEquals(listOf("AA"), fixture.addresses)
@@ -81,13 +81,13 @@ class PrinterSessionTest {
         assertEquals(listOf("label"), next.labels)
     }
 
-    @Test fun changingJobsClosesAnUnusedConnectionEvenDuringConnect() = runTest {
+    @Test fun changingPrintersClosesAnUnusedConnectionEvenDuringConnect() = runTest {
         val old = FakeSocket(connectGate = CompletableDeferred())
         val next = FakeSocket()
         val fixture = Fixture(this, old, next)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         runCurrent()
-        fixture.session.select(AutoPrintPrinter(2, "BB"))
+        fixture.session.select("BB")
         assertEquals(1, old.closes)
         runCurrent()
         assertEquals(listOf("AA", "BB"), fixture.addresses)
@@ -97,7 +97,7 @@ class PrinterSessionTest {
 
     @Test fun leavingBeforeAnAttemptStartsDoesNotOpenASocket() = runTest {
         val fixture = Fixture(this)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         fixture.session.select(null)
         runCurrent()
         assertTrue(fixture.addresses.isEmpty())
@@ -110,7 +110,7 @@ class PrinterSessionTest {
             session.select(null)
             socket
         }
-        session.select(firstJob)
+        session.select(firstAddress)
         runCurrent()
         assertEquals(0, socket.connects)
         assertEquals(1, socket.closes)
@@ -122,12 +122,12 @@ class PrinterSessionTest {
         val replacement = FakeSocket()
         val queued = FakeSocket()
         val fixture = Fixture(this, old, replacement, queued)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         runCurrent()
         val print = async { fixture.print("in flight") }
         runCurrent()
         val queuedPrint = fixture.session.preparePrint("AA")
-        fixture.session.select(AutoPrintPrinter(2, "BB"))
+        fixture.session.select("BB")
         runCurrent()
         assertEquals(listOf("in flight"), old.labels)
         assertEquals(0, old.closes)
@@ -145,18 +145,18 @@ class PrinterSessionTest {
         assertEquals(0, replacement.closes)
     }
 
-    @Test fun staleRequestCannotCreateARetainedSocketForAReopenedJob() = runTest {
+    @Test fun staleRequestCannotCreateARetainedSocketAfterLoggingInAgain() = runTest {
         val old = FakeSocket()
         val failed = FakeSocket(connectGate = CompletableDeferred<Unit>().apply {
             completeExceptionally(IOException("printer offline"))
         })
         val oneShot = FakeSocket()
         val fixture = Fixture(this, old, failed, oneShot)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         runCurrent()
         val queued = fixture.session.preparePrint("AA")
         fixture.session.select(null)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         runCurrent()
         queued("queued".toByteArray())
         assertEquals(listOf("queued"), oneShot.labels)
@@ -167,10 +167,11 @@ class PrinterSessionTest {
         val old = FakeSocket()
         val replacement = FakeSocket()
         val fixture = Fixture(this, old, replacement)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         runCurrent()
         val queued = fixture.session.preparePrint("AA")
-        fixture.session.select(firstJob.copy(jobId = 2))
+        fixture.session.select(null)
+        fixture.session.select(firstAddress)
         runCurrent()
         queued("queued".toByteArray())
         assertEquals(listOf("queued"), replacement.labels)
@@ -183,7 +184,7 @@ class PrinterSessionTest {
         val failedWrite = FakeSocket(writeFailure = true)
         val recovered = FakeSocket()
         val fixture = Fixture(this, asleep, failedWrite, recovered)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         runCurrent()
         asleep.disconnected.complete(Unit)
         runCurrent()
@@ -200,17 +201,17 @@ class PrinterSessionTest {
         assertEquals(1, recovered.closes)
     }
 
-    @Test fun scanWarmsUpADisconnectedAutoPrintSocketOnlyOnce() = runTest {
+    @Test fun scanWarmsUpADisconnectedConfiguredSocketOnlyOnce() = runTest {
         val disconnected = FakeSocket()
         val next = FakeSocket()
         val fixture = Fixture(this, disconnected, next)
-        fixture.session.select(firstJob)
+        fixture.session.select(firstAddress)
         runCurrent()
         disconnected.disconnected.complete(Unit)
         runCurrent()
 
-        fixture.session.warmUp(firstJob)
-        fixture.session.warmUp(firstJob)
+        fixture.session.warmUp(firstAddress)
+        fixture.session.warmUp(firstAddress)
         runCurrent()
         assertEquals(listOf("AA", "AA"), fixture.addresses)
         assertEquals(1, next.connects)
@@ -220,7 +221,7 @@ class PrinterSessionTest {
         assertEquals(listOf("label"), next.labels)
     }
 
-    @Test fun manualPrintsWithoutAutoPrintConnectAndCloseOneAtATime() = runTest {
+    @Test fun printsWithoutASelectedSessionConnectAndCloseOneAtATime() = runTest {
         val gate = CompletableDeferred<Unit>()
         val first = FakeSocket(writeGate = gate)
         val second = FakeSocket()
@@ -267,11 +268,11 @@ class PrinterSessionTest {
         assertEquals(8L, report.totalMs)
     }
 
-    @Test fun printerChecksReuseTheSettingsConnectionWithoutAnotherConnect() = runTest {
+    @Test fun printerChecksAndOrdinaryPrintsReuseTheConfiguredConnection() = runTest {
         val gate = CompletableDeferred<Unit>()
         val socket = FakeSocket(connectGate = gate)
         val fixture = Fixture(this, socket)
-        fixture.session.select(SettingsPrinter("AA"))
+        fixture.session.select(firstAddress)
         runCurrent()
         assertEquals(1, socket.connects)
         assertTrue(socket.labels.isEmpty())
@@ -284,8 +285,9 @@ class PrinterSessionTest {
             assertEquals(0L, timing.report().elapsedMs[PrinterTestStage.CONNECT])
         }
 
+        fixture.print("ordinary label")
         assertEquals(listOf("AA"), fixture.addresses)
-        assertEquals(listOf("test label", "test label"), socket.labels)
+        assertEquals(listOf("test label", "test label", "ordinary label"), socket.labels)
         assertEquals(0, socket.closes)
         fixture.session.select(null)
         assertEquals(1, socket.closes)
@@ -357,6 +359,6 @@ class PrinterSessionTest {
     }
 
     private companion object {
-        val firstJob = AutoPrintPrinter(1, "AA")
+        const val firstAddress = "AA"
     }
 }

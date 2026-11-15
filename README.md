@@ -58,6 +58,12 @@ docs/
   WD4-Setup.md                   Bluetooth HID ring scanner setup guide
 ```
 
+## Bluetooth Printer Connection
+
+After login, the app connects to the selected printer without waiting for a scan job or a print request. Changing the selected printer switches the connection; clearing the selection or logging out closes it. Manual printing, test printing, and autoprint share the same connection across Settings, job changes, autoprint toggles, and activity backgrounding.
+
+The connection lasts while the app's ViewModel remains alive. If Bluetooth disconnects or the initial connection fails, the app retries on the next scan, print, or return to the foreground. Failed print data is not replayed automatically, to avoid duplicate labels. Bluetooth permissions and an available paired printer are still required.
+
 ## Building
 
 Clone the repository and build with the Gradle wrapper:

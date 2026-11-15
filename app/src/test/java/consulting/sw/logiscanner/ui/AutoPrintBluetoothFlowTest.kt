@@ -15,20 +15,19 @@ import consulting.sw.logiscanner.MainActivity
 import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.StickerTemplates
-import consulting.sw.logiscanner.printer.AutoPrintPrinter
 import consulting.sw.logiscanner.printer.BluetoothPrinterClient
 import consulting.sw.logiscanner.printer.KgtStickerPrintService
 import consulting.sw.logiscanner.printer.PrinterNotFoundException
 import consulting.sw.logiscanner.printer.PrinterTestError
 import consulting.sw.logiscanner.printer.PrinterTestStage
 import consulting.sw.logiscanner.printer.PrinterUnavailableException
-import consulting.sw.logiscanner.printer.SettingsPrinter
 import consulting.sw.logiscanner.printer.TscStickerRenderer
 import consulting.sw.logiscanner.repo.ScanRepository
 import consulting.sw.logiscanner.store.RelabelingSubmode
 import consulting.sw.logiscanner.store.SettingsStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -71,11 +70,18 @@ class AutoPrintBluetoothFlowTest {
         shadowOf(adapter).setBondedDevices(devices)
     }
 
-    @Test fun foregroundJobConnectsBeforeScanningAndReleasesAcrossOperatorTransitions() {
+    @After fun resetPrinterPreferences() = runBlocking {
+        val settings = SettingsStore(app)
+        settings.setPrinterBluetoothAddress(null)
+        settings.setPrinterAutoPrintEnabled(false)
+        settings.setRelabelingSubmode(RelabelingSubmode.KGT)
+    }
+
+    @Test fun loginConnectsAndKeepsTheSocketAcrossOperatorAndActivityTransitions() {
         val settings = SettingsStore(app)
         runBlocking {
             settings.setPrinterBluetoothAddress(firstAddress)
-            settings.setPrinterAutoPrintEnabled(true)
+            settings.setPrinterAutoPrintEnabled(false)
             settings.setRelabelingSubmode(RelabelingSubmode.KGT)
         }
         val activity = Robolectric.buildActivity(MainActivity::class.java).setup()
@@ -83,66 +89,105 @@ class AutoPrintBluetoothFlowTest {
         val state = stateOf(vm)
         try {
             waitFor("saved printer preferences") {
-                state.value.printerBluetoothAddress == firstAddress && state.value.printerAutoPrintEnabled &&
+                state.value.printerBluetoothAddress == firstAddress && !state.value.printerAutoPrintEnabled &&
                     state.value.relabelingSubmode == RelabelingSubmode.KGT
             }
+            assertTrue(opened.isEmpty())
             state.value = state.value.copy(isLoggedIn = true)
-            assertNull(autoPrintPrinter(state.value))
-            vm.selectScanJob(wbrJob)
             val first = connected(0)
+            assertNull(state.value.selectedScanJob)
             assertFalse(state.value.isScanning)
             assertEquals("", readLabel(first))
 
+            vm.selectScanJob(wbrJob)
             vm.printKgtSticker("15")
             waitFor("manual print on the prepared socket") { state.value.printerMessage != null }
             assertTrue(readLabel(first).contains("15"))
             assertEquals(1, opened.size)
 
-            vm.setPrinterAutoPrintEnabled(false)
-            waitFor("socket release when auto-print is disabled") {
-                !state.value.printerAutoPrintEnabled && !first.isConnected
-            }
             vm.setPrinterAutoPrintEnabled(true)
-            val enabled = connected(1)
+            waitFor("auto-print enabled") { state.value.printerAutoPrintEnabled }
+            vm.setPrinterAutoPrintEnabled(false)
+            waitFor("auto-print disabled") { !state.value.printerAutoPrintEnabled }
+            assertTrue(first.isConnected)
+            assertEquals(1, opened.size)
 
             activity.pause().stop()
-            waitFor("socket release in the background") { !enabled.isConnected }
+            shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(first.isConnected)
             activity.restart().start().resume()
-            val foreground = connected(2)
+            assertEquals(1, opened.size)
 
             vm.openSettings()
-            waitFor("socket release when opening settings") { !foreground.isConnected }
-            val settingsPrinter = connected(3)
-            assertEquals(firstAddress, opened[3].first)
-            assertEquals("", readLabel(settingsPrinter))
             repeat(2) {
                 vm.requestPrinterTest(hasPermission = true)
                 waitFor("printer check to send its label") { !state.value.printerTestRunning && state.value.printerTestReport != null }
                 assertNull(state.value.printerTestReport?.error)
             }
-            assertEquals(2, Regex("PRINT 1,1").findAll(readLabel(settingsPrinter)).count())
-            assertEquals(4, opened.size)
+            assertEquals(3, Regex("PRINT 1,1").findAll(readLabel(first)).count())
+            assertEquals(1, opened.size)
             vm.setPrinterBluetoothAddress(secondAddress)
-            waitFor("old Settings socket release when selecting a printer") { !settingsPrinter.isConnected }
-            val changedInSettings = connected(4)
-            assertEquals(secondAddress, opened[4].first)
+            waitFor("old socket release when selecting a printer") { !first.isConnected }
+            val changed = connected(1)
+            assertEquals(secondAddress, opened[1].first)
             vm.closeSettings()
-            waitFor("Settings socket release when closing settings") { !changedInSettings.isConnected }
-            val changed = connected(5)
-            assertEquals(secondAddress, opened[5].first)
 
             vm.selectScanJob(null)
-            waitFor("socket release when leaving the job") { !changed.isConnected }
+            shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(changed.isConnected)
             vm.selectScanJob(wbrJob)
-            val reopened = connected(6)
+            vm.setRelabelingSubmode(RelabelingSubmode.FULL)
+            shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(changed.isConnected)
+            assertEquals(2, opened.size)
             vm.logout()
-            waitFor("socket release and logout") { !reopened.isConnected && !state.value.isLoggedIn }
+            waitFor("socket release and logout") { !changed.isConnected && !state.value.isLoggedIn }
         } finally {
             activity.pause().stop().destroy()
         }
     }
 
-    @Test fun eligibleWbrAndTajikistanScansPrintOnTheirPreparedSockets() {
+    @Test fun clearingPrinterReleasesTheSocketAndActivityDestructionClosesItsReplacement() {
+        val settings = SettingsStore(app)
+        runBlocking { settings.setPrinterBluetoothAddress(firstAddress) }
+        val activity = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val vm = ViewModelProvider(activity.get())[MainViewModel::class.java]
+        val state = stateOf(vm)
+        lateinit var replacement: BluetoothSocket
+        try {
+            waitFor("saved printer preference") { state.value.printerBluetoothAddress == firstAddress }
+            state.value = state.value.copy(isLoggedIn = true)
+            val first = connected(0)
+
+            vm.setPrinterBluetoothAddress(firstAddress)
+            shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(first.isConnected)
+            assertEquals(1, opened.size)
+
+            vm.setPrinterBluetoothAddress(null)
+            waitFor("cleared printer connection") {
+                state.value.printerBluetoothAddress == null && !first.isConnected
+            }
+            assertEquals(1, opened.size)
+
+            vm.setPrinterBluetoothAddress(secondAddress)
+            replacement = connected(1)
+            assertNull(state.value.selectedScanJob)
+            assertEquals(secondAddress, opened[1].first)
+
+            activity.pause().stop()
+            shadowOf(replacement).inputStreamFeeder.close()
+            waitFor("remote disconnect in the background") { !replacement.isConnected }
+            activity.restart().start().resume()
+            replacement = connected(2)
+            assertEquals(secondAddress, opened[2].first)
+        } finally {
+            activity.pause().stop().destroy()
+        }
+        waitFor("socket release on activity destruction") { !replacement.isConnected }
+    }
+
+    @Test fun eligibleWbrAndTajikistanScansShareTheLoginConnectionAndRecoverAfterDisconnect() {
         val settings = SettingsStore(app)
         runBlocking {
             settings.setPrinterBluetoothAddress(firstAddress)
@@ -184,7 +229,7 @@ class AutoPrintBluetoothFlowTest {
 
             shadowOf(wbr).inputStreamFeeder.close()
             waitFor("WBR printer disconnect") { !wbr.isConnected }
-            assertEquals(AutoPrintPrinter(wbrJob.id, firstAddress), autoPrintPrinter(state.value))
+            assertEquals(firstAddress, configuredPrinterAddress(state.value))
             reconnectGate.set(CountDownLatch(1))
             vm.onScanned("second-wbr-barcode")
             val reconnected = connected(1)
@@ -196,12 +241,9 @@ class AutoPrintBluetoothFlowTest {
 
             val tjJob = wbrJob.copy(id = 2, registerType = 0, stickerTemplate = StickerTemplates.TAJIKISTAN_EXPORT)
             vm.selectScanJob(tjJob)
-            waitFor("WBR socket release when switching jobs") { !reconnected.isConnected }
-            assertNull(autoPrintPrinter(state.value))
             vm.setRelabelingSubmode(RelabelingSubmode.FULL)
-            assertNull(autoPrintPrinter(state.value))
             vm.toggleBulkyItemsMode()
-            val tj = connected(2)
+            val tj = reconnected
             assertFalse(state.value.isScanning)
             body.set("""
                 {"count":1,"parcelCount":1,"boxCount":0,"scanSource":10,"itemNumbers":[],"stickerTemplate":"TJ_EXPORT",
@@ -214,7 +256,7 @@ class AutoPrintBluetoothFlowTest {
             vm.onScanned("tj-barcode")
             waitFor("TJ auto-print") { !state.value.isBusy && state.value.printerMessage != null }
             assertTrue(readLabel(tj).contains("12345678901"))
-            assertEquals(3, opened.size)
+            assertEquals(2, opened.size)
         } finally {
             reconnectGate.getAndSet(null)?.countDown()
             activity.pause().stop().destroy()
@@ -226,7 +268,7 @@ class AutoPrintBluetoothFlowTest {
         val client = BluetoothPrinterClient(app, this)
         val payload = "PRINT 1,1\r\n".toByteArray()
         try {
-            client.selectPrinter(AutoPrintPrinter(1, firstAddress))
+            client.selectPrinter(firstAddress)
             val socket = connected(0)
             val writes = mutableListOf<ByteArray>()
             shadowOf(socket).setOutputStream(object : PipedOutputStream() {
@@ -265,7 +307,7 @@ class AutoPrintBluetoothFlowTest {
             assertEquals(PrinterTestStage.CONNECT, connectFailure.failedStage)
             assertEquals("", readLabel(opened.single().second))
 
-            client.selectPrinter(SettingsPrinter(firstAddress))
+            client.selectPrinter(firstAddress)
             val socket = connected(1)
             val writes = mutableListOf<ByteArray>()
             shadowOf(socket).setOutputStream(object : PipedOutputStream() {
