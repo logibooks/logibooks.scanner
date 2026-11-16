@@ -77,24 +77,28 @@ class MainActivity : ComponentActivity() {
             val context = LocalContext.current
             val focusManager = LocalFocusManager.current
             val printerSelected = hasSelectedPrinter(state.printerBluetoothAddress)
-            var pendingPrinterAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+            var pendingPrinterAction by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
+            DisposableEffect(vm) {
+                onDispose { vm.cancelPendingMonitorStickerPermission() }
+            }
             val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()
             ) {
                 val action = pendingPrinterAction
                 pendingPrinterAction = null
+                action?.invoke(hasBluetoothPrinterPermissions(context))
+            }
+            val requestPrinterPermission: ((Boolean) -> Unit) -> Unit = { action ->
                 if (hasBluetoothPrinterPermissions(context)) {
-                    action?.invoke()
-                } else {
-                    vm.setPrinterPermissionDenied()
+                    action(true)
+                } else if (pendingPrinterAction == null) {
+                    pendingPrinterAction = action
+                    bluetoothPermissionLauncher.launch(requiredBluetoothPrinterPermissions())
                 }
             }
             val runPrinterAction: (() -> Unit) -> Unit = { action ->
-                if (hasBluetoothPrinterPermissions(context)) {
-                    action()
-                } else {
-                    pendingPrinterAction = action
-                    bluetoothPermissionLauncher.launch(requiredBluetoothPrinterPermissions())
+                requestPrinterPermission { granted ->
+                    if (granted) action() else vm.setPrinterPermissionDenied()
                 }
             }
             val printerTestPermissionLauncher = rememberLauncherForActivityResult(
@@ -260,8 +264,10 @@ class MainActivity : ComponentActivity() {
                                         vm.printParcelSticker(sticker)
                                     }
                                 },
-                                onPrintBoxSticker = { boxId ->
-                                    runPrinterAction { vm.printBoxSticker(boxId) }
+                                onPrintMonitorSticker = { jobId, target ->
+                                    if (pendingPrinterAction == null) {
+                                        vm.prepareMonitorStickerPrint(jobId, target)?.let(requestPrinterPermission)
+                                    }
                                 },
                                 loadTajikistanInvoice = vm::loadTajikistanInvoice,
                                 onPrintTajikistanInvoice = { scanJobId, payload ->

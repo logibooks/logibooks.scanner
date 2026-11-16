@@ -169,6 +169,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var printerTestAttempt: PrinterTestAttempt? = null
     private var pendingPrinterTestPermission: PrinterTestAttempt? = null
 
+    private class MonitorStickerPrint(
+        val jobId: Int,
+        val target: MonitorStickerTarget,
+        val address: String,
+        val repository: ScanJobMonitorRepository
+    ) {
+        var worker: Job? = null
+    }
+
+    private var monitorStickerPrint: MonitorStickerPrint? = null
+
     init {
         viewModelScope.launch {
             state.collect { updatePrinterSession() }
@@ -221,7 +232,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             settingsStore.printerBluetoothAddress().collect { address ->
-                if (address != state.value.printerBluetoothAddress) cancelPrinterTest()
+                if (address != state.value.printerBluetoothAddress) {
+                    cancelPrinterTest()
+                    cancelMonitorStickerPrint()
+                }
                 _state.update {
                     val nextSubmode = if (address.isNullOrBlank()) RelabelingSubmode.KGT else it.relabelingSubmode
                     it.copy(
@@ -426,7 +440,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setPrinterBluetoothAddress(value: String?) {
-        if (value != state.value.printerBluetoothAddress) cancelPrinterTest()
+        if (value != state.value.printerBluetoothAddress) {
+            cancelPrinterTest()
+            cancelMonitorStickerPrint()
+        }
         // Apply the address through the preference collector so an older save cannot reconnect
         // the previous printer after a newer selection has already been shown.
         _state.update {
@@ -561,19 +578,58 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun printBoxSticker(boxId: Int) {
-        if (state.value.printerLoading) return
+    internal fun prepareMonitorStickerPrint(jobId: Int, target: MonitorStickerTarget): ((Boolean) -> Unit)? {
+        val current = state.value
+        val address = configuredPrinterAddress(current) ?: return null
+        if (signingOut || current.printerLoading || current.selectedScanJob?.id != jobId
+            || !::scanJobMonitorRepo.isInitialized) return null
+
+        val command = MonitorStickerPrint(jobId, target, address, scanJobMonitorRepo)
+        monitorStickerPrint = command
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
-        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+        return { granted -> finishMonitorStickerPermission(command, granted) }
+    }
+
+    private fun finishMonitorStickerPermission(command: MonitorStickerPrint, granted: Boolean) {
+        if (monitorStickerPrint !== command || command.worker != null) return
+        if (!granted) {
+            cancelMonitorStickerPrint()
+            setPrinterPermissionDenied()
+            return
+        }
+
+        command.worker = viewModelScope.launch(start = CoroutineStart.LAZY) {
             try {
-                val result = stickerPrintService.printBoxSticker(state.value.printerBluetoothAddress) {
-                    scanJobMonitorRepo.loadBoxLabel(boxId)
+                val target = command.target
+                val result = stickerPrintService.printServerSticker(command.address, target.template) {
+                    when (target.template) {
+                        StickerTemplates.WBR_BOX, StickerTemplates.OZON_BOX ->
+                            command.repository.loadBoxLabel(target.id, target.template)
+                        StickerTemplates.OZON_PARCEL ->
+                            command.repository.loadParcelLabel(command.jobId, target.id, target.template)
+                        else -> error("Unsupported monitor label template")
+                    }
                 }
-                applyPrinterResult(result)
+                if (monitorStickerPrint === command) applyPrinterResult(result)
             } finally {
-                _state.update { it.copy(printerLoading = false) }
+                if (monitorStickerPrint === command) {
+                    monitorStickerPrint = null
+                    _state.update { it.copy(printerLoading = false) }
+                }
             }
         }
+        command.worker?.start()
+    }
+
+    internal fun cancelPendingMonitorStickerPermission() {
+        if (monitorStickerPrint?.worker == null) cancelMonitorStickerPrint()
+    }
+
+    private fun cancelMonitorStickerPrint() {
+        val command = monitorStickerPrint ?: return
+        monitorStickerPrint = null
+        command.worker?.cancel()
+        _state.update { it.copy(printerLoading = false) }
     }
 
     suspend fun loadTajikistanInvoice(scanJobId: Int, parcelId: Int): ByteArray {
@@ -621,10 +677,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 // Create repositories with 401 handler that triggers logout
                 val unauthorizedHandler: () -> Unit = {
                     viewModelScope.launch {
-                        logout()
+                        if (!signingOut && loginRepo.token == token) logout()
                     }
                 }
                 scanJobRepo = ScanJobRepository(url, token, unauthorizedHandler)
+                cancelMonitorStickerPrint()
                 scanJobMonitorRepo = ScanJobMonitorRepository(url, token, unauthorizedHandler)
                 scanRepo = ScanRepository(url, token, unauthorizedHandler)
                 loadScanJobs()
@@ -733,6 +790,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectScanJob(job: ScanJob?) {
         viewModelScope.launch {
             val jobChanged = state.value.selectedScanJob?.id != job?.id
+            if (jobChanged) cancelMonitorStickerPrint()
             val nextBulkyItemsMode = normalizeRelabelingMode(
                 job,
                 state.value.relabelingSubmode,
@@ -1043,6 +1101,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun stopScanJobMonitor() {
+        cancelMonitorStickerPrint()
         monitorScopeVersion += 1
         monitorJob?.cancel()
         monitorDetailJob?.cancel()
@@ -1072,6 +1131,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun returnToScanJobSelectionForInactiveJob(status: Int) {
+        cancelMonitorStickerPrint()
         scanJobMonitorRepo.stop()
         val message = getApplication<Application>().getString(
             R.string.monitor_closed,
@@ -1348,6 +1408,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (signingOut) return@launch
             signingOut = true
             cancelPrinterTest()
+            cancelMonitorStickerPrint()
             updatePrinterSession()
             try {
                 scanJobListMonitorVersion += 1

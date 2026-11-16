@@ -28,17 +28,17 @@ class KgtStickerPrintServiceTest {
         val service = KgtStickerPrintService(TscStickerRenderer(), client)
         val payload = "SIZE 58 mm,40 mm\r\nQRCODE server bytes\r\nPRINT 1,1\r\n"
         val label = consulting.sw.logiscanner.net.LabelPrintPayload("WBR_BOX", java.util.Base64.getEncoder().encodeToString(payload.toByteArray()), "TSPL", 58, 40)
-        assertEquals(KgtStickerPrintResult.Success, service.printBoxSticker("AA:BB") { label })
+        assertEquals(KgtStickerPrintResult.Success, service.printServerSticker("AA:BB", "WBR_BOX") { label })
         assertEquals(payload, client.prints.single().payload)
-        assertEquals(KgtStickerPrintResult.MissingPrinter, service.printBoxSticker(null) { error("Must not fetch") })
+        assertEquals(KgtStickerPrintResult.MissingPrinter, service.printServerSticker(null, "WBR_BOX") { error("Must not fetch") })
         for (invalid in listOf(label.copy(template = "WBRN"), label.copy(language = "ZPL"), label.copy(widthMm = 40),
             label.copy(heightMm = 58), label.copy(contentBase64 = "!"), label.copy(contentBase64 = ""))) {
-            assertTrue(service.printBoxSticker("AA:BB") { invalid } is KgtStickerPrintResult.InvalidSticker)
+            assertTrue(service.printServerSticker("AA:BB", "WBR_BOX") { invalid } is KgtStickerPrintResult.InvalidSticker)
         }
         assertEquals(1, client.prints.size)
-        assertTrue(service.printBoxSticker("AA:BB") { throw IOException("offline") } is KgtStickerPrintResult.Failed)
+        assertTrue(service.printServerSticker("AA:BB", "WBR_BOX") { throw IOException("offline") } is KgtStickerPrintResult.Failed)
         try {
-            service.printBoxSticker("AA:BB") { throw kotlinx.coroutines.CancellationException("cancelled") }
+            service.printServerSticker("AA:BB", "WBR_BOX") { throw kotlinx.coroutines.CancellationException("cancelled") }
             error("Cancellation must propagate")
         } catch (_: kotlinx.coroutines.CancellationException) { }
     }
@@ -96,17 +96,24 @@ class KgtStickerPrintServiceTest {
     }
 
     @Test
-    fun printParcelStickerRejectsOzonWithoutCallingPrinter() = runTest {
+    fun ozonPrintUsesTheExpectedTemplateAndNeverSendsAfterCanceledFetch() = runTest {
         val client = RecordingClient()
         val service = KgtStickerPrintService(TscStickerRenderer(), client)
-
-        val result = service.printParcelSticker(
-            "AA:BB",
-            ParcelSticker.Ozon("POST-1", "OZON-BARCODE", "Ташкент")
-        )
-
-        assertTrue(result is KgtStickerPrintResult.InvalidSticker)
-        assertTrue(client.prints.isEmpty())
+        val payload = "SIZE 58 mm,40 mm\r\nPRINT 1,1\r\n"
+        for (template in listOf("OZON_BOX", "OZON")) {
+            val label = consulting.sw.logiscanner.net.LabelPrintPayload(template,
+                java.util.Base64.getEncoder().encodeToString(payload.toByteArray()), "TSPL", 58, 40)
+            assertEquals(KgtStickerPrintResult.Success, service.printServerSticker("AA:BB", template) { label })
+            val canceled = async {
+                service.printServerSticker("AA:BB", template) {
+                    kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]!!.cancel()
+                    label
+                }
+            }
+            canceled.join()
+            assertTrue(canceled.isCancelled)
+        }
+        assertEquals(listOf(payload, payload), client.prints.map { it.payload })
     }
 
     @Test

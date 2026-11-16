@@ -8,11 +8,5 @@ sealed interface ParcelSticker {
     data class WbrN(
         val sticker: String?
     ) : ParcelSticker
-
-    data class Ozon(
-        val postingNumber: String?,
-        val barcode: String?,
-        val destinationCity: String?
-    ) : ParcelSticker
 }
 

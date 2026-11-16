@@ -5,13 +5,11 @@
 package consulting.sw.logiscanner.printer
 
 import java.nio.charset.Charset
-import java.util.Locale
 
 class ParcelStickerRenderer {
 
     fun render(sticker: ParcelSticker): ByteArray = when (sticker) {
         is ParcelSticker.WbrN -> renderWbrN(sticker)
-        is ParcelSticker.Ozon -> renderOzon(sticker)
     }
 
     private fun renderWbrN(sticker: ParcelSticker.WbrN): ByteArray {
@@ -45,45 +43,6 @@ class ParcelStickerRenderer {
         return buildPayload(commands)
     }
 
-    private fun renderOzon(sticker: ParcelSticker.Ozon): ByteArray {
-        val postingNumber = normalizeText(sticker.postingNumber)
-        val barcode = normalizeQr(sticker.barcode)
-        val destinationCity = normalizeText(sticker.destinationCity)?.uppercase(RUSSIAN_LOCALE)
-        require(postingNumber != null || barcode != null || destinationCity != null) {
-            "Ozon sticker has no printable data"
-        }
-
-        val commands = mutableListOf(
-            verticalTextCommand(OZON_BRAND, 31, 160, FONT_4, FONT_4_WIDTH_DOTS)
-        )
-        destinationCity?.let { city ->
-            commands += fittedVerticalTextCommand(city, 435, 160)
-        }
-        postingNumber?.let { value ->
-            val (first, second) = splitPostingNumber(value)
-            commands += verticalTextCommand(first, 105, 160, FONT_3, FONT_3_WIDTH_DOTS)
-            if (second.isNotEmpty()) {
-                commands += verticalTextCommand(second, 350, 160, FONT_3, FONT_3_WIDTH_DOTS)
-            }
-        }
-
-        barcode?.let { commands += qrCommand(169, 94, 6, it) }
-        return buildPayload(commands)
-    }
-
-    private fun fittedVerticalTextCommand(
-        value: String,
-        x: Int,
-        centerY: Int
-    ): String {
-        val (font, charWidth) = when {
-            value.length * FONT_3_WIDTH_DOTS <= MAX_VERTICAL_TEXT_LENGTH_DOTS -> FONT_3 to FONT_3_WIDTH_DOTS
-            value.length * FONT_2_WIDTH_DOTS <= MAX_VERTICAL_TEXT_LENGTH_DOTS -> FONT_2 to FONT_2_WIDTH_DOTS
-            else -> FONT_1 to FONT_1_WIDTH_DOTS
-        }
-        return verticalTextCommand(value, x, centerY, font, charWidth)
-    }
-
     private fun verticalTextCommand(
         value: String,
         x: Int,
@@ -113,15 +72,6 @@ class ParcelStickerRenderer {
         value.length > WBR_NUMBER_SUFFIX_LENGTH ->
             value.dropLast(WBR_NUMBER_SUFFIX_LENGTH) to value.takeLast(WBR_NUMBER_SUFFIX_LENGTH)
         else -> splitInHalf(value)
-    }
-
-    private fun splitPostingNumber(value: String): Pair<String, String> {
-        val separator = value.indexOf('-').takeIf { it in 1 until value.lastIndex }
-        return if (separator != null) {
-            value.substring(0, separator) to value.substring(separator + 1)
-        } else {
-            splitInHalf(value)
-        }
     }
 
     private fun normalizeText(value: String?): String? = value
@@ -157,16 +107,9 @@ class ParcelStickerRenderer {
 
     companion object {
         private const val WBR_BRAND = "WB"
-        private const val OZON_BRAND = "OZON"
-        private const val FONT_1 = "1"
         private const val FONT_2 = "2"
-        private const val FONT_3 = "3"
         private const val FONT_4 = "4"
-        private const val FONT_1_WIDTH_DOTS = 8
-        private const val FONT_2_WIDTH_DOTS = 12
-        private const val FONT_3_WIDTH_DOTS = 16
         private const val FONT_4_WIDTH_DOTS = 24
-        private const val MAX_VERTICAL_TEXT_LENGTH_DOTS = 270
         private const val WBR_NUMBER_SUFFIX_LENGTH = 4
         private const val CENTRAL_QR_CELL_DOTS = 10
         private const val CENTRAL_QR_SIZE_DOTS = 21 * CENTRAL_QR_CELL_DOTS
@@ -174,6 +117,5 @@ class ParcelStickerRenderer {
         private const val CENTRAL_QR_Y_DOTS = (320 - CENTRAL_QR_SIZE_DOTS) / 2
         private const val CORNER_QR_CELL_DOTS = 4
         private val WINDOWS_1251: Charset = Charset.forName("windows-1251")
-        private val RUSSIAN_LOCALE = Locale.forLanguageTag("ru-RU")
     }
 }

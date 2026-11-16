@@ -74,15 +74,17 @@ class ScanJobMonitorRepository(
         )
     }
 
-    suspend fun loadBoxLabel(boxId: Int): LabelPrintPayload = loadLabel {
-        api.getBoxLabel("Bearer $token", boxId)
+    suspend fun loadBoxLabel(boxId: Int, template: String): LabelPrintPayload = loadLabel {
+        api.getBoxLabel("Bearer $token", boxId, template)
+    }
+
+    suspend fun loadParcelLabel(scanJobId: Int, parcelId: Int, template: String): LabelPrintPayload = loadLabel {
+        api.getMonitorParcelLabel("Bearer $token", scanJobId, parcelId, template)
     }
 
     suspend fun loadTajikistanInvoice(scanJobId: Int, parcelId: Int): ByteArray {
         val template = StickerTemplates.TAJIKISTAN_EXPORT
-        return loadLabel {
-            api.getMonitorParcelLabel("Bearer $token", scanJobId, parcelId, template)
-        }.decodeTspl(template)
+        return loadParcelLabel(scanJobId, parcelId, template).decodeTspl(template)
     }
 
     private suspend fun loadLabel(request: suspend () -> LabelPrintPayload): LabelPrintPayload {

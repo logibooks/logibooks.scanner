@@ -32,21 +32,22 @@ class ScanJobMonitorUiTest {
     fun savedBoxStickerUsesCompanyIdAndServerCapabilities() {
         val snapshot = ScanJobMonitorSnapshot(companyId = 2, registerType = RegisterTypes.WBR_N)
         val box = ScanJobMonitorBox(boxId = 7, boxSticker = "$1:1:4542503776:362877", printableTemplates = listOf("WBR_BOX"))
-        assertTrue(showWbrBoxSticker(snapshot, box))
-        assertTrue(showWbrBoxSticker(snapshot.copy(registerType = RegisterTypes.OZON), box))
+        assertTrue(boxStickerTarget(snapshot, box) != null)
+        assertTrue(boxStickerTarget(snapshot.copy(registerType = RegisterTypes.OZON), box) != null)
         for (registerType in listOf(RegisterTypes.WBR, RegisterTypes.WBR_N)) {
             for (companyId in listOf(0, RegisterTypes.OZON, RegisterTypes.WBR_N)) {
                 val otherCompany = snapshot.copy(companyId = companyId, registerType = registerType)
-                assertFalse(showWbrBoxSticker(otherCompany, box))
+                assertFalse(boxStickerTarget(otherCompany, box) != null)
             }
         }
-        assertFalse(showWbrBoxSticker(ScanJobMonitorSnapshot(registerType = RegisterTypes.OZON), box))
-        assertFalse(showWbrBoxSticker(snapshot, box.copy(area = ScanJobMonitorAreas.UNASSIGNED)))
-        assertTrue(canPrintWbrBoxSticker(box, true, false))
-        assertFalse(canPrintWbrBoxSticker(box.copy(boxId = null), true, false))
-        assertFalse(canPrintWbrBoxSticker(box.copy(printableTemplates = emptyList()), true, false))
-        assertFalse(canPrintWbrBoxSticker(box, false, false))
-        assertFalse(canPrintWbrBoxSticker(box, true, true))
+        assertFalse(boxStickerTarget(ScanJobMonitorSnapshot(registerType = RegisterTypes.OZON), box) != null)
+        assertFalse(boxStickerTarget(snapshot, box.copy(area = ScanJobMonitorAreas.UNASSIGNED)) != null)
+        assertNull(boxStickerTarget(snapshot, box.copy(boxId = null)))
+        assertNull(boxStickerTarget(snapshot, box.copy(printableTemplates = emptyList())))
+        val ozon = ScanJobMonitorSnapshot(registerType = RegisterTypes.OZON, companyId = 1)
+        assertEquals(MonitorStickerTarget(box.boxId!!, "OZON_BOX"),
+            boxStickerTarget(ozon, box.copy(printableTemplates = listOf("OZON_BOX"))))
+        assertNull(boxStickerTarget(snapshot, box.copy(printableTemplates = listOf("OZON_BOX"))))
     }
 
     @Test
@@ -126,15 +127,15 @@ class ScanJobMonitorUiTest {
     }
 
     @Test
-    fun parcelStickerActionRejectsOzon() {
-        val parcel = ScanJobMonitorParcel(
-            postingNumber = "POST-1",
-            barcode = "BAR-1",
-            destinationCity = "Tashkent"
-        )
-
-        assertNull(parcelStickerAction(RegisterTypes.OZON, parcel))
-        assertNull(parcelStickerAction(RegisterTypes.OZON, ScanJobMonitorParcel()))
+    fun ozonParcelPrintRequiresASavedParcelAndCoreCapability() {
+        val parcel = ScanJobMonitorParcel(parcelId = 17, postingNumber = "0139467461-0028-1",
+            printableTemplates = listOf("OZON"))
+        assertEquals(MonitorStickerTarget(17, "OZON"), ozonParcelStickerTarget(RegisterTypes.OZON, parcel))
+        assertNull(ozonParcelStickerTarget(RegisterTypes.WBR_N, parcel))
+        assertNull(ozonParcelStickerTarget(RegisterTypes.OZON, parcel.copy(printableTemplates = emptyList())))
+        assertNull(ozonParcelStickerTarget(RegisterTypes.OZON, parcel.copy(isInRegister = false)))
+        assertNull(ozonParcelStickerTarget(RegisterTypes.OZON, parcel.copy(parcelId = null)))
+        assertNull(ozonParcelStickerTarget(RegisterTypes.OZON, parcel.copy(postingNumber = " ")))
     }
 
     @Test

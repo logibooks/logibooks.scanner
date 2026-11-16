@@ -10,6 +10,8 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -18,6 +20,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.Closeable
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -130,6 +133,7 @@ internal class PrinterSession(
             val socket = if (timing == null) connection() else timing.measure(PrinterTestStage.CONNECT) { connection() }
             try {
                 if (timing == null) {
+                    currentCoroutineContext().ensureActive()
                     socket.write(payload)
                 } else {
                     timing.measure(PrinterTestStage.SEND) { socket.runTestIo(5_000) { write(payload) } }
@@ -152,24 +156,27 @@ internal class PrinterSession(
         timeoutMs: Long,
         operation: suspend PrinterConnection.() -> Unit
     ) {
-        val socket = this
-        withTimeoutOrNull(timeoutMs) {
-            coroutineScope {
-                suspendCancellableCoroutine<Unit> { continuation ->
-                    // Close independently of the worker so cancellation unblocks RFCOMM I/O.
-                    continuation.invokeOnCancellation { close(socket) }
-                    launch(io) {
-                        if (!continuation.isActive) return@launch
-                        try {
-                            socket.operation()
-                            continuation.resume(Unit)
-                        } catch (failure: Exception) {
-                            continuation.resumeWithException(failure)
-                        }
-                    }
+        withTimeoutOrNull(timeoutMs) { runSocketIo({ close(this@runTestIo) }, operation) }
+            ?: throw PrinterTestFailure(PrinterTestError.TIMEOUT)
+    }
+
+    private suspend fun PrinterConnection.runSocketIo(
+        abort: () -> Unit,
+        operation: suspend PrinterConnection.() -> Unit
+    ) = coroutineScope {
+        suspendCancellableCoroutine<Unit> { continuation ->
+            // Closing the socket from another thread unblocks RFCOMM I/O on cancellation.
+            continuation.invokeOnCancellation { abort() }
+            launch(io) {
+                if (!continuation.isActive) return@launch
+                try {
+                    operation()
+                    continuation.resume(Unit)
+                } catch (failure: Exception) {
+                    continuation.resumeWithException(failure)
                 }
             }
-        } ?: throw PrinterTestFailure(PrinterTestError.TIMEOUT)
+        }
     }
 
     private suspend fun connect(address: String, owner: Session?, timed: Boolean): PrinterConnection? {
@@ -181,10 +188,19 @@ internal class PrinterSession(
             }
             owner.socket = socket
         }
+        val discarded = AtomicBoolean()
+        fun abortConnection() {
+            if (discarded.compareAndSet(false, true)) discard(owner, socket)
+        }
         try {
-            if (timed) socket.runTestIo(15_000) { connect() } else socket.connect()
+            if (timed) {
+                withTimeoutOrNull(15_000) { socket.runSocketIo(::abortConnection) { connect() } }
+                    ?: throw PrinterTestFailure(PrinterTestError.TIMEOUT)
+            } else {
+                socket.runSocketIo(::abortConnection) { connect() }
+            }
         } catch (failure: Exception) {
-            discard(owner, socket)
+            abortConnection()
             throw failure
         }
         if (owner != null) scope.launch(io) {

@@ -7,6 +7,7 @@ package consulting.sw.logiscanner.ui
 import android.content.Context
 import consulting.sw.logiscanner.net.RegisterTypes
 import consulting.sw.logiscanner.R
+import consulting.sw.logiscanner.net.StickerTemplates
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjection
 import consulting.sw.logiscanner.net.ParcelCheckStatusProjectionKinds
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
@@ -342,12 +343,26 @@ private fun formatMonitorDateTimePart(value: String?, formatter: DateTimeFormatt
 }
 
 
-internal fun showWbrBoxSticker(snapshot: ScanJobMonitorSnapshot, box: ScanJobMonitorBox): Boolean =
-    isPhysicalMonitorBox(box) &&
-        snapshot.companyId == RegisterTypes.WBR
+data class MonitorStickerTarget(val id: Int, val template: String)
 
-internal fun showWbrBoxStickerPrint(snapshot: ScanJobMonitorSnapshot, box: ScanJobMonitorBox): Boolean =
-    showWbrBoxSticker(snapshot, box) && "WBR_BOX" in box.printableTemplates
+internal fun boxStickerTarget(snapshot: ScanJobMonitorSnapshot, box: ScanJobMonitorBox): MonitorStickerTarget? {
+    val boxId = box.boxId?.takeIf { it > 0 && isPhysicalMonitorBox(box) } ?: return null
+    val template = when {
+        snapshot.registerType == RegisterTypes.OZON && StickerTemplates.OZON_BOX in box.printableTemplates ->
+            StickerTemplates.OZON_BOX
+        snapshot.companyId == RegisterTypes.WBR && StickerTemplates.WBR_BOX in box.printableTemplates ->
+            StickerTemplates.WBR_BOX
+        else -> return null
+    }
+    return MonitorStickerTarget(boxId, template)
+}
+
+internal fun ozonParcelStickerTarget(registerType: Int, parcel: ScanJobMonitorParcel): MonitorStickerTarget? {
+    if (registerType != RegisterTypes.OZON || !parcel.isInRegister || parcel.postingNumber.isNullOrBlank()
+        || StickerTemplates.OZON_PARCEL !in parcel.printableTemplates) return null
+    val id = parcel.parcelId?.takeIf { it > 0 } ?: return null
+    return MonitorStickerTarget(id, StickerTemplates.OZON_PARCEL)
+}
 
 internal fun localScanResultBox(
     display: LocalScanResultDisplay,
@@ -360,6 +375,3 @@ internal fun localScanResultBox(
     if (isPhysicalMonitorBox(detailBox) && detailBox?.boxCode == number) return detailBox
     return snapshot.boxes.singleOrNull { isPhysicalMonitorBox(it) && it.boxCode == number }
 }
-
-internal fun canPrintWbrBoxSticker(box: ScanJobMonitorBox, printerSelected: Boolean, busy: Boolean): Boolean =
-    box.boxId != null && "WBR_BOX" in box.printableTemplates && printerSelected && !busy

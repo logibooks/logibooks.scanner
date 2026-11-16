@@ -93,7 +93,7 @@ class InvoicePrintingRenderingTest {
                         lastItemNumbers = emptyList(), lastExtData = null, lastExtId = null,
                         lastTajikistanExportSticker = null, lastScanTime = null,
                         printerSelected = printerSelected.value, printerLoading = busy.value, onPrintKgtSticker = {},
-                        snapshot = null, detailSnapshot = null, onPrintBoxSticker = {}
+                        snapshot = null, detailSnapshot = null, onPrintMonitorSticker = { _, _ -> }
                     )
                     MonitorParcelRow(
                         parcel = parcel.value, registerType = RegisterTypes.WBR_N, weightCorrection = null,

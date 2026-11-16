@@ -35,11 +35,17 @@ import java.util.concurrent.atomic.AtomicReference
 class WbrBoxStickerFlowTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
+    @Test fun wbBoxPrintsFromDetailsAndFailuresRemainVisibleForRetry() =
+        boxPrintsFromDetails(RegisterTypes.WBR_N, 2, "WBR_BOX", "$1:1:4542503776:362877")
+
+    @Test fun ozonBoxPrintsFromDetailsAndFailuresRemainVisibleForRetry() =
+        boxPrintsFromDetails(RegisterTypes.OZON, 1, "OZON_BOX", "%301%4542503776")
+
     @Suppress("UNCHECKED_CAST")
-    @Test fun boxPrintsFromDetailsAndFailuresRemainVisibleForRetry() {
+    private fun boxPrintsFromDetails(registerType: Int, companyId: Int, template: String, sticker: String) {
         val bytes = "SIZE 58 mm,40 mm\r\nPRINT 1,1\r\n".toByteArray()
         val status = AtomicInteger(200)
-        val body = AtomicReference("""{"template":"WBR_BOX","contentBase64":"${java.util.Base64.getEncoder().encodeToString(bytes)}","language":"TSPL","widthMm":58,"heightMm":40}""")
+        val body = AtomicReference("""{"template":"$template","contentBase64":"${java.util.Base64.getEncoder().encodeToString(bytes)}","language":"TSPL","widthMm":58,"heightMm":40}""")
         val requests = ConcurrentLinkedQueue<String>()
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
@@ -62,8 +68,8 @@ class WbrBoxStickerFlowTest {
             }
             lateinit var vm: MainViewModel
             lateinit var flow: MutableStateFlow<MainState>
-            val box = ScanJobMonitorBox(boxId = 7, boxCode = "4542503776", boxSticker = "$1:1:4542503776:362877", printableTemplates = listOf("WBR_BOX"))
-            val snapshot = ScanJobMonitorSnapshot(scanJobId = 1, registerType = RegisterTypes.WBR_N, companyId = 2,
+            val box = ScanJobMonitorBox(boxId = 7, boxCode = "4542503776", boxSticker = sticker, printableTemplates = listOf(template))
+            val snapshot = ScanJobMonitorSnapshot(scanJobId = 1, registerType = registerType, companyId = companyId,
                 boxes = listOf(box), totalBoxes = 1)
             compose.runOnIdle {
                 vm = ViewModelProvider(compose.activity)[MainViewModel::class.java]
@@ -72,7 +78,7 @@ class WbrBoxStickerFlowTest {
                 val stateField = MainViewModel::class.java.getDeclaredField("_state").apply { isAccessible = true }
                 flow = stateField.get(vm) as MutableStateFlow<MainState>
                 flow.value = flow.value.copy(isLoggedIn = true, printerBluetoothAddress = "AA:BB",
-                    selectedScanJob = ScanJob(1, "Test", null, "15", "30", RegisterTypes.WBR_N),
+                    selectedScanJob = ScanJob(1, "Test", null, "15", "30", registerType),
                     monitorSnapshot = snapshot, monitorLoading = false)
             }
             assertEquals(android.content.pm.PackageManager.PERMISSION_GRANTED,
@@ -82,26 +88,26 @@ class WbrBoxStickerFlowTest {
             val printButton = compose.onNodeWithContentDescription("Печать стикера коробки")
             printButton.assertDoesNotExist()
             compose.onNodeWithText("Код стикера").assertDoesNotExist()
-            compose.onNodeWithText("$1:1:4542503776:362877").assertDoesNotExist()
+            compose.onNodeWithText(sticker).assertDoesNotExist()
             compose.runOnIdle {
                 flow.value = flow.value.copy(monitorSelectedScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOX, 7),
                     monitorDetailSnapshot = snapshot.copy(area = ScanJobMonitorAreas.BOX, boxes = emptyList(), box = box))
             }
             compose.onNodeWithText("Код стикера").assertExists()
-            compose.onNodeWithText("$1:1:4542503776:362877").assertExists()
+            compose.onNodeWithText(sticker).assertExists()
             printButton.performScrollTo().assertIsEnabled().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) { it() }
             compose.waitUntil(10000) {
                 shadowOf(android.os.Looper.getMainLooper()).idle()
                 sent.size == 1 || vm.state.value.printerError != null
             }
             assertEquals("Requests=${requests.size}; error=${vm.state.value.printerError}; loading=${vm.state.value.printerLoading}", 1, sent.size)
-            compose.runOnIdle { vm.printBoxSticker(7) }
+            compose.runOnIdle { assertNull(vm.prepareMonitorStickerPrint(1, MonitorStickerTarget(7, template))) }
             assertEquals(1, requests.size)
             assertTrue(vm.state.value.printerLoading)
             gate.complete(Unit)
             compose.waitUntil(10000) { shadowOf(android.os.Looper.getMainLooper()).idle(); !vm.state.value.printerLoading }
             assertArrayEquals(bytes, sent.single())
-            assertEquals("/api/boxes/7/label?template=WBR_BOX|Bearer box-token", requests.single())
+            assertEquals("/api/boxes/7/label?template=$template|Bearer box-token", requests.single())
             status.set(409)
             body.set("""{"msg":"Box sticker unavailable","errors":{},"code":"Unavailable"}""")
             compose.onNodeWithContentDescription("Печать стикера коробки").performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) { it() }
@@ -112,16 +118,125 @@ class WbrBoxStickerFlowTest {
             // Missing/invalid error bodies preserve a useful HTTP error instead of hiding the failure.
             for (errorBody in listOf("", "{", "{\"msg\":\"\"}")) {
                 body.set(errorBody)
-                try { runBlocking { repo.loadBoxLabel(7) }; fail("Must reject HTTP failure") }
+                try { runBlocking { repo.loadBoxLabel(7, template) }; fail("Must reject HTTP failure") }
                 catch (expected: java.io.IOException) { assertTrue(expected.message!!.contains("409")) }
             }
             status.set(200)
-            body.set("""{"template":"WBR_BOX","contentBase64":"${java.util.Base64.getEncoder().encodeToString(bytes)}","language":"TSPL","widthMm":58,"heightMm":40}""")
+            body.set("""{"template":"$template","contentBase64":"${java.util.Base64.getEncoder().encodeToString(bytes)}","language":"TSPL","widthMm":58,"heightMm":40}""")
             compose.onNodeWithContentDescription("Печать стикера коробки").performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) { it() }
             compose.waitUntil(10000) { shadowOf(android.os.Looper.getMainLooper()).idle(); sent.size == 2 && !vm.state.value.printerLoading }
             assertNull(vm.state.value.printerError)
             assertEquals(snapshot.boxes.single().boxSticker, vm.state.value.monitorDetailSnapshot!!.box!!.boxSticker)
         } finally { server.stop(0) }
+    }
+
+
+    @Test fun ozonParcelCancelsStalePermissionAndFetchAfterJobChange() =
+        ozonParcelCancelsStalePermissionAndFetch(changeAccount = false)
+
+    @Test fun ozonParcelCancelsStalePermissionAndFetchAfterAccountChange() =
+        ozonParcelCancelsStalePermissionAndFetch(changeAccount = true)
+
+    @Suppress("UNCHECKED_CAST")
+    private fun ozonParcelCancelsStalePermissionAndFetch(changeAccount: Boolean) {
+        val bytes = "SIZE 58 mm,40 mm\r\nPRINT 1,1\r\n".toByteArray()
+        val requests = ConcurrentLinkedQueue<String>()
+        val sent = ConcurrentLinkedQueue<ByteArray>()
+        val responseGate = java.util.concurrent.CountDownLatch(1)
+        val handlerStarted = java.util.concurrent.CountDownLatch(1)
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/") { exchange ->
+            requests += exchange.requestURI.toString() + "|" + exchange.requestHeaders.getFirst("Authorization")
+            handlerStarted.countDown()
+            responseGate.await(10, java.util.concurrent.TimeUnit.SECONDS)
+            val payload = java.util.Base64.getEncoder().encodeToString(bytes)
+            val body = """{"template":"OZON","contentBase64":"$payload","language":"TSPL","widthMm":58,"heightMm":40}""".toByteArray()
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            runCatching {
+                exchange.sendResponseHeaders(200, body.size.toLong())
+                exchange.responseBody.use { it.write(body) }
+            }
+            exchange.close()
+        }
+        server.start()
+        try {
+            val repo = ScanJobMonitorRepository("http://127.0.0.1:${server.address.port}/api/", "parcel-token")
+            val client = object : StickerPrinterClient {
+                override suspend fun listBondedPrinters(): List<BluetoothPrinterDevice> = emptyList()
+                override suspend fun print(address: String, payload: ByteArray) { sent += payload }
+            }
+            lateinit var vm: MainViewModel
+            lateinit var flow: MutableStateFlow<MainState>
+            val job = ScanJob(19, "Ozon", null, "15", "30", RegisterTypes.OZON)
+            val target = MonitorStickerTarget(7, "OZON")
+            lateinit var oldPermission: (Boolean) -> Unit
+            compose.runOnIdle {
+                vm = ViewModelProvider(compose.activity)[MainViewModel::class.java]
+                field(vm, "scanJobMonitorRepo", repo)
+                field(vm, "stickerPrintService", KgtStickerPrintService(TscStickerRenderer(), client))
+                val stateField = MainViewModel::class.java.getDeclaredField("_state").apply { isAccessible = true }
+                flow = stateField.get(vm) as MutableStateFlow<MainState>
+                flow.value = flow.value.copy(isLoggedIn = true, selectedScanJob = job)
+                vm.setPrinterBluetoothAddress("AA:BB")
+            }
+            compose.waitUntil(10000) {
+                shadowOf(android.os.Looper.getMainLooper()).idle()
+                flow.value.printerBluetoothAddress == "AA:BB"
+            }
+            compose.runOnIdle {
+                oldPermission = checkNotNull(vm.prepareMonitorStickerPrint(job.id, target))
+                vm.setPrinterBluetoothAddress("CC:DD")
+                assertFalse(flow.value.printerLoading)
+                assertTrue(requests.isEmpty())
+            }
+            compose.waitUntil(10000) {
+                shadowOf(android.os.Looper.getMainLooper()).idle()
+                flow.value.printerBluetoothAddress == "CC:DD"
+            }
+            compose.runOnIdle {
+                assertNull(vm.prepareMonitorStickerPrint(99, target))
+                val request = checkNotNull(vm.prepareMonitorStickerPrint(job.id, target))
+                oldPermission(false)
+                oldPermission(true)
+                assertTrue(flow.value.printerLoading)
+                assertNull(flow.value.printerError)
+                assertTrue(requests.isEmpty())
+                request(true)
+            }
+            compose.waitUntil(10000) {
+                shadowOf(android.os.Looper.getMainLooper()).idle()
+                handlerStarted.count == 0L
+            }
+            compose.runOnIdle {
+                if (changeAccount) vm.logout() else vm.selectScanJob(null)
+            }
+            compose.waitUntil(10000) {
+                shadowOf(android.os.Looper.getMainLooper()).idle()
+                !vm.state.value.printerLoading && vm.state.value.selectedScanJob == null
+            }
+            compose.runOnIdle {
+                assertTrue(sent.isEmpty())
+                if (changeAccount) {
+                    val nextRepo = ScanJobMonitorRepository("http://127.0.0.1:${server.address.port}/api/", "other-token")
+                    field(vm, "scanJobMonitorRepo", nextRepo)
+                }
+                flow.value = flow.value.copy(isLoggedIn = true, selectedScanJob = job)
+                checkNotNull(vm.prepareMonitorStickerPrint(job.id, target))(true)
+                assertTrue(vm.state.value.printerLoading)
+                responseGate.countDown()
+            }
+            compose.waitUntil(10000) {
+                shadowOf(android.os.Looper.getMainLooper()).idle()
+                sent.size == 1 && !vm.state.value.printerLoading
+            }
+            assertArrayEquals(bytes, sent.single())
+            val path = "/api/ScanJobs/19/monitor/parcels/7/label?template=OZON|Bearer "
+            val newToken = if (changeAccount) "other-token" else "parcel-token"
+            assertEquals(listOf(path + "parcel-token", path + newToken), requests.toList())
+        } finally {
+            responseGate.countDown()
+            server.stop(0)
+        }
     }
 
     private fun field(vm: MainViewModel, name: String, value: Any) {

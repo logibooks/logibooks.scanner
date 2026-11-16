@@ -77,7 +77,7 @@ class ScanJobMonitorRenderingTest {
                     onKgtAutoPrintEnabledChange = {},
                     onJumpNumberChange = {},
                     onJumpToNumber = {},
-                    onPrintBoxSticker = {}
+                    onPrintMonitorSticker = { _, _ -> }
                 )
             }
         }

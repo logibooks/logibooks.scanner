@@ -7,6 +7,8 @@ package consulting.sw.logiscanner.printer
 import android.util.Log
 import consulting.sw.logiscanner.net.LabelPrintPayload
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -71,19 +73,17 @@ internal class KgtStickerPrintService(
     }
 
     suspend fun printParcelSticker(address: String?, sticker: ParcelSticker): KgtStickerPrintResult {
-        if (sticker !is ParcelSticker.WbrN) {
-            return KgtStickerPrintResult.InvalidSticker("Parcel sticker printing is available for WbrN only")
-        }
         return printRendered(address) {
             parcelStickerRenderer.render(sticker)
         }
     }
 
-    suspend fun printBoxSticker(
+    suspend fun printServerSticker(
         address: String?,
+        template: String,
         loadLabel: suspend () -> LabelPrintPayload
     ): KgtStickerPrintResult = printRendered(address) {
-        loadLabel().decodeTspl("WBR_BOX")
+        loadLabel().decodeTspl(template)
     }
 
     suspend fun printTajikistanInvoice(address: String, payload: ByteArray): KgtStickerPrintResult =
@@ -100,7 +100,9 @@ internal class KgtStickerPrintService(
         val send = client.preparePrint(address)
         return mutex.withLock {
             try {
-                send(renderPayload())
+                val payload = renderPayload()
+                currentCoroutineContext().ensureActive()
+                send(payload)
                 KgtStickerPrintResult.Success
             } catch (ex: CancellationException) {
                 throw ex
