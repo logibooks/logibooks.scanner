@@ -116,6 +116,28 @@ class PrinterSessionTest {
         assertEquals(1, socket.closes)
     }
 
+    @Test fun cancelingDuringConnectClosesTheTemporarySocketWithoutWriting() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val socket = FakeSocket(connectGate = gate)
+        val session = PrinterSession(backgroundScope, StandardTestDispatcher(testScheduler)) {
+            object : PrinterConnection by socket {
+                override suspend fun connect() {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { socket.connect() }
+                }
+            }
+        }
+        val pending = async { session.preparePrint("AA")("old".toByteArray()) }
+        runCurrent()
+        assertEquals(1, socket.connects)
+        pending.cancel()
+        assertEquals(1, socket.closes)
+        assertFalse(pending.isCompleted)
+        gate.complete(Unit)
+        pending.join()
+        assertTrue(socket.labels.isEmpty())
+        assertEquals(1, socket.closes)
+    }
+
     @Test fun leavingLetsTheCurrentWriteFinishAndQueuedWorkKeepsItsOriginalAddress() = runTest {
         val gate = CompletableDeferred<Unit>()
         val old = FakeSocket(writeGate = gate)

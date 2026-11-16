@@ -75,6 +75,9 @@ object ScannedItemSources {
 }
 
 object StickerTemplates {
+    const val WBR_BOX = "WBR_BOX"
+    const val OZON_BOX = "OZON_BOX"
+    const val OZON_PARCEL = "OZON"
     const val TAJIKISTAN_EXPORT = "TJ_EXPORT"
 }
 
@@ -116,6 +119,7 @@ data class ParcelCheckStatusProjection(
 
 @JsonClass(generateAdapter = true)
 data class ScanJobMonitorParcel(
+    var printableTemplates: List<String> = emptyList(),
     var isInRegister: Boolean = true,
     var stickerScanned: Boolean = false,
     var scannedSticker: String? = null,

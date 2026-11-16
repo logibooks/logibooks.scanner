@@ -46,7 +46,7 @@ interface ApiService {
     suspend fun getBoxLabel(
         @Header("Authorization") bearer: String,
         @Path("id") id: Int,
-        @Query("template") template: String = "WBR_BOX"
+        @Query("template") template: String
     ): LabelPrintPayload
 
     @GET("ScanJobs/{id}/monitor/parcels/{parcelId}/label")

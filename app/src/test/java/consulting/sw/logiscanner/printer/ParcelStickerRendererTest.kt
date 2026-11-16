@@ -43,39 +43,6 @@ class ParcelStickerRendererTest {
         renderer.render(ParcelSticker.WbrN(null))
     }
 
-    @Test
-    fun renderOzonEmitsBarcodeQrAndNativeCyrillicDestination() {
-        val rendered = renderer.render(
-            ParcelSticker.Ozon(
-                postingNumber = "0216094457-0039-1",
-                barcode = "ii16065571612",
-                destinationCity = "Ташкент"
-            )
-        )
-        val commands = rendered.toString(WINDOWS_1251)
-
-        assertFalse(commands.contains("BITMAP"))
-        assertTrue(commands.contains("CODEPAGE 1251"))
-        assertEquals(1, commands.countOccurrences("QRCODE"))
-        assertTrue(commands.contains("\"ii16065571612\""))
-        assertTrue(commands.contains("ТАШКЕНТ"))
-        assertTrue(commands.endsWith("PRINT 1,1\r\n"))
-    }
-
-    @Test
-    fun renderOzonOmitsInvalidQrAndPrintsRemainingData() {
-        val commands = renderer.render(ParcelSticker.Ozon("POST-1", "bad\"barcode", null))
-            .toString(WINDOWS_1251)
-
-        assertFalse(commands.contains("QRCODE"))
-        assertTrue(commands.endsWith("PRINT 1,1\r\n"))
-    }
-
-    @Test(expected = IllegalArgumentException::class)
-    fun renderRejectsStickerWithoutPrintableData() {
-        renderer.render(ParcelSticker.Ozon(" ", null, "\u0001"))
-    }
-
     private fun String.countOccurrences(value: String): Int =
         windowed(value.length).count { it == value }
 

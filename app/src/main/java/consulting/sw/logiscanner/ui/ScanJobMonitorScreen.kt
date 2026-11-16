@@ -128,7 +128,7 @@ internal fun ScanJobMonitorPanel(
     onJumpNumberChange: (String) -> Unit,
     onJumpToNumber: () -> Unit,
     onJumpFieldFocusChanged: (Boolean) -> Unit = {},
-    onPrintBoxSticker: (Int) -> Unit
+    onPrintMonitorSticker: (Int, MonitorStickerTarget) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -279,7 +279,7 @@ internal fun ScanJobMonitorPanel(
                 onPrintKgtSticker = onPrintKgtSticker,
                 snapshot = snapshot,
                 detailSnapshot = detailSnapshot,
-                onPrintBoxSticker = onPrintBoxSticker
+                onPrintMonitorSticker = onPrintMonitorSticker
             )
 
             if (loading && snapshot == null) {
@@ -339,7 +339,7 @@ internal fun ScanJobMonitorPanel(
                         loadTajikistanInvoice = loadTajikistanInvoice,
                         onPrintTajikistanInvoice = onPrintTajikistanInvoice,
                         onOpenRegister = onOpenRegister,
-                        onPrintBoxSticker = onPrintBoxSticker
+                        onPrintMonitorSticker = onPrintMonitorSticker
                     )
                 }
             }
@@ -584,7 +584,7 @@ internal fun MonitorBoxDetail(
     loadTajikistanInvoice: suspend (Int, Int) -> ByteArray,
     onPrintTajikistanInvoice: (Int, ByteArray) -> Unit,
     onOpenRegister: () -> Unit,
-    onPrintBoxSticker: (Int) -> Unit
+    onPrintMonitorSticker: (Int, MonitorStickerTarget) -> Unit
 ) {
     val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -681,13 +681,14 @@ internal fun MonitorBoxDetail(
                 )
                 val stickerLabel = stringResource(R.string.sticker)
                 val stickerNumber = box.boxCode.ifBlank { notSetText }
-                if (showWbrBoxStickerPrint(snapshot, box)) {
+                val printTarget = boxStickerTarget(snapshot, box)
+                if (printTarget != null) {
                     StickerPrintAttribute(
                         label = stickerLabel,
                         value = stickerNumber,
-                        printEnabled = canPrintWbrBoxSticker(box, printerSelected, printerLoading),
+                        printEnabled = printerSelected && !printerLoading,
                         contentDescription = stringResource(R.string.printer_print_box_sticker),
-                        onPrint = { box.boxId?.let(onPrintBoxSticker) }
+                        onPrint = { onPrintMonitorSticker(snapshot.scanJobId, printTarget) }
                     )
                 } else {
                     MonitorAttribute(label = stickerLabel, value = stickerNumber)
@@ -758,6 +759,7 @@ internal fun MonitorBoxDetail(
                         printerLoading = printerLoading,
                         onPrintKgtSticker = onPrintKgtSticker,
                         onPrintParcelSticker = onPrintParcelSticker,
+                        onPrintOzonSticker = { onPrintMonitorSticker(snapshot.scanJobId, it) },
                         tajikistanInvoiceJobId = tajikistanInvoiceJobId?.takeIf { it == snapshot.scanJobId },
                         loadTajikistanInvoice = loadTajikistanInvoice,
                         onPrintTajikistanInvoice = onPrintTajikistanInvoice,
@@ -785,6 +787,7 @@ internal fun MonitorParcelRow(
     tajikistanInvoiceJobId: Int?,
     loadTajikistanInvoice: suspend (Int, Int) -> ByteArray,
     onPrintTajikistanInvoice: (Int, ByteArray) -> Unit,
+    onPrintOzonSticker: (MonitorStickerTarget) -> Unit = {},
     onToggleExpanded: () -> Unit
 ) {
     val statusText = when {
@@ -934,7 +937,8 @@ internal fun MonitorParcelRow(
                 printerSelected = printerSelected,
                 printerLoading = printerLoading,
                 onPrintKgtSticker = onPrintKgtSticker,
-                onPrintParcelSticker = onPrintParcelSticker
+                onPrintParcelSticker = onPrintParcelSticker,
+                onPrintOzonSticker = onPrintOzonSticker
             )
         }
     }
@@ -974,9 +978,11 @@ private fun MonitorParcelAttributes(
     printerSelected: Boolean,
     printerLoading: Boolean,
     onPrintKgtSticker: (String) -> Unit,
-    onPrintParcelSticker: (ParcelSticker) -> Unit
+    onPrintParcelSticker: (ParcelSticker) -> Unit,
+    onPrintOzonSticker: (MonitorStickerTarget) -> Unit
 ) {
     val stickerAction = parcelStickerAction(registerType, parcel)
+    val ozonTarget = ozonParcelStickerTarget(registerType, parcel)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         stickerAction?.let { action ->
             StickerPrintAttribute(
@@ -1009,6 +1015,16 @@ private fun MonitorParcelAttributes(
                     value = value.orEmpty(),
                     printEnabled = canManualPrintKgtSticker(value, printerSelected),
                     onPrintKgtSticker = onPrintKgtSticker
+                )
+            } else if (attribute.labelResId == R.string.monitor_parcel_posting_number &&
+                !value.isNullOrBlank() && ozonTarget != null
+            ) {
+                StickerPrintAttribute(
+                    label = stringResource(attribute.labelResId),
+                    value = value,
+                    printEnabled = printerSelected && !printerLoading,
+                    contentDescription = stringResource(R.string.printer_print_sticker),
+                    onPrint = { onPrintOzonSticker(ozonTarget) }
                 )
             } else if (!value.isNullOrBlank()) {
                 MonitorAttribute(stringResource(attribute.labelResId), value)
@@ -1269,7 +1285,7 @@ internal fun LocalScanResult(
     onPrintKgtSticker: (String) -> Unit,
     snapshot: ScanJobMonitorSnapshot?,
     detailSnapshot: ScanJobMonitorSnapshot?,
-    onPrintBoxSticker: (Int) -> Unit
+    onPrintMonitorSticker: (Int, MonitorStickerTarget) -> Unit
 ) {
     val display = localScanResultDisplay(
         lastCode = lastCode,
@@ -1284,6 +1300,7 @@ internal fun LocalScanResult(
     val displayTime = formatLocalScanResultTime(display.scanTime)
     val displayDate = formatLocalScanResultDate(display.scanTime)
     val scannedBox = localScanResultBox(display, snapshot, detailSnapshot)
+    val boxTarget = if (snapshot != null && scannedBox != null) boxStickerTarget(snapshot, scannedBox) else null
     val numberAttribute = display.numberKind?.let { numberKind ->
         val resources = LocalResources.current
         val value = display.itemNumbers.joinToString(", ")
@@ -1377,13 +1394,13 @@ internal fun LocalScanResult(
             }
         }
         numberAttribute?.let { (label, value) ->
-            if (snapshot != null && scannedBox != null && showWbrBoxStickerPrint(snapshot, scannedBox)) {
+            if (snapshot != null && boxTarget != null) {
                 StickerPrintAttribute(
                     label = label,
                     value = value,
-                    printEnabled = canPrintWbrBoxSticker(scannedBox, printerSelected, printerLoading),
+                    printEnabled = printerSelected && !printerLoading,
                     contentDescription = stringResource(R.string.printer_print_box_sticker),
-                    onPrint = { scannedBox.boxId?.let(onPrintBoxSticker) }
+                    onPrint = { onPrintMonitorSticker(snapshot.scanJobId, boxTarget) }
                 )
             } else {
                 MonitorAttribute(label = label, value = value)

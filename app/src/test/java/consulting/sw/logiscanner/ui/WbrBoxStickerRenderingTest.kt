@@ -21,6 +21,35 @@ import org.robolectric.annotation.Config
 class WbrBoxStickerRenderingTest {
     @get:Rule val compose = createComposeRule()
 
+    @Test fun ozonParcelShowsSinglePrintActionBesidePostingNumber() {
+        val parcel = mutableStateOf(ScanJobMonitorParcel(parcelId = 7, parcelNumber = "Parcel 7",
+            postingNumber = "0139467461-0028-1", printableTemplates = listOf("OZON")))
+        val printerSelected = mutableStateOf(false)
+        var printed: MonitorStickerTarget? = null
+        compose.setContent {
+            MaterialTheme {
+                MonitorParcelRow(
+                    parcel = parcel.value, registerType = RegisterTypes.OZON, weightCorrection = null,
+                    expanded = true, highlighted = false, printerSelected = printerSelected.value,
+                    printerLoading = false, onPrintKgtSticker = {}, onPrintParcelSticker = {},
+                    tajikistanInvoiceJobId = null, loadTajikistanInvoice = { _, _ -> error("Not an invoice") },
+                    onPrintTajikistanInvoice = { _, _ -> },
+                    onPrintOzonSticker = { printed = it }, onToggleExpanded = {}
+                )
+            }
+        }
+        val button = compose.onNodeWithContentDescription("Print sticker")
+        compose.onAllNodesWithText("0139467461-0028-1").assertCountEquals(1)
+        button.assertIsNotEnabled()
+        compose.runOnIdle { printerSelected.value = true }
+        button.assertIsEnabled().performClick()
+        assertEquals(MonitorStickerTarget(7, "OZON"), printed)
+
+        compose.runOnIdle { parcel.value = parcel.value.copy(printableTemplates = emptyList()) }
+        button.assertDoesNotExist()
+        compose.onAllNodesWithText("0139467461-0028-1").assertCountEquals(1)
+    }
+
     @Test fun manuallyEnteredCodeIsDisplayedOnceEvenWithoutScanAndWithoutWbrPrinting() {
         val box = mutableStateOf(ScanJobMonitorBox(boxId = 7, boxSticker = "manual", boxStickerScanned = false))
         compose.setContent { MaterialTheme { BoxStickerAttribute(box.value) } }
@@ -50,7 +79,7 @@ class WbrBoxStickerRenderingTest {
                     onPrintKgtSticker = {}, onPrintParcelSticker = {}, onOpenRegister = {},
                     tajikistanInvoiceJobId = null, loadTajikistanInvoice = { _, _ -> error("Not a TJ job") },
                     onPrintTajikistanInvoice = { _, _ -> },
-                    onPrintBoxSticker = { printed = it }
+                    onPrintMonitorSticker = { _, target -> printed = target.id }
                 )
             }
         }
@@ -110,7 +139,7 @@ class WbrBoxStickerRenderingTest {
                     loading = false, highlightedParcelId = null, printerSelected = false, printerLoading = false,
                     onPrintKgtSticker = {}, onPrintParcelSticker = {}, onOpenRegister = {},
                     tajikistanInvoiceJobId = null, loadTajikistanInvoice = { _, _ -> error("Not a TJ job") },
-                    onPrintTajikistanInvoice = { _, _ -> }, onPrintBoxSticker = {}
+                    onPrintTajikistanInvoice = { _, _ -> }, onPrintMonitorSticker = { _, _ -> }
                 )
             }
         }
@@ -135,7 +164,7 @@ class WbrBoxStickerRenderingTest {
                     lastExtData = null, lastExtId = null, lastTajikistanExportSticker = null,
                     lastScanTime = null, printerSelected = false, printerLoading = false,
                     onPrintKgtSticker = {}, snapshot = snapshot.value, detailSnapshot = null,
-                    onPrintBoxSticker = {}
+                    onPrintMonitorSticker = { _, _ -> }
                 )
             }
         }
@@ -175,7 +204,7 @@ class WbrBoxStickerRenderingTest {
                     lastExtData = null, lastExtId = null, lastTajikistanExportSticker = null,
                     lastScanTime = null, printerSelected = printerSelected.value, printerLoading = busy.value,
                     onPrintKgtSticker = {},
-                    snapshot = snapshot.value, detailSnapshot = detail.value, onPrintBoxSticker = { printed = it }
+                    snapshot = snapshot.value, detailSnapshot = detail.value, onPrintMonitorSticker = { _, target -> printed = target.id }
                 )
             }
         }
