@@ -159,6 +159,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var scanJobListRefreshJob: Job? = null
     private var scanJobListMonitorVersion = 0
     private var monitorScopeVersion = 0
+    private var scanSessionVersion = 0
     private var signingOut = false
     
     private var tts: TextToSpeech? = null
@@ -789,8 +790,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectScanJob(job: ScanJob?) {
         viewModelScope.launch {
+            if (signingOut) return@launch
             val jobChanged = state.value.selectedScanJob?.id != job?.id
-            if (jobChanged) cancelMonitorStickerPrint()
+            if (jobChanged && job != null) {
+                resetScanSession()
+                cancelMonitorStickerPrint()
+            }
             val nextBulkyItemsMode = normalizeRelabelingMode(
                 job,
                 state.value.relabelingSubmode,
@@ -798,9 +803,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 state.value.kgtVoiceEnabled,
                 hasSelectedPrinter(state.value.printerBluetoothAddress)
             )
-            if (job == null) {
-                stopScanJobMonitor()
-            }
             val typeDisplay = if (job != null && ::scanJobRepo.isInitialized) {
                 scanJobRepo.getScanJobTypeDisplay(job.type)
             } else {
@@ -841,7 +843,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (job != null && ::scanJobMonitorRepo.isInitialized) {
                 startScanJobMonitor(job.id)
             } else if (job == null) {
-                refreshScanJobsKeepingMessage()
+                stopScanJobMonitor()
+                if (state.value.selectedScanJob == null) refreshScanJobsKeepingMessage()
             }
         }
     }
@@ -1101,15 +1104,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun stopScanJobMonitor() {
+        resetScanSession()
         cancelMonitorStickerPrint()
         monitorScopeVersion += 1
         monitorJob?.cancel()
         monitorDetailJob?.cancel()
-        if (::scanJobMonitorRepo.isInitialized) {
-            scanJobMonitorRepo.stop()
-        }
         _state.update {
             it.copy(
+                selectedScanJob = null,
+                selectedScanJobTypeDisplay = null,
                 monitorSnapshot = null,
                 monitorDetailSnapshot = null,
                 monitorSelectedScope = ScanJobMonitorScope(ScanJobMonitorAreas.BOXES),
@@ -1119,6 +1122,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 monitorJumpLoading = false,
                 monitorHighlightedParcelId = null
             )
+        }
+        if (::scanJobMonitorRepo.isInitialized) {
+            scanJobMonitorRepo.stop()
         }
     }
 
@@ -1131,8 +1137,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun returnToScanJobSelectionForInactiveJob(status: Int) {
+        resetScanSession()
         cancelMonitorStickerPrint()
-        scanJobMonitorRepo.stop()
         val message = getApplication<Application>().getString(
             R.string.monitor_closed,
             scanJobStatusText(getApplication(), status)
@@ -1167,7 +1173,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 error = message
             )
         }
-        refreshScanJobsKeepingMessage()
+        scanJobMonitorRepo.stop()
+        if (state.value.selectedScanJob == null) refreshScanJobsKeepingMessage()
     }
 
     private suspend fun refreshScanJobsKeepingMessage() {
@@ -1197,14 +1204,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startScanning() {
-        _state.update { it.copy(isScanning = true, error = null) }
+        _state.update { if (it.selectedScanJob == null) it else it.copy(isScanning = true, error = null) }
     }
 
     fun stopScanning() {
         _state.update { it.copy(isScanning = false) }
     }
 
+    private fun resetScanSession() {
+        // Queued and in-flight results belong to the job selection that accepted the scan.
+        scanSessionVersion += 1
+        tts?.stop()
+        colorResetJob?.cancel()
+        _state.update { it.copy(isScanning = false, isBusy = false, scanResultColor = ScanResultColor.NONE) }
+    }
+
     fun onScanned(code: String) {
+        val job = state.value.selectedScanJob ?: return
         // Ignore scans when not in scanning mode
         if (!state.value.isScanning) {
             Log.d(javaClass.simpleName, "Scan received but not in scanning mode, ignoring: $code")
@@ -1230,17 +1246,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         
-        val job = state.value.selectedScanJob
-        if (job == null) {
-            Log.w(javaClass.simpleName, "Scan received but no job selected, ignoring: $code")
-            return
-        }
+        val sessionVersion = scanSessionVersion
         reconnectPrinterIfNeeded()
         
         // Cancel any pending color reset
         colorResetJob?.cancel()
         
         viewModelScope.launch {
+            if (sessionVersion != scanSessionVersion) return@launch
             _state.update {
                 it.copy(
                     isBusy = true,
@@ -1263,6 +1276,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 val bulkyItemsMode = backendBulkyItemsMode(job, submode, relabelingMode, voiceEnabled)
                 val result = scanRepo.scan(job.id, code, bulkyItemsMode)
+                if (sessionVersion != scanSessionVersion) return@launch
                 val autoPrintEnabled = state.value.printerAutoPrintEnabled
                 val tajikistanValidation = if (
                     result.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
@@ -1339,7 +1353,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     result.extData
                 )
                 if (speechText.isNotEmpty() && ttsReady) {
-                    tts?.speak(speechText, TextToSpeech.QUEUE_FLUSH, null, "scan_result_${System.currentTimeMillis()}")
+                    // Let each accepted scan finish speaking when another result arrives.
+                    tts?.speak(speechText, TextToSpeech.QUEUE_ADD, null, "scan_result_${System.currentTimeMillis()}")
                 }
                 
                 // Reset color after a short delay
@@ -1348,11 +1363,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _state.update { it.copy(scanResultColor = ScanResultColor.NONE) }
                 }
             } catch (ex: Exception) {
+                if (sessionVersion != scanSessionVersion) return@launch
                 Log.e(javaClass.simpleName, "Scan failed", ex)
                 
                 // Check if it's a 400 Bad Request - job selection is no longer valid
                 if (ex is HttpException && ex.code() == 400) {
-                    stopScanJobMonitor()
                     // Return to JobSelectionScreen by deselecting the job
                     _state.update { 
                         it.copy(
@@ -1374,7 +1389,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             scanResultColor = ScanResultColor.NONE
                         )
                     }
-                    refreshScanJobsKeepingMessage()
+                    stopScanJobMonitor()
+                    if (state.value.selectedScanJob == null) refreshScanJobsKeepingMessage()
                 } else {
                     _state.update { 
                         it.copy(
@@ -1398,7 +1414,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             } finally {
-                _state.update { it.copy(isBusy = false) }
+                if (sessionVersion == scanSessionVersion) {
+                    _state.update { it.copy(isBusy = false) }
+                }
             }
         }
     }
