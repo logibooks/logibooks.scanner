@@ -212,7 +212,15 @@ class SettingsChecksTest {
         data class Utterance(val text: String, val locale: Locale?, val queueMode: Int, val id: String)
 
         val utterances = mutableListOf<Utterance>()
+        var stopCalls = 0
+            private set
         private var activeLocale: Locale? = null
+
+        @Implementation
+        override fun stop(): Int {
+            stopCalls += 1
+            return super.stop()
+        }
 
         @Implementation
         override fun setLanguage(locale: Locale): Int {
