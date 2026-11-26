@@ -61,8 +61,15 @@ enum class ScanResultColor {
 
 fun determineScanResultColor(result: ScanResultItem): ScanResultColor {
     return when {
-        result.isLookupBoxScan() -> ScanResultColor.OK
-        result.lookupOutcome in setOf("alreadyConfirmed", "noOutstanding") -> ScanResultColor.IGNORED
+        result.isLookupBoxScan() -> {
+            if (result.lookupOutcome == "inspectBox" || !result.confirmedLookupCandidates.isNullOrEmpty()) {
+                ScanResultColor.OK
+            } else {
+                ScanResultColor.NOT_FOUND
+            }
+        }
+        result.lookupOutcome == "confirmed" || result.lookupOutcome == "alreadyConfirmed" -> ScanResultColor.OK
+        result.lookupOutcome == "noOutstanding" -> ScanResultColor.IGNORED
         result.lookupOutcome in setOf("inspectBox", "ambiguous") || result.hasIssues -> ScanResultColor.ISSUE
         result.count == 0 -> ScanResultColor.NOT_FOUND
         else -> ScanResultColor.OK
@@ -1253,7 +1260,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onScanned(code: String) {
         if (state.value.parcelSelection != null) {
-            remindParcelSelection()
+            onScanDuringParcelSelection()
             return
         }
         val job = state.value.selectedScanJob ?: return
@@ -1519,8 +1526,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return app.createConfigurationContext(speechConfig).getString(R.string.parcel_selection_prompt)
     }
 
-    internal fun remindParcelSelection() {
+    internal fun onScanDuringParcelSelection() {
         if (state.value.parcelSelection?.canEdit == true) {
+            _state.update { it.copy(scanResultColor = ScanResultColor.IGNORED) }
+            resetScanColor()
             speakScanText(parcelSelectionPrompt())
         }
     }

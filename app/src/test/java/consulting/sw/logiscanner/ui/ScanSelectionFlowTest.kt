@@ -103,6 +103,7 @@ class ScanSelectionFlowTest {
         val title = compose.onNodeWithText("Выберите товары")
         title.assertIsDisplayed()
         compose.onNodeWithText("QUEUED", substring = true).assertIsDisplayed()
+        assertEquals(ScanResultColor.NONE, vm.state.value.scanResultColor)
         assertEquals("Выбор для поиска. Выберите товары", speech.utterances.single().text)
 
         compose.runOnIdle {
@@ -111,11 +112,18 @@ class ScanSelectionFlowTest {
             )
         }
         await { speech.utterances.size == 2 }
+        assertEquals(ScanResultColor.IGNORED, vm.state.value.scanResultColor)
+        shadowOf(Looper.getMainLooper()).idleFor(1600, TimeUnit.MILLISECONDS)
+        assertEquals(ScanResultColor.NONE, vm.state.value.scanResultColor)
+
         compose.runOnIdle { state.value = state.value.copy(externalScannerEnabled = true) }
         title.performKeyInput {
             listOf(Key.A, Key.B, Key.C, Key.D, Key.E, Key.F, Key.Enter).forEach { pressKey(it) }
         }
         await { speech.utterances.size == 3 }
+        assertEquals(ScanResultColor.IGNORED, vm.state.value.scanResultColor)
+        shadowOf(Looper.getMainLooper()).idleFor(1600, TimeUnit.MILLISECONDS)
+        assertEquals(ScanResultColor.NONE, vm.state.value.scanResultColor)
         assertEquals(listOf("Выберите товары", "Выберите товары"), speech.utterances.drop(1).map { it.text })
         assertEquals(listOf("SHARED"), core.requests.map(ScanRequest::code))
 
@@ -138,6 +146,7 @@ class ScanSelectionFlowTest {
         }
         assertEquals(1, vm.state.value.selectedScanJob?.id)
         assertFalse(vm.state.value.settingsOpen)
+        assertEquals(ScanResultColor.NONE, vm.state.value.scanResultColor)
         pending.countDown()
 
         await { vm.state.value.parcelSelection == null && vm.state.value.lastSelectedParcels.size == 2 }
