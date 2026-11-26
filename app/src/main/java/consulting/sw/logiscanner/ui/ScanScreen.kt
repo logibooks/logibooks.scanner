@@ -211,6 +211,7 @@ internal fun ScanScreen(
 
                     Button(
                         onClick = if (!isScanning) onStartScanning else onStopScanning,
+                        enabled = !parcelSelectionActive,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(if (!isScanning) stringResource(R.string.start_scanning) else stringResource(R.string.stop_scanning))

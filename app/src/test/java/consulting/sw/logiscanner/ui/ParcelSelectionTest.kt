@@ -84,7 +84,7 @@ class ParcelSelectionTest {
         compose.onNodeWithText("Закрыть").assertIsDisplayed()
     }
 
-    @Test fun eachSelectedParcelRetainsItsManualPrintAction() {
+    @Test fun eachSelectedParcelKeepsItsMessageAndManualPrintAction() {
         val printed = mutableListOf<String>()
         compose.setContent {
             MaterialTheme {
@@ -96,7 +96,7 @@ class ParcelSelectionTest {
                     lastItemNumbers = emptyList(),
                     lastExtData = null,
                     lastSelectedParcels = listOf(
-                        SelectedParcelScan(2, "Кабель", null, "K000001", null),
+                        SelectedParcelScan(2, "Кабель", null, "K000001", null, "Передайте на проверку", true),
                         SelectedParcelScan(3, "Зарядное устройство", null, "K000002", null)
                     ),
                     lastExtId = "K000002",
@@ -111,10 +111,35 @@ class ParcelSelectionTest {
                 )
             }
         }
+        compose.onNodeWithText("Передайте на проверку").assertIsDisplayed()
+        compose.onNodeWithText("Кабель #2 · Требуется проверка").assertIsDisplayed()
         val buttons = compose.onAllNodesWithContentDescription("Напечатать стикер")
         buttons[0].performClick()
         buttons[1].performClick()
         assertEquals(listOf("K000001", "K000002"), printed)
+    }
+
+    @Test fun successfulReprintClearsOnlyThatStickersFailure() {
+        val remaining = mapOf(
+            1 to SelectionPrintFailure("K000001", "First failure"),
+            2 to SelectionPrintFailure("K000002", "Second failure"),
+            3 to SelectionPrintFailure(null, "Export failure")
+        ).afterKgtReprint("K000001")
+        assertEquals(setOf(2, 3), remaining.keys)
+    }
+
+    @Test fun aNewSelectionClearsOldScanResultsAndGatesSettings() {
+        val old = MainState(
+            lastCode = "OLD",
+            lastSelectedParcels = listOf(SelectedParcelScan(2, "Кабель", null, "K000001", null)),
+            lastExtId = "K000001"
+        )
+        val opened = openParcelSelectionState(old, pending.value)
+        assertNull(opened.lastCode)
+        assertNull(opened.lastExtId)
+        assertTrue(opened.lastSelectedParcels.isEmpty())
+        assertFalse(openSettingsState(opened).settingsOpen)
+        assertTrue(openSettingsState(old).settingsOpen)
     }
 
     @Test fun voiceAndInputGatesHonorASelection() {

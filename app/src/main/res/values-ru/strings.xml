@@ -229,6 +229,7 @@ This file is a part of LogiScanner application
     <string name="parcel_selection_box">Номер коробки: %1$s</string>
     <string name="parcel_selection_unnamed">Товар #%1$d</string>
     <string name="parcel_selection_found">Найден</string>
+    <string name="parcel_selection_issue">Требуется проверка</string>
     <string name="parcel_selection_print_error">Товар #%1$d. %2$s</string>
     <string name="parcel_selection_outstanding">Цель поиска</string>
     <string name="parcel_selection_confirmed">Найден ранее</string>

@@ -63,8 +63,15 @@ internal data class SelectedParcelScan(
     val productName: String?,
     val lookupOutcome: String?,
     val extId: String?,
-    val exportOrderNumber: String?
+    val exportOrderNumber: String?,
+    val message: String? = null,
+    val hasIssues: Boolean = false
 )
+
+internal data class SelectionPrintFailure(val kgtCode: String?, val message: String)
+
+internal fun Map<Int, SelectionPrintFailure>.afterKgtReprint(code: String): Map<Int, SelectionPrintFailure> =
+    filterValues { it.kgtCode != code }
 
 internal fun parcelSelectionSpeech(configuredMessage: String?, prompt: String): String =
     listOfNotNull(configuredMessage?.takeIf(String::isNotBlank), prompt).joinToString(". ")

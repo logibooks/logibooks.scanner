@@ -201,7 +201,7 @@ class MainActivity : ComponentActivity() {
                         }
                         else -> {
                             ScanScreen(
-                                isBusy = state.isBusy,
+                                isBusy = state.isBusy || state.parcelSelection != null,
                                 displayName = state.displayName,
                                 selectedJob = state.selectedScanJob!!,
                                 selectedJobTypeDisplay = state.selectedScanJobTypeDisplay ?: "",
@@ -236,7 +236,8 @@ class MainActivity : ComponentActivity() {
                                 printerSelected = printerSelected,
                                 printerLoading = state.printerLoading || state.selectionPrinterLoading,
                                 printerMessage = state.printerMessage?.let { stringResource(it) },
-                                printerError = listOfNotNull(state.printerError, state.selectionPrinterError)
+                                printerError = (listOfNotNull(state.printerError) +
+                                    state.selectionPrintFailures.values.map { it.message })
                                     .joinToString("\n").ifBlank { null },
                                 monitorJumpNumber = state.monitorJumpNumber,
                                 monitorJumpLoading = state.monitorJumpLoading,

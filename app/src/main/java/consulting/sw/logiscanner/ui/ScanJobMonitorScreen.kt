@@ -1359,7 +1359,7 @@ internal fun LocalScanResult(
                 modifier = Modifier.weight(0.58f)
             )
         }
-        display.hint?.let { hint ->
+        display.hint?.takeIf { lastSelectedParcels.isEmpty() }?.let { hint ->
             Text(
                 text = hint,
                 style = MaterialTheme.typography.bodySmall,
@@ -1378,7 +1378,15 @@ internal fun LocalScanResult(
                 "notTarget" -> stringResource(R.string.parcel_selection_not_target)
                 else -> null
             }
-            Text(listOfNotNull(title, status).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+            val issue = stringResource(R.string.parcel_selection_issue).takeIf { selected.hasIssues }
+            Text(
+                listOfNotNull(title, status, issue).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (selected.hasIssues) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            )
+            selected.message?.takeIf(String::isNotBlank)?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall)
+            }
             selected.extId?.takeIf { kgtStickerCode(it) != null }?.let { extId ->
                 KgtPrintAttribute(
                     stringResource(R.string.monitor_parcel_ext_id),

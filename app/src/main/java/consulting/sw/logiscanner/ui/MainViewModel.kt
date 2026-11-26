@@ -95,7 +95,7 @@ internal data class MainState(
     val bondedPrinters: List<BluetoothPrinterDevice> = emptyList(),
     val printerLoading: Boolean = false,
     val selectionPrinterLoading: Boolean = false,
-    val selectionPrinterError: String? = null,
+    val selectionPrintFailures: Map<Int, SelectionPrintFailure> = emptyMap(),
     @get:StringRes val printerMessage: Int? = null,
     val printerError: String? = null,
     @get:StringRes val printerTestError: Int? = null,
@@ -122,7 +122,24 @@ internal data class MainState(
     val error: String? = null
 )
 
-internal fun openSettingsState(state: MainState): MainState = state.copy(settingsOpen = true)
+internal fun openSettingsState(state: MainState): MainState =
+    if (state.parcelSelection == null) state.copy(settingsOpen = true) else state
+
+internal fun openParcelSelectionState(state: MainState, selection: ParcelSelectionState): MainState =
+    state.copy(
+        parcelSelection = selection,
+        lastCode = null,
+        lastParcelCount = null,
+        lastBoxCount = null,
+        lastScanSource = null,
+        lastItemNumbers = emptyList(),
+        lastExtData = null,
+        lastLookupBox = null,
+        lastSelectedParcels = emptyList(),
+        lastExtId = null,
+        lastTajikistanExportSticker = null,
+        lastScanTime = null
+    )
 
 internal fun closeSettingsState(state: MainState): MainState =
     state.copy(
@@ -797,7 +814,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectScanJob(job: ScanJob?) {
         viewModelScope.launch {
-            if (signingOut) return@launch
+            if (signingOut || state.value.parcelSelection != null) return@launch
             val jobChanged = state.value.selectedScanJob?.id != job?.id
             if (jobChanged && job != null) {
                 resetScanSession()
@@ -1229,7 +1246,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         colorResetJob?.cancel()
         _state.update {
             it.copy(isScanning = false, isBusy = false, scanResultColor = ScanResultColor.NONE, parcelSelection = null,
-                selectionPrinterLoading = false, selectionPrinterError = null)
+                selectionPrinterLoading = false, selectionPrintFailures = emptyMap())
         }
     }
 
@@ -1288,13 +1305,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (sessionVersion != scanSessionVersion) return@launch
                 val selection = result.parcelSelection
                 if (selection != null) {
-                    val discardedCodes = scanInput.discardQueued().map(AcceptedScan::code).distinct()
                     selectionOptions = options
-                    _state.update {
-                        it.copy(parcelSelection = ParcelSelectionState(
-                            code, options.bulkyItemsMode, selection, discardedCodes = discardedCodes
-                        ))
-                    }
+                    val pending = ParcelSelectionState(code, options.bulkyItemsMode, selection)
+                    _state.update { openParcelSelectionState(it, pending) }
+                    val discardedCodes = scanInput.discardQueued().map(AcceptedScan::code).distinct()
+                    _state.update { it.copy(parcelSelection = pending.copy(discardedCodes = discardedCodes)) }
                     val prompt = getApplication<Application>().getString(R.string.parcel_selection_prompt)
                     speakScanText(parcelSelectionSpeech(result.extData, prompt))
                 } else {
@@ -1356,7 +1371,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } finally {
                 if (sessionVersion == scanSessionVersion) {
                     _state.update { it.copy(isBusy = false) }
-                    scanInput.finish()?.let(::processAcceptedScan)
+                    if (state.value.parcelSelection == null) {
+                        scanInput.finish()?.let(::processAcceptedScan)
+                    } else {
+                        scanInput.reset()
+                    }
                 }
             }
         }
@@ -1470,7 +1489,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return when {
             !selectionResult -> null
             stickerDataError != null -> SelectionPrintWork.Invalid(stickerDataError)
-            kgt != null -> SelectionPrintWork.Send { address -> stickerPrintService.print(address, kgt) }
+            kgt != null -> SelectionPrintWork.Send(kgt) { address -> stickerPrintService.print(address, kgt) }
             export != null -> SelectionPrintWork.Send { address ->
                 stickerPrintService.printTajikistanExportSticker(address, export)
             }
@@ -1480,7 +1499,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private sealed interface SelectionPrintWork {
         data class Invalid(val error: String) : SelectionPrintWork
-        data class Send(val print: suspend (String?) -> KgtStickerPrintResult) : SelectionPrintWork
+        data class Send(val kgtCode: String? = null, val print: suspend (String?) -> KgtStickerPrintResult) : SelectionPrintWork
     }
 
     private fun resetScanColor() {
@@ -1519,7 +1538,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val warning = pending.discardedCodes.takeIf { it.isNotEmpty() }?.let { codes ->
             getApplication<Application>().getString(R.string.parcel_selection_rescan_codes, codes.joinToString(", "))
         }
-        _state.update { it.copy(parcelSelection = null, error = warning) }
+        _state.update { it.copy(parcelSelection = null, error = warning, isBusy = false) }
     }
 
     private fun submitParcelSelection(ids: List<Int>) {
@@ -1527,7 +1546,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val job = state.value.selectedScanJob ?: return
         if (!pending.canEdit) return
         val version = scanSessionVersion
-        _state.update { it.copy(parcelSelection = pending.copy(submitting = true)) }
+        _state.update { it.copy(parcelSelection = pending.copy(submitting = true), isBusy = true) }
         viewModelScope.launch {
             val result = try {
                 scanRepo.scan(job.id, pending.code, pending.bulkyItemsMode, pending.selection.id, ids)
@@ -1552,7 +1571,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val selected = ids.zip(items).map { (id, result) ->
                 applyScanResult(job, pending.code, result, options, selectionResult = true)
                     ?.let { printWork.add(id to it) }
-                SelectedParcelScan(id, choices[id]?.productName, result.lookupOutcome, result.extId, result.exportSticker?.orderNumber)
+                SelectedParcelScan(id, choices[id]?.productName, result.lookupOutcome, result.extId,
+                    result.exportSticker?.orderNumber, result.extData, result.hasIssues)
             }
             if (items.isNotEmpty()) {
                 val colors = items.map(::determineScanResultColor)
@@ -1591,7 +1611,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         version: Int
     ) {
         val app = getApplication<Application>()
-        val errors = mutableListOf<String>()
+        var printedAny = false
         if (version == scanSessionVersion) _state.update { it.copy(selectionPrinterLoading = true) }
         try {
             for ((parcelId, operation) in work) {
@@ -1606,16 +1626,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     Log.e(javaClass.simpleName, "Could not print selected parcel $parcelId", failure)
                     app.getString(R.string.printer_print_failed, app.getString(R.string.error_unknown))
                 }
-                if (error != null) errors += app.getString(R.string.parcel_selection_print_error, parcelId, error)
+                if (error == null) printedAny = true
+                if (version == scanSessionVersion) {
+                    _state.update {
+                        val failures = if (error == null) {
+                            it.selectionPrintFailures - parcelId
+                        } else {
+                            it.selectionPrintFailures + (parcelId to SelectionPrintFailure(
+                                (operation as? SelectionPrintWork.Send)?.kgtCode,
+                                app.getString(R.string.parcel_selection_print_error, parcelId, error)
+                            ))
+                        }
+                        it.copy(selectionPrintFailures = failures)
+                    }
+                }
             }
         } finally {
             if (version == scanSessionVersion) {
                 _state.update {
                     it.copy(
                         selectionPrinterLoading = false,
-                        selectionPrinterError = errors.takeIf(List<String>::isNotEmpty)?.joinToString("\n")
-                            ?: it.selectionPrinterError,
-                        printerMessage = if (errors.isEmpty() && it.printerError == null && it.selectionPrinterError == null)
+                        printerMessage = if (printedAny && it.printerError == null && it.selectionPrintFailures.isEmpty())
                             R.string.printer_printed else it.printerMessage
                     )
                 }
@@ -1684,7 +1715,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
         try {
+            val version = scanSessionVersion
             val result = stickerPrintService.print(state.value.printerBluetoothAddress, stickerCode)
+            if (result == KgtStickerPrintResult.Success && version == scanSessionVersion) {
+                _state.update { it.copy(selectionPrintFailures = it.selectionPrintFailures.afterKgtReprint(stickerCode)) }
+            }
             applyPrinterResult(result)
         } finally {
             _state.update { it.copy(printerLoading = false) }

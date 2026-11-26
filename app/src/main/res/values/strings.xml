@@ -225,6 +225,7 @@ This file is a part of LogiScanner application
     <string name="parcel_selection_box">Box number: %1$s</string>
     <string name="parcel_selection_unnamed">Item #%1$d</string>
     <string name="parcel_selection_found">Found</string>
+    <string name="parcel_selection_issue">Review required</string>
     <string name="parcel_selection_print_error">Item #%1$d. %2$s</string>
     <string name="parcel_selection_outstanding">Lookup target</string>
     <string name="parcel_selection_confirmed">Previously found</string>
