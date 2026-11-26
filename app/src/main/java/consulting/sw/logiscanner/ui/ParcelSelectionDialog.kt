@@ -5,6 +5,7 @@
 package consulting.sw.logiscanner.ui
 
 import android.view.KeyCharacterMap
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +35,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -83,6 +86,7 @@ internal fun ParcelSelectionDialog(
     onConfirm: () -> Unit,
     onSkip: () -> Unit,
     onClose: () -> Unit,
+    showScanWarning: Boolean = false,
     onUnexpectedScan: (() -> Unit)? = null
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -101,8 +105,12 @@ internal fun ParcelSelectionDialog(
         handledScanKey || isScannerKey(key.keyCode, key.unicodeChar)
     }.focusable()
 
+    val warningBorder = if (showScanWarning) {
+        Modifier.border(4.dp, colorResource(R.color.scan_result_ignored), AlertDialogDefaults.shape)
+    } else Modifier
+
     AlertDialog(
-        modifier = suppressKeys,
+        modifier = suppressKeys.then(warningBorder),
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.parcel_selection_title)) },

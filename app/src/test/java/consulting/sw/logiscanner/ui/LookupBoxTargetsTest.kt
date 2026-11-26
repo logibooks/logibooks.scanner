@@ -62,7 +62,7 @@ class LookupBoxTargetsTest {
         compose.onNodeWithText("Нет посылок для поиска").assertIsDisplayed()
     }
 
-    @Test fun bothBoxOutcomesAreGreenAndListsGroupIndependently() {
+    @Test fun boxColorReflectsBothTargetListsAndListsGroupIndependently() {
         val result = ScanResultItem(
             count = 0, parcelCount = 0, boxCount = 1, scanSource = ScannedItemSources.BOX_STICKER,
             itemNumbers = listOf("017"), extData = null, lookupOutcome = "inspectBox",
@@ -70,7 +70,15 @@ class LookupBoxTargetsTest {
             confirmedLookupCandidates = listOf(LookupScanCandidate(4, "A"))
         )
         assertEquals(ScanResultColor.OK, determineScanResultColor(result))
-        assertEquals(ScanResultColor.OK, determineScanResultColor(result.copy(lookupOutcome = "noOutstanding")))
+        assertEquals(ScanResultColor.OK, determineScanResultColor(result.copy(confirmedLookupCandidates = emptyList())))
+
+        val noOutstanding = result.copy(lookupOutcome = "noOutstanding", lookupCandidates = emptyList())
+        assertEquals(ScanResultColor.OK, determineScanResultColor(noOutstanding))
+        assertEquals(
+            ScanResultColor.NOT_FOUND,
+            determineScanResultColor(noOutstanding.copy(confirmedLookupCandidates = emptyList()))
+        )
+
         val display = result.lookupBoxResult()!!
         assertEquals(mapOf("A" to 2, "B" to 1), display.outstanding.countsByParcelNumber())
         assertEquals(mapOf("A" to 1), display.confirmed.countsByParcelNumber())

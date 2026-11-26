@@ -317,8 +317,9 @@ class MainActivity : ComponentActivity() {
                                     onConfirm = vm::confirmParcelSelection,
                                     onSkip = vm::skipParcelSelection,
                                     onClose = vm::closeStaleParcelSelection,
+                                    showScanWarning = state.scanResultColor == ScanResultColor.IGNORED,
                                     onUnexpectedScan = if (hidScannerInputEnabled(state.externalScannerEnabled)) {
-                                        vm::remindParcelSelection
+                                        vm::onScanDuringParcelSelection
                                     } else null
                                 )
                             }
