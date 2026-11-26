@@ -1371,7 +1371,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } finally {
                 if (sessionVersion == scanSessionVersion) {
                     _state.update { it.copy(isBusy = false) }
-                    if (state.value.parcelSelection == null) {
+                    val current = state.value
+                    if (current.selectedScanJob?.id == job.id && current.parcelSelection == null) {
                         scanInput.finish()?.let(::processAcceptedScan)
                     } else {
                         scanInput.reset()
