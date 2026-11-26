@@ -35,10 +35,13 @@ import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.JobSelectionScreen
 import consulting.sw.logiscanner.ui.LoginScreen
 import consulting.sw.logiscanner.ui.MainViewModel
+import consulting.sw.logiscanner.ui.ParcelSelectionDialog
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.ScanScreen
+import consulting.sw.logiscanner.ui.SelectionPrintKey
 import consulting.sw.logiscanner.ui.SettingsScreen
 import consulting.sw.logiscanner.ui.hasSelectedPrinter
+import consulting.sw.logiscanner.ui.hidScannerInputEnabled
 import consulting.sw.logiscanner.ui.relabelingModeAvailable
 import consulting.sw.logiscanner.ui.scanReceiverEnabled
 import consulting.sw.logiscanner.ui.theme.LogiScannerTheme
@@ -100,6 +103,9 @@ class MainActivity : ComponentActivity() {
                 requestPrinterPermission { granted ->
                     if (granted) action() else vm.setPrinterPermissionDenied()
                 }
+            }
+            val retrySelectionPrint: (SelectionPrintKey) -> Unit = { key ->
+                runPrinterAction { vm.retrySelectionPrint(key) }
             }
             val printerTestPermissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()
@@ -182,6 +188,9 @@ class MainActivity : ComponentActivity() {
                                 displayName = state.displayName,
                                 error = state.error,
                                 onSelectJob = vm::selectScanJob,
+                                selectionPrintFailures = state.selectionPrintFailures,
+                                canRetrySelectionPrint = printerSelected && !state.printerLoading && !state.selectionPrinterLoading,
+                                onRetrySelectionPrint = retrySelectionPrint,
                                 onDismissMessage = vm::dismissMessage,
                                 onLogout = {
                                     if (state.externalScannerEnabled) {
@@ -200,7 +209,7 @@ class MainActivity : ComponentActivity() {
                         }
                         else -> {
                             ScanScreen(
-                                isBusy = state.isBusy,
+                                isBusy = state.isBusy || state.parcelSelection != null,
                                 displayName = state.displayName,
                                 selectedJob = state.selectedScanJob!!,
                                 selectedJobTypeDisplay = state.selectedScanJobTypeDisplay ?: "",
@@ -211,7 +220,9 @@ class MainActivity : ComponentActivity() {
                                 lastScanSource = state.lastScanSource,
                                 lastItemNumbers = state.lastItemNumbers,
                                 lastExtData = state.lastExtData,
-                                lastLookupCandidates = state.lastLookupCandidates,
+                                lastLookupBox = state.lastLookupBox,
+                                lastSelectedParcels = state.lastSelectedParcels,
+                                parcelSelectionActive = state.parcelSelection != null,
                                 lastExtId = state.lastExtId,
                                 lastTajikistanExportSticker = state.lastTajikistanExportSticker,
                                 lastScanTime = state.lastScanTime,
@@ -231,9 +242,11 @@ class MainActivity : ComponentActivity() {
                                     printerSelected
                                 ),
                                 printerSelected = printerSelected,
-                                printerLoading = state.printerLoading,
+                                printerLoading = state.printerLoading || state.selectionPrinterLoading,
                                 printerMessage = state.printerMessage?.let { stringResource(it) },
                                 printerError = state.printerError,
+                                selectionPrintFailures = state.selectionPrintFailures,
+                                onRetrySelectionPrint = retrySelectionPrint,
                                 monitorJumpNumber = state.monitorJumpNumber,
                                 monitorJumpLoading = state.monitorJumpLoading,
                                 monitorHighlightedParcelId = state.monitorHighlightedParcelId,
@@ -297,6 +310,18 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onScanned = vm::onScanned
                             )
+                            state.parcelSelection?.let { selection ->
+                                ParcelSelectionDialog(
+                                    selection = selection,
+                                    onToggle = vm::toggleParcelChoice,
+                                    onConfirm = vm::confirmParcelSelection,
+                                    onSkip = vm::skipParcelSelection,
+                                    onClose = vm::closeStaleParcelSelection,
+                                    onUnexpectedScan = if (hidScannerInputEnabled(state.externalScannerEnabled)) {
+                                        vm::remindParcelSelection
+                                    } else null
+                                )
+                            }
                         }
                     }
                 }

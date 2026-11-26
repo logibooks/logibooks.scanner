@@ -215,4 +215,29 @@ This file is a part of LogiScanner application
     <string name="scan_stopped_tts">Сканирование остановлено</string>
     <string name="monitor_box_sticker">Код стикера</string>
     <string name="printer_print_box_sticker">Печать стикера коробки</string>
+    <string name="monitor_lookup_previously_found">Найдены ранее:</string>
+    <string name="monitor_lookup_no_targets">Нет посылок для поиска</string>
+    <plurals name="monitor_lookup_goods_count">
+        <item quantity="one">%d товар</item>
+        <item quantity="few">%d товара</item>
+        <item quantity="many">%d товаров</item>
+        <item quantity="other">%d товара</item>
+    </plurals>
+    <string name="parcel_selection_title">Выберите товары</string>
+    <string name="parcel_selection_prompt">Выберите товары</string>
+    <string name="parcel_selection_code">Штрихкод %1$s</string>
+    <string name="parcel_selection_box">Номер коробки: %1$s</string>
+    <string name="parcel_selection_unnamed">Товар #%1$d</string>
+    <string name="parcel_selection_found">Найден</string>
+    <string name="parcel_selection_issue">Требуется проверка</string>
+    <string name="parcel_selection_print_item">Задание %1$s (#%2$d), товар #%3$d</string>
+    <string name="parcel_selection_retry_print">Повторить печать</string>
+    <string name="parcel_selection_outstanding">Цель поиска</string>
+    <string name="parcel_selection_confirmed">Найден ранее</string>
+    <string name="parcel_selection_not_target">Вне поиска</string>
+    <string name="parcel_selection_confirm">Подтвердить (%1$d)</string>
+    <string name="parcel_selection_skip">Пропустить</string>
+    <string name="parcel_selection_stale">Не удалось завершить выбор. Отсканируйте штрихкод снова.</string>
+    <string name="parcel_selection_close">Закрыть</string>
+    <string name="parcel_selection_rescan_codes">Повторите сканирование этих штрихкодов: %1$s</string>
 </resources>

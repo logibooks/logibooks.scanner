@@ -78,6 +78,35 @@ class ScanJobMonitorModelsTest {
     }
 
     @Test
+    fun sharedLabelProtocolDecodesOffersAndPerParcelResultsAndEncodesSkip() {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(ScanResultItem::class.java)
+        val offer = adapter.fromJson("""
+            {"count":0,"parcelCount":0,"boxCount":0,"scanSource":10,"itemNumbers":[],"extData":null,
+             "parcelSelection":{"id":"f00c98e9-09e5-4a94-88cb-d19af0e23299","candidates":[
+               {"parcelId":21,"productName":"Cable","boxNumber":"017","sortMessage":"Проверьте"},
+               {"parcelId":22,"productName":"Charger","boxNumber":"018"}]}}
+        """)!!.parcelSelection!!
+        assertEquals(listOf(21, 22), offer.candidates.map { it.parcelId })
+        assertEquals("Проверьте", offer.candidates.first().sortMessage)
+
+        val result = adapter.fromJson("""
+            {"count":1,"parcelCount":1,"boxCount":0,"scanSource":10,"itemNumbers":[],"extData":null,
+             "selectionResults":[{"count":1,"parcelCount":1,"boxCount":0,"scanSource":10,
+             "itemNumbers":["P-21"],"extData":"Проверьте","hasIssues":true,"scanCodeId":95}]}
+        """)!!.selectionResults!!.single()
+        assertEquals(95, result.scanCodeId)
+        assertTrue(result.hasIssues)
+
+        val requestAdapter = moshi.adapter(ScanRequest::class.java)
+        val request = ScanRequest(7, " LABEL ", selectionId = offer.id, selectedParcelIds = emptyList())
+        val json = requestAdapter.toJson(request)
+        assertTrue(json.contains("\"supportsParcelSelection\":true"))
+        assertTrue(json.contains("\"selectedParcelIds\":[]"))
+        assertEquals(request, requestAdapter.fromJson(json))
+    }
+
+    @Test
     fun savedBoxStickerParsesWithoutChangingCurrentJobIndicators() {
         val adapter = Moshi.Builder().build().adapter(ScanJobMonitorSnapshot::class.java)
         val snapshot = adapter.fromJson("""{"companyId":2,"registerType":2097154,

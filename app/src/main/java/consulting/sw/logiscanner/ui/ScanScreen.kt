@@ -38,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import consulting.sw.logiscanner.R
-import consulting.sw.logiscanner.net.LookupScanCandidate
 import consulting.sw.logiscanner.net.ScanJob
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
@@ -60,7 +59,9 @@ internal fun ScanScreen(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
-    lastLookupCandidates: List<LookupScanCandidate>,
+    lastLookupBox: LookupBoxResult?,
+    lastSelectedParcels: List<SelectedParcelScan>,
+    parcelSelectionActive: Boolean,
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
     lastScanTime: String?,
@@ -100,10 +101,12 @@ internal fun ScanScreen(
     onLogout: () -> Unit,
     onOpenSettings: () -> Unit,
     onScanned: (String) -> Unit,
-    onPrintMonitorSticker: (Int, MonitorStickerTarget) -> Unit
+    onPrintMonitorSticker: (Int, MonitorStickerTarget) -> Unit,
+    selectionPrintFailures: Map<SelectionPrintKey, SelectionPrintFailure> = emptyMap(),
+    onRetrySelectionPrint: (SelectionPrintKey) -> Unit = {}
 ) {
     var isJumpFieldFocused by remember { mutableStateOf(false) }
-    if (hidScannerInputEnabled(externalScannerEnabled)) {
+    if (hidScannerInputEnabled(externalScannerEnabled) && !parcelSelectionActive) {
         HidScanInput(
             enabled = true,
             onScan = onScanned,
@@ -210,6 +213,7 @@ internal fun ScanScreen(
 
                     Button(
                         onClick = if (!isScanning) onStartScanning else onStopScanning,
+                        enabled = !parcelSelectionActive,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(if (!isScanning) stringResource(R.string.start_scanning) else stringResource(R.string.stop_scanning))
@@ -217,6 +221,8 @@ internal fun ScanScreen(
                 }
             }
         }
+
+        selectionPrintFailureItems(selectionPrintFailures, printerSelected && !printerLoading, onRetrySelectionPrint)
 
         item {
             ScanJobMonitorPanel(
@@ -229,7 +235,8 @@ internal fun ScanScreen(
                 lastScanSource = lastScanSource,
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
-                lastLookupCandidates = lastLookupCandidates,
+                lastLookupBox = lastLookupBox,
+                lastSelectedParcels = lastSelectedParcels,
                 lastExtId = lastExtId,
                 lastTajikistanExportSticker = lastTajikistanExportSticker,
                 tajikistanInvoiceJobId = selectedJob.takeIf {
