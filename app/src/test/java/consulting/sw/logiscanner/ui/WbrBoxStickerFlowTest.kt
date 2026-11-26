@@ -212,7 +212,9 @@ class WbrBoxStickerFlowTest {
             }
             compose.waitUntil(10000) {
                 shadowOf(android.os.Looper.getMainLooper()).idle()
-                !vm.state.value.printerLoading && vm.state.value.selectedScanJob == null
+                val current = vm.state.value
+                !current.printerLoading && current.selectedScanJob == null &&
+                    (!changeAccount || !current.isLoggedIn)
             }
             compose.runOnIdle {
                 assertTrue(sent.isEmpty())
