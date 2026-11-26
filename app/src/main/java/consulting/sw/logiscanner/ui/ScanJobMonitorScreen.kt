@@ -78,7 +78,6 @@ import consulting.sw.logiscanner.net.ScannedItemSources
 import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorParcel
-import consulting.sw.logiscanner.net.LookupScanCandidate
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.printer.ParcelSticker
 import consulting.sw.logiscanner.printer.TajikistanExportSticker
@@ -97,7 +96,8 @@ internal fun ScanJobMonitorPanel(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
-    lastLookupCandidates: List<LookupScanCandidate> = emptyList(),
+    lastLookupBox: LookupBoxResult? = null,
+    lastSelectedParcels: List<SelectedParcelScan> = emptyList(),
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
     tajikistanInvoiceJobId: Int?,
@@ -270,7 +270,8 @@ internal fun ScanJobMonitorPanel(
                 lastScanSource = lastScanSource,
                 lastItemNumbers = lastItemNumbers,
                 lastExtData = lastExtData,
-                lastLookupCandidates = lastLookupCandidates,
+                lastLookupBox = lastLookupBox,
+                lastSelectedParcels = lastSelectedParcels,
                 lastExtId = lastExtId,
                 lastTajikistanExportSticker = lastTajikistanExportSticker,
                 lastScanTime = lastScanTime,
@@ -1276,7 +1277,8 @@ internal fun LocalScanResult(
     lastScanSource: Int?,
     lastItemNumbers: List<String>,
     lastExtData: String?,
-    lastLookupCandidates: List<LookupScanCandidate> = emptyList(),
+    lastLookupBox: LookupBoxResult? = null,
+    lastSelectedParcels: List<SelectedParcelScan> = emptyList(),
     lastExtId: String?,
     lastTajikistanExportSticker: TajikistanExportSticker?,
     lastScanTime: String?,
@@ -1366,15 +1368,30 @@ internal fun LocalScanResult(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        if (lastLookupCandidates.isNotEmpty()) {
-            MonitorAttribute(
-                label = stringResource(R.string.monitor_lookup_candidates),
-                value = lastLookupCandidates.joinToString(", ") { candidate ->
-                    candidate.parcelNumber.ifBlank { "#${candidate.parcelId}" }
-                }
-            )
+        lastLookupBox?.let { LookupBoxTargets(it) }
+        lastSelectedParcels.forEach { selected ->
+            val title = selected.productName?.takeIf(String::isNotBlank)?.let { "$it #${selected.parcelId}" }
+                ?: stringResource(R.string.parcel_selection_unnamed, selected.parcelId)
+            val status = when (selected.lookupOutcome) {
+                "confirmed" -> stringResource(R.string.parcel_selection_found)
+                "alreadyConfirmed" -> stringResource(R.string.parcel_selection_confirmed)
+                "notTarget" -> stringResource(R.string.parcel_selection_not_target)
+                else -> null
+            }
+            Text(listOfNotNull(title, status).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+            selected.extId?.takeIf { kgtStickerCode(it) != null }?.let { extId ->
+                KgtPrintAttribute(
+                    stringResource(R.string.monitor_parcel_ext_id),
+                    extId,
+                    !printerLoading && canManualPrintKgtSticker(extId, printerSelected),
+                    onPrintKgtSticker
+                )
+            }
+            selected.exportOrderNumber?.let {
+                MonitorAttribute(stringResource(R.string.printer_tj_sticker_order), it)
+            }
         }
-        display.extId?.takeIf { kgtStickerCode(it) != null }?.let { extId ->
+        display.extId?.takeIf { lastSelectedParcels.isEmpty() && kgtStickerCode(it) != null }?.let { extId ->
             KgtPrintAttribute(
                 label = stringResource(R.string.monitor_parcel_ext_id),
                 value = extId,
@@ -1382,7 +1399,7 @@ internal fun LocalScanResult(
                 onPrintKgtSticker = onPrintKgtSticker
             )
         }
-        lastTajikistanExportSticker?.let { sticker ->
+        lastTajikistanExportSticker?.takeIf { lastSelectedParcels.isEmpty() }?.let { sticker ->
             MonitorAttribute(
                 label = stringResource(R.string.printer_tj_sticker_order),
                 value = sticker.orderNumber
@@ -1408,3 +1425,30 @@ internal fun LocalScanResult(
         }
     }
 }
+
+@Composable
+private fun LookupBoxTargets(result: LookupBoxResult) {
+    val outstanding = result.outstanding.countsByParcelNumber()
+    val confirmed = result.confirmed.countsByParcelNumber()
+    val title = stringResource(R.string.monitor_lookup_candidates)
+    when {
+        outstanding.isNotEmpty() -> MonitorAttribute(title, lookupBoxTargetText(outstanding))
+        confirmed.isEmpty() -> MonitorAttribute(title, stringResource(R.string.monitor_lookup_no_targets))
+        else -> Text(title, style = MaterialTheme.typography.bodySmall)
+    }
+    if (confirmed.isNotEmpty()) {
+        MonitorAttribute(
+            stringResource(R.string.monitor_lookup_previously_found),
+            lookupBoxTargetText(confirmed)
+        )
+    }
+}
+
+@Composable
+private fun lookupBoxTargetText(counts: Map<String, Int>): String =
+    counts.map { (number, count) ->
+        if (count == 1) number else {
+            val goods = LocalContext.current.resources.getQuantityString(R.plurals.monitor_lookup_goods_count, count, count)
+            "$number ($goods)"
+        }
+    }.joinToString(", ")

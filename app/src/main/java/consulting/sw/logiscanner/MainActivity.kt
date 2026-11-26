@@ -35,6 +35,7 @@ import consulting.sw.logiscanner.scan.Mt93ScanReceiver
 import consulting.sw.logiscanner.ui.JobSelectionScreen
 import consulting.sw.logiscanner.ui.LoginScreen
 import consulting.sw.logiscanner.ui.MainViewModel
+import consulting.sw.logiscanner.ui.ParcelSelectionDialog
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.ScanScreen
 import consulting.sw.logiscanner.ui.SettingsScreen
@@ -211,7 +212,9 @@ class MainActivity : ComponentActivity() {
                                 lastScanSource = state.lastScanSource,
                                 lastItemNumbers = state.lastItemNumbers,
                                 lastExtData = state.lastExtData,
-                                lastLookupCandidates = state.lastLookupCandidates,
+                                lastLookupBox = state.lastLookupBox,
+                                lastSelectedParcels = state.lastSelectedParcels,
+                                parcelSelectionActive = state.parcelSelection != null,
                                 lastExtId = state.lastExtId,
                                 lastTajikistanExportSticker = state.lastTajikistanExportSticker,
                                 lastScanTime = state.lastScanTime,
@@ -231,9 +234,10 @@ class MainActivity : ComponentActivity() {
                                     printerSelected
                                 ),
                                 printerSelected = printerSelected,
-                                printerLoading = state.printerLoading,
+                                printerLoading = state.printerLoading || state.selectionPrinterLoading,
                                 printerMessage = state.printerMessage?.let { stringResource(it) },
-                                printerError = state.printerError,
+                                printerError = listOfNotNull(state.printerError, state.selectionPrinterError)
+                                    .joinToString("\n").ifBlank { null },
                                 monitorJumpNumber = state.monitorJumpNumber,
                                 monitorJumpLoading = state.monitorJumpLoading,
                                 monitorHighlightedParcelId = state.monitorHighlightedParcelId,
@@ -297,6 +301,15 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onScanned = vm::onScanned
                             )
+                            state.parcelSelection?.let { selection ->
+                                ParcelSelectionDialog(
+                                    selection = selection,
+                                    onToggle = vm::toggleParcelChoice,
+                                    onConfirm = vm::confirmParcelSelection,
+                                    onSkip = vm::skipParcelSelection,
+                                    onClose = vm::closeStaleParcelSelection
+                                )
+                            }
                         }
                     }
                 }

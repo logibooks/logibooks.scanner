@@ -21,7 +21,6 @@ import consulting.sw.logiscanner.net.ScanJobMonitorAreas
 import consulting.sw.logiscanner.net.ScanJobMonitorBox
 import consulting.sw.logiscanner.net.ScanJobMonitorSnapshot
 import consulting.sw.logiscanner.net.ScanJobMonitorTargetKinds
-import consulting.sw.logiscanner.net.LookupScanCandidate
 import consulting.sw.logiscanner.net.ScanResultItem
 import consulting.sw.logiscanner.printer.BluetoothPrinterClient
 import consulting.sw.logiscanner.printer.BluetoothPrinterDevice
@@ -61,6 +60,7 @@ enum class ScanResultColor {
 
 fun determineScanResultColor(result: ScanResultItem): ScanResultColor {
     return when {
+        result.isLookupBoxScan() -> ScanResultColor.OK
         result.lookupOutcome in setOf("alreadyConfirmed", "noOutstanding") -> ScanResultColor.IGNORED
         result.lookupOutcome in setOf("inspectBox", "ambiguous") || result.hasIssues -> ScanResultColor.ISSUE
         result.count == 0 -> ScanResultColor.NOT_FOUND
@@ -94,6 +94,8 @@ internal data class MainState(
     val printerBluetoothAddress: String? = null,
     val bondedPrinters: List<BluetoothPrinterDevice> = emptyList(),
     val printerLoading: Boolean = false,
+    val selectionPrinterLoading: Boolean = false,
+    val selectionPrinterError: String? = null,
     @get:StringRes val printerMessage: Int? = null,
     val printerError: String? = null,
     @get:StringRes val printerTestError: Int? = null,
@@ -110,7 +112,9 @@ internal data class MainState(
     val lastScanSource: Int? = null,
     val lastItemNumbers: List<String> = emptyList(),
     val lastExtData: String? = null,
-    val lastLookupCandidates: List<LookupScanCandidate> = emptyList(),
+    val lastLookupBox: LookupBoxResult? = null,
+    val lastSelectedParcels: List<SelectedParcelScan> = emptyList(),
+    val parcelSelection: ParcelSelectionState? = null,
     val lastExtId: String? = null,
     val lastTajikistanExportSticker: TajikistanExportSticker? = null,
     val lastScanTime: String? = null,
@@ -160,6 +164,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var scanJobListMonitorVersion = 0
     private var monitorScopeVersion = 0
     private var scanSessionVersion = 0
+    private val scanInput = ScanInputQueue<AcceptedScan>()
+    private var selectionOptions: ScanProcessingOptions? = null
+    private var selectionPrintJob: Job? = null
     private var signingOut = false
     
     private var tts: TextToSpeech? = null
@@ -582,7 +589,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal fun prepareMonitorStickerPrint(jobId: Int, target: MonitorStickerTarget): ((Boolean) -> Unit)? {
         val current = state.value
         val address = configuredPrinterAddress(current) ?: return null
-        if (signingOut || current.printerLoading || current.selectedScanJob?.id != jobId
+        if (signingOut || current.printerLoading || current.selectionPrinterLoading || current.selectedScanJob?.id != jobId
             || !::scanJobMonitorRepo.isInitialized) return null
 
         val command = MonitorStickerPrint(jobId, target, address, scanJobMonitorRepo)
@@ -832,7 +839,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastScanSource = if (jobChanged) null else it.lastScanSource,
                     lastItemNumbers = if (jobChanged) emptyList() else it.lastItemNumbers,
                     lastExtData = if (jobChanged) null else it.lastExtData,
-                    lastLookupCandidates = if (jobChanged) emptyList() else it.lastLookupCandidates,
+                    lastLookupBox = if (jobChanged) null else it.lastLookupBox,
+                    lastSelectedParcels = if (jobChanged) emptyList() else it.lastSelectedParcels,
                     lastExtId = if (jobChanged) null else it.lastExtId,
                     lastTajikistanExportSticker = if (jobChanged) null else it.lastTajikistanExportSticker,
                     lastScanTime = if (jobChanged) null else it.lastScanTime,
@@ -1166,7 +1174,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 lastScanSource = null,
                 lastItemNumbers = emptyList(),
                 lastExtData = null,
-                lastLookupCandidates = emptyList(),
+                lastLookupBox = null,
+                lastSelectedParcels = emptyList(),
                 lastExtId = null,
                 lastScanTime = null,
                 scanResultColor = ScanResultColor.NONE,
@@ -1214,12 +1223,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun resetScanSession() {
         // Queued and in-flight results belong to the job selection that accepted the scan.
         scanSessionVersion += 1
+        scanInput.reset()
+        selectionOptions = null
         tts?.stop()
         colorResetJob?.cancel()
-        _state.update { it.copy(isScanning = false, isBusy = false, scanResultColor = ScanResultColor.NONE) }
+        _state.update {
+            it.copy(isScanning = false, isBusy = false, scanResultColor = ScanResultColor.NONE, parcelSelection = null,
+                selectionPrinterLoading = false, selectionPrinterError = null)
+        }
     }
 
     fun onScanned(code: String) {
+        if (state.value.parcelSelection != null) return
         val job = state.value.selectedScanJob ?: return
         // Ignore scans when not in scanning mode
         if (!state.value.isScanning) {
@@ -1245,7 +1260,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             return
         }
-        
+        val accepted = AcceptedScan(job, code, scanProcessingOptions(job))
+        if (scanInput.begin(accepted)) processAcceptedScan(accepted)
+    }
+
+    private fun processAcceptedScan(accepted: AcceptedScan) {
+        val (job, code, options) = accepted
         val sessionVersion = scanSessionVersion
         reconnectPrinterIfNeeded()
         
@@ -1264,103 +1284,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
             try {
-                val printerSelected = hasSelectedPrinter(state.value.printerBluetoothAddress)
-                val submode = state.value.relabelingSubmode
-                val voiceEnabled = submode == RelabelingSubmode.KGT && state.value.kgtVoiceEnabled
-                val relabelingMode = normalizeRelabelingMode(
-                    job,
-                    submode,
-                    state.value.bulkyItemsMode,
-                    voiceEnabled,
-                    printerSelected
-                )
-                val bulkyItemsMode = backendBulkyItemsMode(job, submode, relabelingMode, voiceEnabled)
-                val result = scanRepo.scan(job.id, code, bulkyItemsMode)
+                val result = scanRepo.scan(job.id, code, options.bulkyItemsMode)
                 if (sessionVersion != scanSessionVersion) return@launch
-                val autoPrintEnabled = state.value.printerAutoPrintEnabled
-                val tajikistanValidation = if (
-                    result.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
-                ) {
-                    result.exportSticker.validateForPrinting()
-                } else {
-                    null
-                }
-                val tajikistanSticker = tajikistanValidation?.sticker
-                val tajikistanAutoPrintAction = tajikistanExportStickerAutoPrintAction(
-                    submode,
-                    relabelingMode,
-                    printerSelected,
-                    job,
-                    result,
-                    hasPrintableSticker = tajikistanSticker != null
-                )
-                val tajikistanMissingData =
-                    tajikistanAutoPrintAction == TajikistanExportStickerAutoPrintAction.MISSING_DATA
-                _state.update { 
-                    it.copy(
-                        lastCode = code, 
-                        lastParcelCount = result.parcelCount,
-                        lastBoxCount = result.boxCount,
-                        lastScanSource = result.scanSource,
-                        lastItemNumbers = result.itemNumbers,
-                        lastExtData = result.extData,
-                        lastLookupCandidates = result.lookupCandidates.orEmpty(),
-                        lastExtId = result.extId,
-                        lastTajikistanExportSticker = if (tajikistanMissingData) {
-                            null
-                        } else {
-                            tajikistanSticker ?: it.lastTajikistanExportSticker
-                        },
-                        lastScanTime = result.scanTime?.takeIf { scanTime -> scanTime.isNotBlank() }
-                            ?: OffsetDateTime.now().toString(),
-                        scanResultColor = determineScanResultColor(result),
-                        printerError = if (tajikistanMissingData) {
-                            tajikistanStickerDataError(
-                                getApplication<Application>(),
-                                requireNotNull(tajikistanValidation).issues
-                            )
-                        } else {
-                            it.printerError
-                        },
-                        printerMessage = if (tajikistanMissingData) null else it.printerMessage
-                    ) 
-                }
-
-                followLocalScanResult(result)
-
-                if (shouldAutoPrintKgtSticker(autoPrintEnabled, job, bulkyItemsMode, result, printerSelected)) {
-                    result.extId?.let(::printKgtSticker)
-                }
-
-                if (tajikistanAutoPrintAction == TajikistanExportStickerAutoPrintAction.PRINT) {
-                    requireNotNull(tajikistanSticker).let { sticker ->
-                        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                            printTajikistanExportStickerInternal(sticker)
-                        }
+                val selection = result.parcelSelection
+                if (selection != null) {
+                    val discardedCodes = scanInput.discardQueued().map(AcceptedScan::code).distinct()
+                    selectionOptions = options
+                    _state.update {
+                        it.copy(parcelSelection = ParcelSelectionState(
+                            code, options.bulkyItemsMode, selection, discardedCodes = discardedCodes
+                        ))
                     }
-                }
-                
-                val extIdSpeechText = if (!result.extId.isNullOrBlank()) {
-                    getApplication<Application>().getString(R.string.bulky_items_number_speech, result.extId)
+                    val prompt = getApplication<Application>().getString(R.string.parcel_selection_prompt)
+                    speakScanText(parcelSelectionSpeech(result.extData, prompt))
                 } else {
-                    null
-                }
-                val speechText = scanResultSpeechText(
-                    submode,
-                    relabelingMode,
-                    voiceEnabled,
-                    extIdSpeechText,
-                    result.extData
-                )
-                if (speechText.isNotEmpty() && ttsReady) {
-                    // Let each accepted scan finish speaking when another result arrives.
-                    tts?.speak(speechText, TextToSpeech.QUEUE_ADD, null, "scan_result_${System.currentTimeMillis()}")
-                }
-                
-                // Reset color after a short delay
-                colorResetJob = viewModelScope.launch {
-                    kotlinx.coroutines.delay(1500)
-                    _state.update { it.copy(scanResultColor = ScanResultColor.NONE) }
+                    applyScanResult(job, code, result, options)
                 }
             } catch (ex: Exception) {
                 if (sessionVersion != scanSessionVersion) return@launch
@@ -1381,7 +1319,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
                             lastExtData = null,
-                            lastLookupCandidates = emptyList(),
+                            lastLookupBox = null,
+                            lastSelectedParcels = emptyList(),
                             lastExtId = null,
                             lastTajikistanExportSticker = null,
                             lastScanTime = null,
@@ -1400,7 +1339,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             lastScanSource = null,
                             lastItemNumbers = emptyList(),
                             lastExtData = null,
-                            lastLookupCandidates = emptyList(),
+                            lastLookupBox = null,
+                            lastSelectedParcels = emptyList(),
                             lastExtId = null,
                             lastScanTime = OffsetDateTime.now().toString(),
                             error = getApplication<Application>().getString(R.string.scan_error_server),
@@ -1416,6 +1356,268 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } finally {
                 if (sessionVersion == scanSessionVersion) {
                     _state.update { it.copy(isBusy = false) }
+                    scanInput.finish()?.let(::processAcceptedScan)
+                }
+            }
+        }
+    }
+
+    private data class AcceptedScan(val job: ScanJob, val code: String, val options: ScanProcessingOptions)
+
+    private data class ScanProcessingOptions(
+        val printerSelected: Boolean,
+        val submode: RelabelingSubmode,
+        val relabelingMode: Int,
+        val voiceEnabled: Boolean,
+        val bulkyItemsMode: Int
+    )
+
+    private fun scanProcessingOptions(job: ScanJob): ScanProcessingOptions {
+        val current = state.value
+        val printerSelected = hasSelectedPrinter(current.printerBluetoothAddress)
+        val submode = current.relabelingSubmode
+        val voiceEnabled = submode == RelabelingSubmode.KGT && current.kgtVoiceEnabled
+        val relabelingMode = normalizeRelabelingMode(job, submode, current.bulkyItemsMode, voiceEnabled, printerSelected)
+        return ScanProcessingOptions(
+            printerSelected, submode, relabelingMode, voiceEnabled,
+            backendBulkyItemsMode(job, submode, relabelingMode, voiceEnabled)
+        )
+    }
+
+    private fun applyScanResult(
+        job: ScanJob,
+        code: String,
+        result: ScanResultItem,
+        options: ScanProcessingOptions,
+        selectionResult: Boolean = false
+    ): SelectionPrintWork? {
+        val (printerSelected, submode, relabelingMode, voiceEnabled, bulkyItemsMode) = options
+        val autoPrintEnabled = state.value.printerAutoPrintEnabled
+        val tajikistanValidation = if (
+            result.stickerTemplate == StickerTemplates.TAJIKISTAN_EXPORT
+        ) {
+            result.exportSticker.validateForPrinting()
+        } else {
+            null
+        }
+        val tajikistanSticker = tajikistanValidation?.sticker
+        val tajikistanAutoPrintAction = tajikistanExportStickerAutoPrintAction(
+            submode,
+            relabelingMode,
+            printerSelected,
+            job,
+            result,
+            hasPrintableSticker = tajikistanSticker != null
+        )
+        val stickerDataError = if (tajikistanAutoPrintAction == TajikistanExportStickerAutoPrintAction.MISSING_DATA) {
+            tajikistanStickerDataError(getApplication<Application>(), requireNotNull(tajikistanValidation).issues)
+        } else null
+        _state.update {
+            it.copy(
+                lastCode = code,
+                lastParcelCount = result.parcelCount,
+                lastBoxCount = result.boxCount,
+                lastScanSource = result.scanSource,
+                lastItemNumbers = result.itemNumbers,
+                lastExtData = result.extData,
+                lastLookupBox = result.lookupBoxResult(),
+                lastSelectedParcels = emptyList(),
+                lastExtId = result.extId,
+                lastTajikistanExportSticker = if (stickerDataError != null) {
+                    null
+                } else {
+                    tajikistanSticker ?: it.lastTajikistanExportSticker
+                },
+                lastScanTime = result.scanTime?.takeIf { scanTime -> scanTime.isNotBlank() }
+                    ?: OffsetDateTime.now().toString(),
+                scanResultColor = determineScanResultColor(result),
+                printerError = if (selectionResult) it.printerError else stickerDataError ?: it.printerError,
+                printerMessage = if (!selectionResult && stickerDataError != null) null else it.printerMessage
+            )
+        }
+
+        followLocalScanResult(result)
+
+        val kgt = kgtStickerCode(result.extId).takeIf {
+            shouldAutoPrintKgtSticker(autoPrintEnabled, job, bulkyItemsMode, result, printerSelected)
+        }
+        val export = tajikistanSticker.takeIf {
+            tajikistanAutoPrintAction == TajikistanExportStickerAutoPrintAction.PRINT
+        }
+        if (!selectionResult) {
+            kgt?.let(::printKgtSticker)
+            export?.let { sticker ->
+                viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+                    printTajikistanExportStickerInternal(sticker)
+                }
+            }
+        }
+
+        val extIdSpeechText = if (!result.extId.isNullOrBlank()) {
+            getApplication<Application>().getString(R.string.bulky_items_number_speech, result.extId)
+        } else {
+            null
+        }
+        val speechText = scanResultSpeechText(
+            submode,
+            relabelingMode,
+            voiceEnabled,
+            extIdSpeechText,
+            result.extData.takeUnless { selectionResult }
+        )
+        speakScanText(speechText)
+        resetScanColor()
+        return when {
+            !selectionResult -> null
+            stickerDataError != null -> SelectionPrintWork.Invalid(stickerDataError)
+            kgt != null -> SelectionPrintWork.Send { address -> stickerPrintService.print(address, kgt) }
+            export != null -> SelectionPrintWork.Send { address ->
+                stickerPrintService.printTajikistanExportSticker(address, export)
+            }
+            else -> null
+        }
+    }
+
+    private sealed interface SelectionPrintWork {
+        data class Invalid(val error: String) : SelectionPrintWork
+        data class Send(val print: suspend (String?) -> KgtStickerPrintResult) : SelectionPrintWork
+    }
+
+    private fun resetScanColor() {
+        colorResetJob?.cancel()
+        colorResetJob = viewModelScope.launch {
+            delay(1500)
+            _state.update { it.copy(scanResultColor = ScanResultColor.NONE) }
+        }
+    }
+
+    private fun speakScanText(text: String) {
+        if (text.isNotEmpty() && ttsReady) {
+            tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "scan_result_${System.nanoTime()}")
+        }
+    }
+
+    internal fun toggleParcelChoice(id: Int) {
+        _state.update { current ->
+            current.copy(parcelSelection = current.parcelSelection?.toggle(id))
+        }
+    }
+
+    internal fun confirmParcelSelection() {
+        val selected = state.value.parcelSelection?.checkedIds.orEmpty()
+        if (selected.isNotEmpty()) submitParcelSelection(selected.sorted())
+    }
+
+    internal fun skipParcelSelection() = submitParcelSelection(emptyList())
+
+    internal fun closeStaleParcelSelection() {
+        state.value.parcelSelection?.takeIf { it.stale }?.let(::finishParcelSelection)
+    }
+
+    private fun finishParcelSelection(pending: ParcelSelectionState) {
+        selectionOptions = null
+        val warning = pending.discardedCodes.takeIf { it.isNotEmpty() }?.let { codes ->
+            getApplication<Application>().getString(R.string.parcel_selection_rescan_codes, codes.joinToString(", "))
+        }
+        _state.update { it.copy(parcelSelection = null, error = warning) }
+    }
+
+    private fun submitParcelSelection(ids: List<Int>) {
+        val pending = state.value.parcelSelection ?: return
+        val job = state.value.selectedScanJob ?: return
+        if (!pending.canEdit) return
+        val version = scanSessionVersion
+        _state.update { it.copy(parcelSelection = pending.copy(submitting = true)) }
+        viewModelScope.launch {
+            val result = try {
+                scanRepo.scan(job.id, pending.code, pending.bulkyItemsMode, pending.selection.id, ids)
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (ex: Exception) {
+                if (version != scanSessionVersion) return@launch
+                Log.e(javaClass.simpleName, "Could not submit parcel selection", ex)
+                // The response can be lost after Core applies the scans. Recover through a fresh scan.
+                _state.update { it.copy(parcelSelection = pending.copy(stale = true)) }
+                return@launch
+            }
+            if (version != scanSessionVersion) return@launch
+            val items = result.selectionResults
+            if (items == null || items.size != ids.size) {
+                _state.update { it.copy(parcelSelection = pending.copy(stale = true)) }
+                return@launch
+            }
+            val options = selectionOptions ?: scanProcessingOptions(job).copy(bulkyItemsMode = pending.bulkyItemsMode)
+            val choices = pending.selection.candidates.associateBy { it.parcelId }
+            val printWork = mutableListOf<Pair<Int, SelectionPrintWork>>()
+            val selected = ids.zip(items).map { (id, result) ->
+                applyScanResult(job, pending.code, result, options, selectionResult = true)
+                    ?.let { printWork.add(id to it) }
+                SelectedParcelScan(id, choices[id]?.productName, result.lookupOutcome, result.extId, result.exportSticker?.orderNumber)
+            }
+            if (items.isNotEmpty()) {
+                val colors = items.map(::determineScanResultColor)
+                _state.update {
+                    it.copy(
+                        lastSelectedParcels = selected,
+                        lastParcelCount = items.sumOf(ScanResultItem::parcelCount),
+                        lastItemNumbers = items.flatMap(ScanResultItem::itemNumbers).distinct(),
+                        scanResultColor = when {
+                            ScanResultColor.ISSUE in colors -> ScanResultColor.ISSUE
+                            ScanResultColor.OK in colors -> ScanResultColor.OK
+                            else -> colors.last()
+                        }
+                    )
+                }
+            }
+            finishParcelSelection(pending)
+            enqueueSelectionPrinting(printWork, version)
+        }
+    }
+
+    private fun enqueueSelectionPrinting(work: List<Pair<Int, SelectionPrintWork>>, version: Int) {
+        if (work.isEmpty()) return
+        val prior = selectionPrintJob
+        val address = state.value.printerBluetoothAddress
+        // The scans are already committed. Finish these labels even if the operator changes jobs.
+        selectionPrintJob = viewModelScope.launch {
+            prior?.join()
+            printSelectionStickers(work, address, version)
+        }
+    }
+
+    private suspend fun printSelectionStickers(
+        work: List<Pair<Int, SelectionPrintWork>>,
+        address: String?,
+        version: Int
+    ) {
+        val app = getApplication<Application>()
+        val errors = mutableListOf<String>()
+        if (version == scanSessionVersion) _state.update { it.copy(selectionPrinterLoading = true) }
+        try {
+            for ((parcelId, operation) in work) {
+                val error = try {
+                    when (operation) {
+                        is SelectionPrintWork.Invalid -> operation.error
+                        is SelectionPrintWork.Send -> printerResultError(operation.print(address))
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Exception) {
+                    Log.e(javaClass.simpleName, "Could not print selected parcel $parcelId", failure)
+                    app.getString(R.string.printer_print_failed, app.getString(R.string.error_unknown))
+                }
+                if (error != null) errors += app.getString(R.string.parcel_selection_print_error, parcelId, error)
+            }
+        } finally {
+            if (version == scanSessionVersion) {
+                _state.update {
+                    it.copy(
+                        selectionPrinterLoading = false,
+                        selectionPrinterError = errors.takeIf(List<String>::isNotEmpty)?.joinToString("\n")
+                            ?: it.selectionPrinterError,
+                        printerMessage = if (errors.isEmpty() && it.printerError == null && it.selectionPrinterError == null)
+                            R.string.printer_printed else it.printerMessage
+                    )
                 }
             }
         }
@@ -1516,60 +1718,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun applyPrinterResult(result: KgtStickerPrintResult) {
-        when (result) {
-            KgtStickerPrintResult.Success -> {
-                _state.update {
-                    it.copy(
-                        printerMessage = R.string.printer_printed,
-                        printerError = null
-                    )
-                }
-            }
-            KgtStickerPrintResult.MissingPrinter -> {
-                _state.update {
-                    it.copy(
-                        printerError = getApplication<Application>().getString(R.string.printer_select_required),
-                        printerMessage = null
-                    )
-                }
-            }
-            KgtStickerPrintResult.PermissionMissing -> {
-                setPrinterPermissionDenied()
-            }
-            is KgtStickerPrintResult.PrinterNotFound -> {
-                _state.update {
-                    it.copy(
-                        printerError = getApplication<Application>().getString(R.string.printer_not_found),
-                        printerMessage = null
-                    )
-                }
-            }
-            is KgtStickerPrintResult.InvalidSticker -> {
-                _state.update {
-                    it.copy(
-                        printerError = getApplication<Application>().getString(
-                            if (result.contentOverflow) {
-                                R.string.printer_tj_sticker_overflow
-                            } else {
-                                R.string.printer_invalid_sticker
-                            }
-                        ),
-                        printerMessage = null
-                    )
-                }
-            }
-            is KgtStickerPrintResult.Failed -> {
-                _state.update {
-                    it.copy(
-                        printerError = getApplication<Application>().getString(
-                            R.string.printer_print_failed,
-                            result.message?.takeIf { message -> message.isNotBlank() }
-                                ?: getApplication<Application>().getString(R.string.error_unknown)
-                        ),
-                        printerMessage = null
-                    )
-                }
-            }
+        if (result == KgtStickerPrintResult.PermissionMissing) {
+            setPrinterPermissionDenied()
+            return
+        }
+        val error = printerResultError(result)
+        _state.update {
+            it.copy(printerError = error, printerMessage = R.string.printer_printed.takeIf { error == null })
+        }
+    }
+
+    private fun printerResultError(result: KgtStickerPrintResult): String? {
+        val app = getApplication<Application>()
+        return when (result) {
+            KgtStickerPrintResult.Success -> null
+            KgtStickerPrintResult.MissingPrinter -> app.getString(R.string.printer_select_required)
+            KgtStickerPrintResult.PermissionMissing -> app.getString(R.string.printer_permission_missing)
+            is KgtStickerPrintResult.PrinterNotFound -> app.getString(R.string.printer_not_found)
+            is KgtStickerPrintResult.InvalidSticker -> app.getString(
+                if (result.contentOverflow) R.string.printer_tj_sticker_overflow else R.string.printer_invalid_sticker
+            )
+            is KgtStickerPrintResult.Failed -> app.getString(
+                R.string.printer_print_failed,
+                result.message?.takeIf(String::isNotBlank) ?: app.getString(R.string.error_unknown)
+            )
         }
     }
 
