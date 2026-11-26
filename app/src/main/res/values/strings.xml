@@ -220,7 +220,7 @@ This file is a part of LogiScanner application
         <item quantity="other">%d items</item>
     </plurals>
     <string name="parcel_selection_title">Select an item</string>
-    <string name="parcel_selection_prompt">Выберите товары</string>
+    <string name="parcel_selection_prompt">Select items</string>
     <string name="parcel_selection_code">Barcode %1$s</string>
     <string name="parcel_selection_box">Box number: %1$s</string>
     <string name="parcel_selection_unnamed">Item #%1$d</string>
