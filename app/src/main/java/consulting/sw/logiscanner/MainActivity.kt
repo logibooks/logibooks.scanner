@@ -38,6 +38,7 @@ import consulting.sw.logiscanner.ui.MainViewModel
 import consulting.sw.logiscanner.ui.ParcelSelectionDialog
 import consulting.sw.logiscanner.ui.ScanResultColor
 import consulting.sw.logiscanner.ui.ScanScreen
+import consulting.sw.logiscanner.ui.SelectionPrintKey
 import consulting.sw.logiscanner.ui.SettingsScreen
 import consulting.sw.logiscanner.ui.hasSelectedPrinter
 import consulting.sw.logiscanner.ui.relabelingModeAvailable
@@ -101,6 +102,9 @@ class MainActivity : ComponentActivity() {
                 requestPrinterPermission { granted ->
                     if (granted) action() else vm.setPrinterPermissionDenied()
                 }
+            }
+            val retrySelectionPrint: (SelectionPrintKey) -> Unit = { key ->
+                runPrinterAction { vm.retrySelectionPrint(key) }
             }
             val printerTestPermissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()
@@ -183,6 +187,9 @@ class MainActivity : ComponentActivity() {
                                 displayName = state.displayName,
                                 error = state.error,
                                 onSelectJob = vm::selectScanJob,
+                                selectionPrintFailures = state.selectionPrintFailures,
+                                canRetrySelectionPrint = printerSelected && !state.printerLoading && !state.selectionPrinterLoading,
+                                onRetrySelectionPrint = retrySelectionPrint,
                                 onDismissMessage = vm::dismissMessage,
                                 onLogout = {
                                     if (state.externalScannerEnabled) {
@@ -236,9 +243,9 @@ class MainActivity : ComponentActivity() {
                                 printerSelected = printerSelected,
                                 printerLoading = state.printerLoading || state.selectionPrinterLoading,
                                 printerMessage = state.printerMessage?.let { stringResource(it) },
-                                printerError = (listOfNotNull(state.printerError) +
-                                    state.selectionPrintFailures.values.map { it.message })
-                                    .joinToString("\n").ifBlank { null },
+                                printerError = state.printerError,
+                                selectionPrintFailures = state.selectionPrintFailures,
+                                onRetrySelectionPrint = retrySelectionPrint,
                                 monitorJumpNumber = state.monitorJumpNumber,
                                 monitorJumpLoading = state.monitorJumpLoading,
                                 monitorHighlightedParcelId = state.monitorHighlightedParcelId,

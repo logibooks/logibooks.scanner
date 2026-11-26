@@ -226,7 +226,8 @@ This file is a part of LogiScanner application
     <string name="parcel_selection_unnamed">Item #%1$d</string>
     <string name="parcel_selection_found">Found</string>
     <string name="parcel_selection_issue">Review required</string>
-    <string name="parcel_selection_print_error">Item #%1$d. %2$s</string>
+    <string name="parcel_selection_print_item">Job %1$s (#%2$d), item #%3$d</string>
+    <string name="parcel_selection_retry_print">Retry print</string>
     <string name="parcel_selection_outstanding">Lookup target</string>
     <string name="parcel_selection_confirmed">Previously found</string>
     <string name="parcel_selection_not_target">Outside lookup</string>

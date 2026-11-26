@@ -4,11 +4,13 @@
 
 package consulting.sw.logiscanner.ui
 
+import android.Manifest
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.ViewModelProvider
@@ -31,6 +33,7 @@ import consulting.sw.logiscanner.printer.StickerPrinterClient
 import consulting.sw.logiscanner.printer.TscStickerRenderer
 import consulting.sw.logiscanner.repo.ScanJobMonitorRepository
 import consulting.sw.logiscanner.repo.ScanRepository
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import org.junit.After
@@ -57,7 +60,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], shadows = [SettingsChecksTest.RecordingSpeech::class])
+@Config(sdk = [35], qualifiers = "w400dp-h800dp", shadows = [SettingsChecksTest.RecordingSpeech::class])
 class ScanSelectionFlowTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
@@ -232,14 +235,7 @@ class ScanSelectionFlowTest {
     @Test fun selectedLabelsPrintInOrderAndManualRecoveryClearsTheMatchingError() {
         selectJob(job.copy(registerType = RegisterTypes.WBR))
         val printer = RecordingPrinter()
-        compose.runOnIdle {
-            ReflectionHelpers.setField(vm, "stickerPrintService", KgtStickerPrintService(TscStickerRenderer(), printer))
-            state.value = state.value.copy(
-                printerBluetoothAddress = printerAddress,
-                bulkyItemsMode = BulkyItemsModes.SILENT,
-                printerAutoPrintEnabled = true
-            )
-        }
+        configurePrinter(printer)
         core.reply(offer())
         scan("PRINT")
         await { vm.state.value.parcelSelection != null }
@@ -250,14 +246,90 @@ class ScanSelectionFlowTest {
         await { printer.attempts.size == 2 && !vm.state.value.selectionPrinterLoading }
         assertNull(vm.state.value.parcelSelection)
         assertEquals(listOf("15001", "15002"), printer.attempts.toList())
-        assertEquals("15001", vm.state.value.selectionPrintFailures.getValue(2).kgtCode)
-        assertEquals(setOf(2), vm.state.value.selectionPrintFailures.keys)
+        val failedLabel = SelectionPrintKey(job.id, 2)
+        assertEquals(SelectionPrintWork.Kgt("15001"), vm.state.value.selectionPrintFailures.getValue(failedLabel).work)
+        assertEquals(setOf(failedLabel), vm.state.value.selectionPrintFailures.keys)
         assertEquals(BulkyItemsModes.SILENT, core.requests.last().bulkyItemsMode)
 
         compose.runOnIdle { vm.printKgtSticker("15001") }
         await { printer.attempts.size == 3 && !vm.state.value.printerLoading }
-        assertEquals(emptySet<Int>(), vm.state.value.selectionPrintFailures.keys)
+        assertTrue(vm.state.value.selectionPrintFailures.isEmpty())
         assertEquals(R.string.printer_printed, vm.state.value.printerMessage)
+    }
+
+    @Test fun printFailuresSurviveJobChangesAndRetryClearsOnlyTheChosenParcel() {
+        val firstJob = job.copy(name = "Первое", registerType = RegisterTypes.WBR)
+        val secondJob = firstJob.copy(id = 2, name = "Второе")
+        val heldLabel = CompletableDeferred<Unit>()
+        val printer = RecordingPrinter { attempt ->
+            if (attempt == 2) heldLabel.await()
+            if (attempt <= 3) throw IOException("Printer is offline")
+        }
+        val firstFailure = SelectionPrintKey(firstJob.id, 2)
+        val delayedFailure = SelectionPrintKey(firstJob.id, 3)
+        val secondJobFailure = SelectionPrintKey(secondJob.id, 2)
+        val firstLabel = "Задание Первое (#1), товар #2"
+        val delayedLabel = "Задание Первое (#1), товар #3"
+        val secondJobLabel = "Задание Второе (#2), товар #2"
+        shadowOf(compose.activity.application).grantPermissions(
+            Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN
+        )
+
+        try {
+            selectJob(firstJob)
+            configurePrinter(printer)
+            core.reply(offer())
+            scan("FIRST-BATCH")
+            await { vm.state.value.parcelSelection != null }
+            compose.onNodeWithText("Третий", substring = true).performClick()
+            core.reply(batch(result(extId = "15001"), result(extId = "15002")))
+            compose.onNodeWithText("Подтвердить (2)").performClick()
+            await { printer.attempts.size == 2 && firstFailure in vm.state.value.selectionPrintFailures }
+
+            compose.runOnIdle { vm.selectScanJob(null) }
+            await { vm.state.value.selectedScanJob == null }
+            compose.onNodeWithText(firstLabel).assertIsDisplayed()
+            compose.onNodeWithText("Повторить печать").assertIsNotEnabled()
+
+            selectJob(secondJob)
+            configurePrinter(printer)
+            heldLabel.complete(Unit)
+            await { delayedFailure in vm.state.value.selectionPrintFailures && !vm.state.value.selectionPrinterLoading }
+            compose.onNodeWithText(delayedLabel).assertIsDisplayed()
+
+            core.reply(offer())
+            scan("SECOND-BATCH")
+            await { vm.state.value.parcelSelection != null }
+            compose.onNodeWithText("Второй", substring = true).performClick()
+            compose.onNodeWithText("Третий", substring = true).performClick()
+            core.reply(batch(result(extId = "15001")))
+            compose.onNodeWithText("Подтвердить (1)").performClick()
+            await { secondJobFailure in vm.state.value.selectionPrintFailures && !vm.state.value.selectionPrinterLoading }
+
+            compose.runOnIdle { vm.selectScanJob(null) }
+            compose.onNodeWithText(secondJobLabel).assertIsDisplayed()
+            assertEquals(setOf(firstFailure, delayedFailure, secondJobFailure), vm.state.value.selectionPrintFailures.keys)
+            compose.onAllNodesWithText("Повторить печать")[0].performClick()
+            await { firstFailure !in vm.state.value.selectionPrintFailures && !vm.state.value.selectionPrinterLoading }
+
+            compose.onNodeWithText(firstLabel).assertDoesNotExist()
+            compose.onNodeWithText(delayedLabel).assertIsDisplayed()
+            compose.onNodeWithText(secondJobLabel).assertIsDisplayed()
+            assertEquals(setOf(delayedFailure, secondJobFailure), vm.state.value.selectionPrintFailures.keys)
+            assertEquals(listOf("15001", "15002", "15001", "15001"), printer.attempts.toList())
+            assertEquals(4, core.requests.size)
+        } finally {
+            heldLabel.complete(Unit)
+        }
+    }
+
+    private fun configurePrinter(printer: RecordingPrinter) = compose.runOnIdle {
+        ReflectionHelpers.setField(vm, "stickerPrintService", KgtStickerPrintService(TscStickerRenderer(), printer))
+        state.value = state.value.copy(
+            printerBluetoothAddress = printerAddress,
+            bulkyItemsMode = BulkyItemsModes.SILENT,
+            printerAutoPrintEnabled = true
+        )
     }
 
     private fun selectJob(selected: ScanJob = job) {
@@ -275,7 +347,9 @@ class ScanSelectionFlowTest {
         condition()
     }
 
-    private class RecordingPrinter : StickerPrinterClient {
+    private class RecordingPrinter(
+        private val afterAttempt: suspend (Int) -> Unit = { if (it == 1) throw IOException("Printer is offline") }
+    ) : StickerPrinterClient {
         val attempts = CopyOnWriteArrayList<String>()
 
         override suspend fun listBondedPrinters(): List<BluetoothPrinterDevice> = emptyList()
@@ -284,7 +358,7 @@ class ScanSelectionFlowTest {
             assertEquals(printerAddress, address)
             val code = listOf("15001", "15002").single { payload.decodeToString().contains(it) }
             attempts += code
-            if (attempts.size == 1) throw IOException("Printer is offline")
+            afterAttempt(attempts.size)
         }
     }
 

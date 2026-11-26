@@ -120,12 +120,17 @@ class ParcelSelectionTest {
     }
 
     @Test fun successfulReprintClearsOnlyThatStickersFailure() {
+        val first = SelectionPrintKey(1, 1)
+        val second = SelectionPrintKey(1, 2)
+        val export = SelectionPrintKey(1, 3)
+        val otherJob = SelectionPrintKey(2, 1)
         val remaining = mapOf(
-            1 to SelectionPrintFailure("K000001", "First failure"),
-            2 to SelectionPrintFailure("K000002", "Second failure"),
-            3 to SelectionPrintFailure(null, "Export failure")
-        ).afterKgtReprint("K000001")
-        assertEquals(setOf(2, 3), remaining.keys)
+            first to SelectionPrintFailure("First job", SelectionPrintWork.Kgt("K000001"), "First failure"),
+            second to SelectionPrintFailure("First job", SelectionPrintWork.Kgt("K000002"), "Second failure"),
+            export to SelectionPrintFailure("First job", SelectionPrintWork.Invalid("Export failure"), "Export failure"),
+            otherJob to SelectionPrintFailure("Second job", SelectionPrintWork.Kgt("K000001"), "Other job failure")
+        ).afterKgtReprint(1, "K000001")
+        assertEquals(setOf(second, export, otherJob), remaining.keys)
     }
 
     @Test fun aNewSelectionClearsOldScanResultsAndGatesSettings() {

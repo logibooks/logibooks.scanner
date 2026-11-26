@@ -101,7 +101,9 @@ internal fun ScanScreen(
     onLogout: () -> Unit,
     onOpenSettings: () -> Unit,
     onScanned: (String) -> Unit,
-    onPrintMonitorSticker: (Int, MonitorStickerTarget) -> Unit
+    onPrintMonitorSticker: (Int, MonitorStickerTarget) -> Unit,
+    selectionPrintFailures: Map<SelectionPrintKey, SelectionPrintFailure> = emptyMap(),
+    onRetrySelectionPrint: (SelectionPrintKey) -> Unit = {}
 ) {
     var isJumpFieldFocused by remember { mutableStateOf(false) }
     if (hidScannerInputEnabled(externalScannerEnabled) && !parcelSelectionActive) {
@@ -219,6 +221,8 @@ internal fun ScanScreen(
                 }
             }
         }
+
+        selectionPrintFailureItems(selectionPrintFailures, printerSelected && !printerLoading, onRetrySelectionPrint)
 
         item {
             ScanJobMonitorPanel(

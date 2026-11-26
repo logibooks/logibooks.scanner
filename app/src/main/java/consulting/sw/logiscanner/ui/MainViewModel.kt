@@ -5,6 +5,7 @@
 package consulting.sw.logiscanner.ui
 
 import android.app.Application
+import android.content.res.Configuration
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
@@ -95,7 +96,7 @@ internal data class MainState(
     val bondedPrinters: List<BluetoothPrinterDevice> = emptyList(),
     val printerLoading: Boolean = false,
     val selectionPrinterLoading: Boolean = false,
-    val selectionPrintFailures: Map<Int, SelectionPrintFailure> = emptyMap(),
+    val selectionPrintFailures: Map<SelectionPrintKey, SelectionPrintFailure> = emptyMap(),
     @get:StringRes val printerMessage: Int? = null,
     val printerError: String? = null,
     @get:StringRes val printerTestError: Int? = null,
@@ -184,6 +185,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val scanInput = ScanInputQueue<AcceptedScan>()
     private var selectionOptions: ScanProcessingOptions? = null
     private var selectionPrintJob: Job? = null
+    private var selectionPrintAccountVersion = 0
     private var signingOut = false
     
     private var tts: TextToSpeech? = null
@@ -1245,8 +1247,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         tts?.stop()
         colorResetJob?.cancel()
         _state.update {
-            it.copy(isScanning = false, isBusy = false, scanResultColor = ScanResultColor.NONE, parcelSelection = null,
-                selectionPrinterLoading = false, selectionPrintFailures = emptyMap())
+            it.copy(isScanning = false, isBusy = false, scanResultColor = ScanResultColor.NONE, parcelSelection = null)
         }
     }
 
@@ -1310,7 +1311,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _state.update { openParcelSelectionState(it, pending) }
                     val discardedCodes = scanInput.discardQueued().map(AcceptedScan::code).distinct()
                     _state.update { it.copy(parcelSelection = pending.copy(discardedCodes = discardedCodes)) }
-                    val prompt = getApplication<Application>().getString(R.string.parcel_selection_prompt)
+                    val app = getApplication<Application>()
+                    val speechConfig = Configuration(app.resources.configuration).apply { setLocale(russianSpeechLocale) }
+                    val prompt = app.createConfigurationContext(speechConfig).getString(R.string.parcel_selection_prompt)
                     speakScanText(parcelSelectionSpeech(result.extData, prompt))
                 } else {
                     applyScanResult(job, code, result, options)
@@ -1490,17 +1493,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return when {
             !selectionResult -> null
             stickerDataError != null -> SelectionPrintWork.Invalid(stickerDataError)
-            kgt != null -> SelectionPrintWork.Send(kgt) { address -> stickerPrintService.print(address, kgt) }
-            export != null -> SelectionPrintWork.Send { address ->
-                stickerPrintService.printTajikistanExportSticker(address, export)
-            }
+            kgt != null -> SelectionPrintWork.Kgt(kgt)
+            export != null -> SelectionPrintWork.Export(export)
             else -> null
         }
-    }
-
-    private sealed interface SelectionPrintWork {
-        data class Invalid(val error: String) : SelectionPrintWork
-        data class Send(val kgtCode: String? = null, val print: suspend (String?) -> KgtStickerPrintResult) : SelectionPrintWork
     }
 
     private fun resetScanColor() {
@@ -1591,74 +1587,95 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             finishParcelSelection(pending)
-            enqueueSelectionPrinting(printWork, version)
+            enqueueSelectionPrinting(job.id, job.name, printWork)
         }
     }
 
-    private fun enqueueSelectionPrinting(work: List<Pair<Int, SelectionPrintWork>>, version: Int) {
+    internal fun retrySelectionPrint(key: SelectionPrintKey) {
+        val current = state.value
+        if (signingOut || current.selectionPrinterLoading || current.printerLoading || configuredPrinterAddress(current) == null) return
+        val failure = current.selectionPrintFailures[key] ?: return
+        if (failure.work is SelectionPrintWork.Invalid) return
+        enqueueSelectionPrinting(key.jobId, failure.jobName, listOf(key.parcelId to failure.work))
+    }
+
+    private fun enqueueSelectionPrinting(jobId: Int, jobName: String, work: List<Pair<Int, SelectionPrintWork>>) {
         if (work.isEmpty()) return
         val prior = selectionPrintJob
         val address = state.value.printerBluetoothAddress
+        val version = scanSessionVersion
+        val accountVersion = selectionPrintAccountVersion
         // The scans are already committed. Finish these labels even if the operator changes jobs.
-        selectionPrintJob = viewModelScope.launch {
-            prior?.join()
-            printSelectionStickers(work, address, version)
+        val batch = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            try {
+                prior?.join()
+                val printedAny = printSelectionStickers(jobId, jobName, work, address, accountVersion)
+                if (printedAny && accountVersion == selectionPrintAccountVersion && version == scanSessionVersion) {
+                    _state.update {
+                        if (it.selectedScanJob?.id == jobId && it.printerError == null &&
+                            it.selectionPrintFailures.keys.none { key -> key.jobId == jobId }
+                        ) it.copy(printerMessage = R.string.printer_printed) else it
+                    }
+                }
+            } finally {
+                if (selectionPrintJob === coroutineContext[Job]) {
+                    selectionPrintJob = null
+                    _state.update { it.copy(selectionPrinterLoading = false) }
+                }
+            }
         }
+        selectionPrintJob = batch
+        _state.update { it.copy(selectionPrinterLoading = true) }
+        batch.start()
     }
 
     private suspend fun printSelectionStickers(
+        jobId: Int,
+        jobName: String,
         work: List<Pair<Int, SelectionPrintWork>>,
         address: String?,
-        version: Int
-    ) {
+        accountVersion: Int
+    ): Boolean {
         val app = getApplication<Application>()
         var printedAny = false
-        if (version == scanSessionVersion) _state.update { it.copy(selectionPrinterLoading = true) }
-        try {
-            for ((parcelId, operation) in work) {
-                val error = try {
-                    when (operation) {
-                        is SelectionPrintWork.Invalid -> operation.error
-                        is SelectionPrintWork.Send -> printerResultError(operation.print(address))
-                    }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (failure: Exception) {
-                    Log.e(javaClass.simpleName, "Could not print selected parcel $parcelId", failure)
-                    app.getString(R.string.printer_print_failed, app.getString(R.string.error_unknown))
+        for ((parcelId, operation) in work) {
+            if (accountVersion != selectionPrintAccountVersion) return false
+            val error = try {
+                when (operation) {
+                    is SelectionPrintWork.Invalid -> operation.error
+                    is SelectionPrintWork.Kgt -> printerResultError(stickerPrintService.print(address, operation.code))
+                    is SelectionPrintWork.Export ->
+                        printerResultError(stickerPrintService.printTajikistanExportSticker(address, operation.sticker))
                 }
-                if (error == null) printedAny = true
-                if (version == scanSessionVersion) {
-                    _state.update {
-                        val failures = if (error == null) {
-                            it.selectionPrintFailures - parcelId
-                        } else {
-                            it.selectionPrintFailures + (parcelId to SelectionPrintFailure(
-                                (operation as? SelectionPrintWork.Send)?.kgtCode,
-                                app.getString(R.string.parcel_selection_print_error, parcelId, error)
-                            ))
-                        }
-                        it.copy(selectionPrintFailures = failures)
-                    }
-                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                Log.e(javaClass.simpleName, "Could not print selected parcel $parcelId", failure)
+                app.getString(R.string.printer_print_failed, app.getString(R.string.error_unknown))
             }
-        } finally {
-            if (version == scanSessionVersion) {
-                _state.update {
-                    it.copy(
-                        selectionPrinterLoading = false,
-                        printerMessage = if (printedAny && it.printerError == null && it.selectionPrintFailures.isEmpty())
-                            R.string.printer_printed else it.printerMessage
-                    )
+            if (accountVersion != selectionPrintAccountVersion) return false
+            if (error == null) printedAny = true
+            val key = SelectionPrintKey(jobId, parcelId)
+            _state.update {
+                val failures = if (error == null) {
+                    it.selectionPrintFailures - key
+                } else {
+                    it.selectionPrintFailures + (key to SelectionPrintFailure(jobName, operation, error))
                 }
+                it.copy(selectionPrintFailures = failures)
             }
         }
+        return printedAny
     }
 
     fun logout() {
         viewModelScope.launch {
             if (signingOut) return@launch
             signingOut = true
+            selectionPrintAccountVersion += 1
+            selectionPrintJob?.cancel()
+            selectionPrintJob = null
+            _state.update { it.copy(selectionPrinterLoading = false, selectionPrintFailures = emptyMap()) }
             cancelPrinterTest()
             cancelMonitorStickerPrint()
             updatePrinterSession()
@@ -1715,15 +1732,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         _state.update { it.copy(printerLoading = true, printerError = null, printerMessage = null) }
+        val jobId = state.value.selectedScanJob?.id
+        val accountVersion = selectionPrintAccountVersion
         try {
-            val version = scanSessionVersion
             val result = stickerPrintService.print(state.value.printerBluetoothAddress, stickerCode)
-            if (result == KgtStickerPrintResult.Success && version == scanSessionVersion) {
-                _state.update { it.copy(selectionPrintFailures = it.selectionPrintFailures.afterKgtReprint(stickerCode)) }
+            if (accountVersion != selectionPrintAccountVersion) return
+            if (result == KgtStickerPrintResult.Success && jobId != null) {
+                _state.update { it.copy(selectionPrintFailures = it.selectionPrintFailures.afterKgtReprint(jobId, stickerCode)) }
             }
             applyPrinterResult(result)
         } finally {
-            _state.update { it.copy(printerLoading = false) }
+            if (accountVersion == selectionPrintAccountVersion) _state.update { it.copy(printerLoading = false) }
         }
     }
 
