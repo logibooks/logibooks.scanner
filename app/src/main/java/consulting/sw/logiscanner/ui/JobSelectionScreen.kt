@@ -7,7 +7,6 @@ package consulting.sw.logiscanner.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,7 +45,10 @@ internal fun JobSelectionScreen(
     onDismissMessage: () -> Unit,
     onLogout: () -> Unit,
     onRefresh: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    selectionPrintFailures: Map<SelectionPrintKey, SelectionPrintFailure> = emptyMap(),
+    canRetrySelectionPrint: Boolean = false,
+    onRetrySelectionPrint: (SelectionPrintKey) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -126,60 +128,57 @@ internal fun JobSelectionScreen(
             DismissibleMessage(message = error, onDismiss = onDismissMessage)
         }
 
-        if (scanJobs.isEmpty() && !isBusy) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        stringResource(R.string.no_scan_jobs),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(scanJobs) { job ->
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            selectionPrintFailureItems(selectionPrintFailures, canRetrySelectionPrint, onRetrySelectionPrint)
+            if (scanJobs.isEmpty() && !isBusy) {
+                item {
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelectJob(job) },
+                        modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            stringResource(R.string.no_scan_jobs),
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            items(scanJobs) { job ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelectJob(job) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            job.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (!job.description.isNullOrBlank()) {
                             Text(
-                                job.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            if (!job.description.isNullOrBlank()) {
-                                Text(
-                                    stringResource(R.string.job_description, job.description),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                            Text(
-                                stringResource(R.string.job_type, scanJobTypeDisplays[job.type] ?: job.type),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                stringResource(R.string.job_description, job.description),
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
+                        Text(
+                            stringResource(R.string.job_type, scanJobTypeDisplays[job.type] ?: job.type),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
         VersionFooter()
     }
 }

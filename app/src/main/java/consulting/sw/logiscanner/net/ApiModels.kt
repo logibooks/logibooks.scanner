@@ -235,7 +235,10 @@ data class ScanRequest(
     val id: Int,
     val code: String,
     /** Scanner-selected bulky item mode; backend accepts non-off only for WBR. */
-    val bulkyItemsMode: Int = BulkyItemsModes.OFF
+    val bulkyItemsMode: Int = BulkyItemsModes.OFF,
+    val supportsParcelSelection: Boolean = true,
+    val selectionId: String? = null,
+    val selectedParcelIds: List<Int>? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -255,11 +258,26 @@ data class ScanResultItem(
     val scanTime: String? = null,
     val followTarget: ScanJobMonitorFollowTarget = ScanJobMonitorFollowTarget(),
     val stickerTemplate: String? = null,
-    val exportSticker: TajikistanExportStickerPayload? = null
+    val exportSticker: TajikistanExportStickerPayload? = null,
+    val confirmedLookupCandidates: List<LookupScanCandidate>? = null,
+    val parcelSelection: ParcelScanSelection? = null,
+    val selectionResults: List<ScanResultItem>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class LookupScanCandidate(val parcelId: Int, val parcelNumber: String, val boxNumber: String? = null)
+
+@JsonClass(generateAdapter = true)
+data class ParcelScanSelection(val id: String, val candidates: List<ParcelScanChoice>)
+
+@JsonClass(generateAdapter = true)
+data class ParcelScanChoice(
+    val parcelId: Int,
+    val productName: String? = null,
+    val boxNumber: String? = null,
+    val lookupState: String? = null,
+    val sortMessage: String? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class TajikistanExportStickerPayload(

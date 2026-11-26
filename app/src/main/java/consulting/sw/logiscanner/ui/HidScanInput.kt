@@ -5,6 +5,7 @@
 package consulting.sw.logiscanner.ui
 
 import android.view.KeyCharacterMap
+import android.view.KeyEvent
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -22,9 +23,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -42,6 +41,34 @@ private fun isTerminatorChar(c: Char) = c == '\n' || c == '\r' || c == '\t'
 
 /** Returns true if [c] is a printable ASCII character (0x20–0x7E). */
 private fun isPrintableAscii(c: Char) = c.code in 0x20..0x7E
+
+private fun isHidTerminatorKey(keyCode: Int): Boolean =
+    keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER || keyCode == KeyEvent.KEYCODE_TAB
+
+internal fun isScannerKey(keyCode: Int, unicodeChar: Int): Boolean =
+    isHidTerminatorKey(keyCode) || unicodeChar in 0x20..0x7E
+
+internal fun HidScanCollector.onHidKeyDown(event: KeyEvent, keyCharMap: KeyCharacterMap): Boolean {
+    if (isHidTerminatorKey(event.keyCode)) {
+        onTerminator()
+        return true
+    }
+
+    val codePoint = keyCharMap.get(event.keyCode, event.metaState)
+    if (codePoint !in 1..Char.MAX_VALUE.code) return false
+    val char = codePoint.toChar()
+    return when {
+        isTerminatorChar(char) -> {
+            onTerminator()
+            true
+        }
+        isPrintableAscii(char) -> {
+            onPrintableChar(char)
+            true
+        }
+        else -> false
+    }
+}
 
 /**
  * Invisible Compose input field that captures HID keystrokes from Bluetooth scanners.
@@ -178,50 +205,7 @@ fun HidScanInput(
                 // interfering with navigation to screens that require keyboard
             }
             .onPreviewKeyEvent { keyEvent ->
-                if (keyEvent.type == KeyEventType.KeyDown) {
-                    when (keyEvent.key) {
-                        Key.Enter -> {
-                            collector.onTerminator()
-                            true
-                        }
-                        Key.Tab -> {
-                            collector.onTerminator()
-                            true
-                        }
-                        else -> {
-                            // Enforce English keyboard locale: translate the raw key code to a
-                            // character using the US English VIRTUAL_KEYBOARD map.  This ensures
-                            // barcode data is always interpreted as ASCII regardless of the
-                            // device's configured keyboard language (e.g., Russian/Cyrillic).
-                            // nativeKeyEvent.keyCode is used here because KeyCharacterMap.get()
-                            // expects the platform-level Android key code, whereas
-                            // keyEvent.key.keyCode is Compose's logical representation which
-                            // may not map 1:1 to the platform values required by the API.
-                            val codePoint = keyCharMap.get(
-                                keyEvent.nativeKeyEvent.keyCode,
-                                keyEvent.nativeKeyEvent.metaState
-                            )
-                            if (codePoint > 0) {
-                                val c = codePoint.toChar()
-                                when {
-                                    isTerminatorChar(c) -> {
-                                        collector.onTerminator()
-                                        true
-                                    }
-                                    isPrintableAscii(c) -> {
-                                        collector.onPrintableChar(c)
-                                        true
-                                    }
-                                    else -> false
-                                }
-                            } else {
-                                false
-                            }
-                        }
-                    }
-                } else {
-                    false
-                }
+                keyEvent.type == KeyEventType.KeyDown && collector.onHidKeyDown(keyEvent.nativeKeyEvent, keyCharMap)
             },
         textStyle = TextStyle(
             color = Color.Transparent,

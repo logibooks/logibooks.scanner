@@ -213,4 +213,27 @@ This file is a part of LogiScanner application
     <string name="scan_stopped_tts">Сканирование остановлено</string>
     <string name="monitor_box_sticker">Sticker code</string>
     <string name="printer_print_box_sticker">Print box sticker</string>
+    <string name="monitor_lookup_previously_found">Previously found:</string>
+    <string name="monitor_lookup_no_targets">No parcels to look for</string>
+    <plurals name="monitor_lookup_goods_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="parcel_selection_title">Select items</string>
+    <string name="parcel_selection_prompt">Select items</string>
+    <string name="parcel_selection_code">Barcode %1$s</string>
+    <string name="parcel_selection_box">Box number: %1$s</string>
+    <string name="parcel_selection_unnamed">Item #%1$d</string>
+    <string name="parcel_selection_found">Found</string>
+    <string name="parcel_selection_issue">Review required</string>
+    <string name="parcel_selection_print_item">Job %1$s (#%2$d), item #%3$d</string>
+    <string name="parcel_selection_retry_print">Retry print</string>
+    <string name="parcel_selection_outstanding">Lookup target</string>
+    <string name="parcel_selection_confirmed">Previously found</string>
+    <string name="parcel_selection_not_target">Outside lookup</string>
+    <string name="parcel_selection_confirm">Confirm (%1$d)</string>
+    <string name="parcel_selection_skip">Skip</string>
+    <string name="parcel_selection_stale">Could not complete the selection. Scan the barcode again.</string>
+    <string name="parcel_selection_close">Close</string>
+    <string name="parcel_selection_rescan_codes">Scan these queued barcodes again: %1$s</string>
 </resources>

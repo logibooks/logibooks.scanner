@@ -17,8 +17,11 @@ class ScanRepository(baseUrl: String, private val token: String, onUnauthorized:
     suspend fun scan(
         scanJobId: Int,
         code: String,
-        bulkyItemsMode: Int = BulkyItemsModes.OFF
-    ): ScanResultItem {
-        return api.scan("Bearer $token", ScanRequest(scanJobId, code, bulkyItemsMode))
-    }
+        bulkyItemsMode: Int = BulkyItemsModes.OFF,
+        selectionId: String? = null,
+        selectedParcelIds: List<Int>? = null
+    ): ScanResultItem = api.scan(
+        "Bearer $token",
+        ScanRequest(scanJobId, code, bulkyItemsMode, selectionId = selectionId, selectedParcelIds = selectedParcelIds)
+    )
 }
